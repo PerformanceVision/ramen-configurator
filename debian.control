@@ -1,0 +1,6 @@
+Package: ramen-configurator
+Version: 2.0.0
+Architecture: amd64
+Maintainer: rixed-github@happyleptic.org
+Depends: libsqlite3-0
+Description: Generates the configuration for Ramen from a configuration database.

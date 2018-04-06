@@ -1,0 +1,3 @@
+= Ramen-Configurator
+
+Generates the configuration for Ramen from a configuration database.
