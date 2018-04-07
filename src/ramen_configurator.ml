@@ -1,5 +1,6 @@
 open Batteries
 open RamenLog
+open RamenHelpers
 
 type options = { debug : bool ; monitor : bool }
 
@@ -999,7 +1000,7 @@ let program_of_bcns bcns dataset_name export =
         name_prefix bcn.percentile bcn.obs_window in
     let op =
       let nb_items_per_groups =
-        Helpers.round_to_int (bcn.obs_window /. bcn.avg_window) in
+        round_to_int (bcn.obs_window /. bcn.avg_window) in
       (* Note: The event start at the end of the observation window and lasts
        * for one avg window! *)
       Printf.sprintf
@@ -1326,7 +1327,7 @@ let program_of_bcas bcas dataset_name export =
         bca.name bca.percentile bca.obs_window in
     let op =
       let nb_items_per_groups =
-        Helpers.round_to_int (bca.obs_window /. bca.avg_window) in
+        round_to_int (bca.obs_window /. bca.avg_window) in
       (* Note: The event start at the end of the observation window and lasts
        * for one avg window! *)
       (* EURT = RTTs + SRT + DTTs (DTT server to client being optional *)

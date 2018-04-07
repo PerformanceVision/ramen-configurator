@@ -36,7 +36,7 @@ all: $(INSTALLED)
 # Dependencies
 
 CONFIGURATOR_SOURCES = \
-	src/RamenLog.ml src/Helpers.ml \
+	src/RamenLog.ml src/RamenHelpers.ml \
 	src/SqliteHelpers.ml src/Conf_of_sqlite.ml \
 	src/ramen_configurator.ml
 
