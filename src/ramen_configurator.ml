@@ -2,10 +2,6 @@ open Batteries
 open RamenLog
 open RamenHelpers
 
-type options = { debug : bool ; monitor : bool }
-
-let options debug monitor = { debug ; monitor }
-
 type export_what = ExportAll | ExportSome | ExportNone
 let export_some = function ExportAll | ExportSome -> true | _ -> false
 let export_all = function ExportAll -> true | _ -> false
@@ -95,7 +91,7 @@ let tcp_traffic_func ?where dataset_name name dt export =
            rd_count_src IS NOT NULL AND
            dtt_count_src IS NOT NULL
      GROUP BY capture_begin // $DT_US$
-     COMMIT WHEN
+     COMMIT AFTER
        in.capture_begin > out.min_capture_begin + 2 * u64($DT_US$)
      $EXPORT$ EVENT STARTING AT start WITH DURATION $DT$|} |>
     rep "$DT$" (string_of_int dt) |>
@@ -113,7 +109,7 @@ let tcp_traffic_func ?where dataset_name name dt export =
  * We want to direct all alerts into a custom SQLite database that other
  * programs will monitor.
  * This DB will have a single table named "alerts" with fields: "id", "name",
- * "started", "stopped", "title" and "text" (coming straight from the NOTIFY
+ * "started", "stopped", "title" and "text" (coming straight from the EXECUTE
  * parameters). The interesting field here is "text"; we will make it a JSON
  * string with more informations depending on the context: IPs, BCA/BCN, etc *)
 let alert_text fields =
@@ -205,8 +201,9 @@ let anomaly_detection_funcs avg_window from name timeseries alert_fields export 
           SELECT start,
           (%s) AS abnormality,
           hysteresis (5-ma abnormality, 3/5, 4/5) AS firing
-          COMMIT AND KEEP ALL WHEN firing != COALESCE(previous.firing, false)
-          NOTIFY "$RAMEN_URL$/notify?name=%s&firing=${firing}&time=${start}&title=%s&text=%s"
+          COMMIT, EXECUTE
+            "insert_alert --name '%s' --firing '${firing}' --time '${start}' --title '%s' --text '%s'"
+            AND KEEP ALL AFTER firing != COALESCE(previous.firing, false)
           %sEVENT STARTING AT start|}
         predictor_name
         condition
@@ -975,7 +972,7 @@ let program_of_bcns bcns dataset_name export =
             %S AS zone_src, %S AS zone_dst
           WHERE %s
           GROUP BY capture_begin // %d
-          COMMIT WHEN
+          COMMIT AFTER
             in.capture_begin > out.min_capture_begin + 2 * u64(%d)
           %sEVENT STARTING AT start WITH DURATION %g|}
         (rebase dataset_name "c2s tcp") (rebase dataset_name "s2c tcp")
@@ -1012,7 +1009,7 @@ let program_of_bcns bcns dataset_name export =
            %gth percentile avg_rtt AS rtt,
            %gth percentile avg_rr AS rr,
            zone_src, zone_dst
-         COMMIT AND SLIDE 1 WHEN
+         COMMIT AND SLIDE 1 AFTER
            group.#count >= %d OR
            in.start > out.max_start + 5
          %sEVENT STARTING AT max_capture_end * 0.000001 WITH DURATION %g|}
@@ -1037,8 +1034,9 @@ let program_of_bcns bcns dataset_name export =
               max_start,
               hysteresis (bytes_per_secs, %d, %d) AS firing
             FROM '%s'
-            COMMIT AND KEEP ALL WHEN firing != COALESCE(previous.firing, false)
-            NOTIFY "$RAMEN_URL$/notify?name=Low%%20traffic&firing=${firing}&time=${max_start}&title=%s&text=%s
+            COMMIT, EXECUTE
+              "insert_alert --name 'Low traffic' --firing '${firing}' --time '${max_start}' --title '%s' --text '%s'"
+              AND KEEP ALL AFTER firing != COALESCE(previous.firing, false)
             %sEVENT STARTING AT max_start"|}
             (min_bps + min_bps/10) min_bps
             perc_per_obs_window_name
@@ -1062,8 +1060,9 @@ let program_of_bcns bcns dataset_name export =
               max_start,
               hysteresis (bytes_per_secs, %d, %d) AS firing
             FROM '%s'
-            COMMIT AND KEEP ALL WHEN firing != COALESCE(previous.firing, false)
-            NOTIFY "$RAMEN_URL$/notify?name=High%%20traffic&firing=${firing}&time=${max_start}&title=%s&text=%s"
+            COMMIT, EXECUTE
+              "insert_alert --name 'High traffic' --firing '${firing}' --time '${max_start}' --title '%s' --text '%s'"
+              AND KEEP ALL AFTER firing != COALESCE(previous.firing, false)
             %sEVENT STARTING AT max_start|}
             (max_bps - max_bps/10) max_bps
             perc_per_obs_window_name
@@ -1088,8 +1087,9 @@ let program_of_bcns bcns dataset_name export =
               max_start, rtt,
               hysteresis (rtt, %f, %f) AS firing
             FROM '%s'
-            COMMIT AND KEEP ALL WHEN firing != COALESCE(previous.firing, false)
-            NOTIFY "$RAMEN_URL$/notify?name=High%%20RTT&firing=${firing}&time=${max_start}&title=%s&text=%s"
+            COMMIT, EXECUTE
+              "insert_alert --name 'High RTT' --firing '${firing}' --time '${max_start}' --title '%s' --text '%s'"
+              AND KEEP ALL AFTER firing != COALESCE(previous.firing, false)
             %sEVENT STARTING AT max_start|}
             (max_rtt -. max_rtt /. 10.) max_rtt
             perc_per_obs_window_name
@@ -1114,8 +1114,9 @@ let program_of_bcns bcns dataset_name export =
               max_start, rr,
               hysteresis (rr, %f, %f) AS firing
             FROM '%s'
-            COMMIT AND KEEP ALL WHEN firing != COALESCE(previous.firing, false)
-            NOTIFY "$RAMEN_URL$/notify?name=High%%20RR&firing=${firing}&time=${max_start}&title=%s&text=%s"
+            COMMIT, EXECUTE
+              "insert_alert --name 'High RR' --firing '${firing}' --time '${max_start}' --title '%s' --text '%s'"
+              AND KEEP ALL AFTER firing != COALESCE(previous.firing, false)
             %sEVENT STARTING AT max_start|}
             (max_rr -. max_rr /. 10.) max_rr
             perc_per_obs_window_name
@@ -1312,7 +1313,7 @@ let program_of_bcas bcas dataset_name export =
               dtt_count_client IS NOT NULL AND
               dtt_count_server IS NOT NULL
         GROUP BY capture_begin * 0.000001 // $AVG_INT$
-        COMMIT WHEN
+        COMMIT AFTER
           in.capture_begin * 0.000001 > out.start + 2 * $AVG$
         $EXPORT$ EVENT STARTING AT start WITH DURATION $AVG$|} |>
       rep "$CSV$" csv |>
@@ -1338,7 +1339,7 @@ let program_of_bcas bcas dataset_name export =
            srtt_avg, crtt_avg, srt_avg, cdtt_avg, sdtt_avg,
            %gth percentile (
             srtt_avg + crtt_avg + srt_avg + cdtt_avg + sdtt_avg) AS eurt
-         COMMIT AND SLIDE 1 WHEN
+         COMMIT AND SLIDE 1 AFTER
            group.#count >= %d OR
            in.start > out.max_start + 5
          %sEVENT STARTING AT max_start WITH DURATION %g|}
@@ -1362,8 +1363,9 @@ let program_of_bcas bcas dataset_name export =
             max_start,
             hysteresis (eurt, %g, %g) AS firing
           FROM '%s'
-          COMMIT AND KEEP ALL WHEN firing != COALESCE(previous.firing, false)
-          NOTIFY "$RAMEN_URL$/notify?name=EURT%%20%s&firing=${firing}&time=${max_start}&title=%s&text=%s"
+          COMMIT, EXECUTE
+            "insert_alert --name 'EURT %s' --firing '${firing}' --time '${max_start}' --title '%s' --text '%s'"
+            AND KEEP ALL AFTER firing != COALESCE(previous.firing, false)
           %sEVENT STARTING AT max_start|}
           (bca.max_eurt -. bca.max_eurt /. 10.) bca.max_eurt
           perc_per_obs_window_name
@@ -1441,7 +1443,7 @@ let ddos_program dataset_name export =
           $AVG_WIN$
           AS nb_new_clients_per_secs
      GROUP BY capture_begin // $AVG_WIN_US$
-     COMMIT WHEN
+     COMMIT AFTER
        in.capture_begin > out.min_capture_begin + 2 * u64($AVG_WIN_US$)
      $EXPORT$ EVENT STARTING AT start WITH DURATION $AVG_WIN$|} |>
     rep "$AVG_WIN_US$" (string_of_int avg_win_us) |>
@@ -1510,7 +1512,7 @@ let start conf ramen_cmd root_dir db_name dataset_name delete uncompress
       compile_program ramen_cmd root_dir ddos)
   in
   update () ;
-  if conf.monitor then
+  if monitor then
     while true do
       check_config_changed db ;
       if must_reload db then (
@@ -1525,14 +1527,12 @@ let start conf ramen_cmd root_dir db_name dataset_name delete uncompress
 
 open Cmdliner
 
-let common_opts =
-  let debug =
-    Arg.(value (flag (info ~doc:"increase verbosity" ["d"; "debug"])))
-  and monitor =
-    Arg.(value (flag (info ~doc:"keep running and update conf when DB changes"
+let debug =
+  Arg.(value (flag (info ~doc:"increase verbosity" ["d"; "debug"])))
+
+let monitor =
+  Arg.(value (flag (info ~doc:"keep running and update conf when DB changes"
                            ["m"; "monitor"])))
-  in
-  Term.(const options $ debug $ monitor)
 
 let ramen_cmd =
   let i = Arg.info ~doc:"Command line to run ramen."
@@ -1606,7 +1606,8 @@ let exports =
 let start_cmd =
   Term.(
     (const start
-      $ common_opts
+      $ debug
+      $ monitor
       $ ramen_cmd
       $ root_dir
       $ db_name
