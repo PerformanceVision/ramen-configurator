@@ -1475,19 +1475,21 @@ let write_program root_dir (program_name, program_code) =
     Printf.fprintf oc "%s\n" program_code) ;
   fname
 
-let compile_program ramen_cmd root_dir (program_name, _ as program) =
+let compile_program ramen_cmd root_dir bundle_dir (program_name, _ as program) =
   let fname = write_program root_dir program in
   let cmd =
-    Printf.sprintf2 "%s compile --root=%S %S" ramen_cmd root_dir fname in
+    Printf.sprintf2 "%s compile --root=%S --bundle-dir=%S %S"
+      ramen_cmd root_dir bundle_dir fname in
   if 0 = Sys.command cmd then
     !logger.debug "Compiled %s" program_name
     (* Now Ramen with autoreload should pick it up *)
   else
     !logger.error "Failed to compile program %s" program_name
 
-let start conf ramen_cmd root_dir db_name dataset_name delete uncompress
-          csv_glob with_base with_bcns with_bcas with_ddos export_all =
-  logger := make_logger conf.debug ;
+let start debug monitor ramen_cmd root_dir bundle_dir db_name dataset_name 
+          delete uncompress csv_glob with_base with_bcns with_bcas with_ddos
+          export_all =
+  logger := make_logger debug ;
   let open Conf_of_sqlite in
   let db = get_db db_name in
   let update () =
@@ -1495,21 +1497,21 @@ let start conf ramen_cmd root_dir db_name dataset_name delete uncompress
     if with_base then (
       let base =
         base_program dataset_name delete uncompress csv_glob export_all in
-      compile_program ramen_cmd root_dir base) ;
+      compile_program ramen_cmd root_dir bundle_dir base) ;
     if with_bcns > 0 || with_bcas > 0 then (
       let bcns, bcas = get_config_from_db db in
       let bcns = List.take with_bcns bcns
       and bcas = List.take with_bcas bcas in
       if bcns <> [] then (
         let bcns = program_of_bcns bcns dataset_name export_all in
-        compile_program ramen_cmd root_dir bcns) ;
+        compile_program ramen_cmd root_dir bundle_dir bcns) ;
       if bcas <> [] then (
         let bcas = program_of_bcas bcas dataset_name export_all in
-        compile_program ramen_cmd root_dir bcas)) ;
+        compile_program ramen_cmd root_dir bundle_dir bcas)) ;
     if with_ddos then (
       (* Several DDoS detection approaches, regrouped in a "DDoS" program. *)
       let ddos = ddos_program dataset_name export_all in
-      compile_program ramen_cmd root_dir ddos)
+      compile_program ramen_cmd root_dir bundle_dir ddos)
   in
   update () ;
   if monitor then
@@ -1554,6 +1556,12 @@ let root_dir =
   let env = Term.env_info "RAMEN_ROOT" in
   let i = Arg.info ~doc:"Path of root of ramen configuration tree."
                    ~env [ "root" ] in
+  Arg.(value (opt string "." i))
+
+let bundle_dir =
+  let env = Term.env_info "RAMEN_BUNDLE_DIR" in
+  let i = Arg.info ~doc:"Path of ramen runtime libraries."
+                   ~env [ "bundle-dir" ] in
   Arg.(value (opt string "." i))
 
 let delete_opt =
@@ -1610,6 +1618,7 @@ let start_cmd =
       $ monitor
       $ ramen_cmd
       $ root_dir
+      $ bundle_dir
       $ db_name
       $ dataset_name
       $ delete_opt
