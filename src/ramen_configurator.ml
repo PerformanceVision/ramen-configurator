@@ -1427,16 +1427,18 @@ let ddos_program dataset_name export =
       SELECT
        (capture_begin // $AVG_WIN_US$) * $AVG_WIN$ AS start,
        min capture_begin, max capture_end,
-       -- Traffic (of any kind) we haven't seen in the last $REM_WIN$ secs
-       sum (0.9 * float(not remember (
+       -- Traffic (of any kind) we haven't seen in the last $REM_WIN$ secs.
+       -- Increase the estimate of *not* remembering since we ask for 10% of
+       -- false positives.
+       sum (1.1 * float(not remember (
               0.1, -- 10% of false positives
               capture_begin // 1_000_000, $REM_WIN$,
               (hash (coalesce (ip4_client, ip6_client, 0)) +
                hash (coalesce (ip4_server, ip6_server, 0)))))) /
          $AVG_WIN$
          AS nb_new_cnxs_per_secs,
-       -- Clients we haven't seen in the last $REM_WIN$ secs
-       sum (0.9 * float(not remember (
+       -- Clients we haven't seen in the last $REM_WIN$ secs.
+       sum (1.1 * float(not remember (
               0.1,
               capture_begin // 1_000_000, $REM_WIN$,
               hash (coalesce (ip4_client, ip6_client, 0))))) /
