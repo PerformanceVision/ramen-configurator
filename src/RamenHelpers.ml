@@ -60,3 +60,15 @@ let do_daemonize () =
 
 let shell_quote s =
   "'"^ String.nreplace s "'" "'\\''" ^"'"
+
+let sql_quote s =
+  "'"^ String.nreplace s "'" "''" ^"'"
+
+let getenv ?def n =
+  try Sys.getenv n
+  with Not_found ->
+    match def with
+    | Some d -> d
+    | None ->
+      Printf.sprintf "Cannot find envvar %s" n |>
+      failwith

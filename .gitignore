@@ -25,6 +25,7 @@ BUGS
 TODO
 *.db
 src/ramen_configurator
+src/insert_alert
 *.html
 *.deb
 debtmp/

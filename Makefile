@@ -13,7 +13,7 @@ override OCAMLFLAGS    += -I src $(WARNS) -g -annot
 PACKAGES = \
 	batteries cmdliner stdint sqlite3 unix uri
 
-INSTALLED_BIN = src/ramen_configurator
+INSTALLED_BIN = src/ramen_configurator src/insert_alert
 INSTALLED = $(INSTALLED_BIN)
 
 bin_dir ?= /usr/bin/
@@ -40,7 +40,11 @@ CONFIGURATOR_SOURCES = \
 	src/SqliteHelpers.ml src/Conf_of_sqlite.ml \
 	src/ramen_configurator.ml
 
-SOURCES = $(CONFIGURATOR_SOURCES)
+INSERT_ALERT_SOURCES = \
+	src/RamenLog.ml src/RamenHelpers.ml \
+	src/SqliteHelpers.ml src/insert_alert.ml
+
+SOURCES = $(CONFIGURATOR_SOURCES) $(INSERT_ALERT_SOURCES)
 
 dep:
 	@$(RM) .depend
@@ -56,15 +60,19 @@ include .depend
 
 src/SqliteHelpers.cmx: src/SqliteHelpers.ml
 	@echo "Compiling $@ (native code)"
-	@$(OCAMLOPT) $(OCAMLOPTFLAGS) -package "$(PACKAGES) sqlite3" -c $<
+	@$(OCAMLOPT) $(OCAMLOPTFLAGS) -package "$(PACKAGES)" -c $<
 
 src/Conf_of_sqlite.cmx: src/Conf_of_sqlite.ml
 	@echo "Compiling $@ (native code)"
-	@$(OCAMLOPT) $(OCAMLOPTFLAGS) -package "$(PACKAGES) sqlite3" -c $<
+	@$(OCAMLOPT) $(OCAMLOPTFLAGS) -package "$(PACKAGES)" -c $<
 
 src/ramen_configurator: $(CONFIGURATOR_SOURCES:.ml=.cmx)
 	@echo "Linking $@"
-	@$(OCAMLOPT) $(OCAMLOPTFLAGS) -linkpkg -package "$(PACKAGES) sqlite3" $(filter %.cmx, $^) -o $@
+	@$(OCAMLOPT) $(OCAMLOPTFLAGS) -linkpkg -package "$(PACKAGES)" $(filter %.cmx, $^) -o $@
+
+src/insert_alert: $(INSERT_ALERT_SOURCES:.ml=.cmx)
+	@echo "Linking $@"
+	@$(OCAMLOPT) $(OCAMLOPTFLAGS) -linkpkg -package "$(PACKAGES)" $(filter %.cmx, $^) -o $@
 
 # Installation
 
