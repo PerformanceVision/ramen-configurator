@@ -57,3 +57,6 @@ let do_daemonize () =
   dup2 null stdout ;
   dup2 null stderr ;
   close null
+
+let shell_quote s =
+  "'"^ String.nreplace s "'" "'\\''" ^"'"
