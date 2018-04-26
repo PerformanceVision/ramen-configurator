@@ -1417,56 +1417,123 @@ let program_of_bcas bcas dataset_name export =
 let get_config_from_db db =
   Conf_of_sqlite.get_config db
 
-let ddos_program dataset_name export =
-  let program_name = rebase dataset_name "DDoS" in
-  let avg_win = 60 and rem_win = 3600 in
-  let op_new_peers =
-    let avg_win_us = avg_win * 1_000_000 in
-    {|FROM $CSVS$
-      MERGE ON capture_begin TIMEOUT AFTER 2 SECONDS
-      SELECT
-       (capture_begin // $AVG_WIN_US$) * $AVG_WIN$ AS start,
-       min capture_begin, max capture_end,
-       -- Traffic (of any kind) we haven't seen in the last $REM_WIN$ secs.
-       -- Increase the estimate of *not* remembering since we ask for 10% of
-       -- false positives.
-       sum (1.1 * float(not remember (
-              0.1, -- 10% of false positives
-              capture_begin // 1_000_000, $REM_WIN$,
-              (hash (coalesce (ip4_client, ip6_client, 0)) +
-               hash (coalesce (ip4_server, ip6_server, 0)))))) /
-         $AVG_WIN$
-         AS nb_new_cnxs_per_secs,
-       -- Clients we haven't seen in the last $REM_WIN$ secs.
-       sum (1.1 * float(not remember (
-              0.1,
-              capture_begin // 1_000_000, $REM_WIN$,
-              hash (coalesce (ip4_client, ip6_client, 0))))) /
-          $AVG_WIN$
-          AS nb_new_clients_per_secs
-     GROUP BY capture_begin // $AVG_WIN_US$
-     COMMIT AFTER
-       in.capture_begin > out.min_capture_begin + 2 * u64($AVG_WIN_US$)
-     $EXPORT$ EVENT STARTING AT start WITH DURATION $AVG_WIN$|} |>
-    rep "$AVG_WIN_US$" (string_of_int avg_win_us) |>
-    rep "$AVG_WIN$" (string_of_int avg_win) |>
-    rep "$REM_WIN$" (string_of_int rem_win) |>
-    rep "$CSVS$" (["tcp" ; "udp" ; "icmp" ; "other-ip"] |>
-                  List.map (fun p -> "'"^ rebase dataset_name p ^"'") |>
-                  String.join ",") |>
-    rep "$EXPORT$" (if export_some export then "EXPORT" else "") in
-  let global_new_peers =
-    make_func "new peers" op_new_peers in
-  let pred_func, anom_func =
-    anomaly_detection_funcs
-      (float_of_int avg_win) "new peers" "DDoS"
-      [ "nb_new_cnxs_per_secs", "nb_new_cnxs_per_secs > 1", false, [] ;
-        "nb_new_clients_per_secs", "nb_new_clients_per_secs > 1", false, [] ]
-      [ "descr", "possible DDoS" ]
-      export in
+let sec_program dataset_name export =
+  let program_name = rebase dataset_name "Security" in
+  let rebase_list csvs =
+    List.map (fun p -> "'"^ rebase dataset_name p ^"'") csvs |>
+    String.join "," in
+  let ddos avg_win rem_win =
+    let op_new_peers =
+      let avg_win_us = avg_win * 1_000_000 in
+      {|FROM $CSVS$
+        MERGE ON capture_begin TIMEOUT AFTER 2 SECONDS
+        SELECT
+         (capture_begin // $AVG_WIN_US$) * $AVG_WIN$ AS start,
+         min capture_begin, max capture_end,
+         -- Traffic (of any kind) we haven't seen in the last $REM_WIN$ secs.
+         -- Increase the estimate of *not* remembering since we ask for 10% of
+         -- false positives.
+         sum (1.1 * float(not remember (
+                0.1, -- 10% of false positives
+                capture_begin // 1_000_000, $REM_WIN$,
+                (hash (coalesce (ip4_client, ip6_client, 0)) +
+                 hash (coalesce (ip4_server, ip6_server, 0)))))) /
+           $AVG_WIN$
+           AS nb_new_cnxs_per_secs,
+         -- Clients we haven't seen in the last $REM_WIN$ secs.
+         sum (1.1 * float(not remember (
+                0.1,
+                capture_begin // 1_000_000, $REM_WIN$,
+                hash (coalesce (ip4_client, ip6_client, 0))))) /
+            $AVG_WIN$
+            AS nb_new_clients_per_secs
+       GROUP BY capture_begin // $AVG_WIN_US$
+       COMMIT AFTER
+         in.capture_begin > out.min_capture_begin + 2 * u64($AVG_WIN_US$)
+       $EXPORT$ EVENT STARTING AT start WITH DURATION $AVG_WIN$|} |>
+      rep "$AVG_WIN_US$" (string_of_int avg_win_us) |>
+      rep "$AVG_WIN$" (string_of_int avg_win) |>
+      rep "$REM_WIN$" (string_of_int rem_win) |>
+      rep "$CSVS$" (rebase_list ["tcp" ; "udp" ; "icmp" ; "other-ip"]) |>
+      rep "$EXPORT$" (if export_some export then "EXPORT" else "") in
+    let global_new_peers =
+      make_func "new peers" op_new_peers in
+    let pred_func, anom_func =
+      anomaly_detection_funcs
+        (float_of_int avg_win) "new peers" "DDoS"
+        [ "nb_new_cnxs_per_secs", "nb_new_cnxs_per_secs > 1", false, [] ;
+          "nb_new_clients_per_secs", "nb_new_clients_per_secs > 1", false, [] ]
+        [ "descr", "possible DDoS" ]
+        export in
+    [ global_new_peers ; pred_func ; anom_func ]
+  and port_scan_detector top_n obs_win =
+    make_func "top_port_scans"
+      ({|FROM $CSVS$
+         MERGE ON capture_begin TIMEOUT AFTER 2 SECONDS
+         WHEN not remember globally (
+           0.1, capture_begin / 1_000_000, $WIN$,
+           -- We do not take into account IP proto, so a ping on a TCP port
+           -- grants you a free ping on the same UDP port.
+           hash (coalesce (ip4_client, ip6_client, 0)) +
+           hash (coalesce (ip4_server, ip6_server, 0)) +
+           port_server)
+         SELECT min (capture_begin / 1_000_000) AS start,
+                max (capture_end / 1_000_000) AS end,
+                coalesce (ip4_client, ip6_client, 0) as client,
+                coalesce (ip4_server, ip6_server, 0) as server,
+                sum 1 as port_count
+         GROUP BY coalesce (ip4_client, ip6_client, 0),
+                  coalesce (ip4_server, ip6_server, 0)
+         TOP $TOP_N$ BY out.port_count
+             WHEN out.end - out.start > $WIN$
+           $EXPORT$|} |>
+       rep "$WIN$" (string_of_int obs_win) |>
+       rep "$TOP_N$" (string_of_int top_n) |>
+       rep "$CSVS$" (rebase_list ["tcp" ; "udp"]) |>
+       rep "$EXPORT$" (if export_some export then "EXPORT" else ""))
+  and port_scan_alert max_ports =
+    make_func "port_scan_alert"
+      ({|FROM top_port_scans
+         WHEN port_count > $MAX_PORTS$
+         EXECUTE
+            "insert_alert --name 'Port-Scan' --time '${start}' --title 'Port scan from ${client} to ${server}' --text '${client} has probed at least ${port_count} ports of ${server} from ${start} to ${end}'"|} |>
+       rep "$MAX_PORTS$" (string_of_int max_ports))
+  and ip_scan_detector top_n obs_win =
+    make_func "top_ip_scans"
+      ({|FROM $CSVS$
+         MERGE ON capture_begin TIMEOUT AFTER 2 SECONDS
+         WHEN not remember globally (
+           0.1, capture_begin / 1_000_000, $WIN$,
+           -- An IP scanner could use varying proto/port to detect host
+           -- presence so we just care about src and dst here:
+           hash (coalesce (ip4_client, ip6_client, 0)) +
+           hash (coalesce (ip4_server, ip6_server, 0)))
+         SELECT min (capture_begin / 1_000_000) AS start,
+                max (capture_end / 1_000_000) AS end,
+                coalesce (ip4_client, ip6_client, 0) as client,
+                sum 1 as ip_count
+         GROUP BY coalesce (ip4_client, ip6_client, 0)
+         TOP $TOP_N$ BY out.ip_count
+             WHEN out.end - out.start > $WIN$
+           $EXPORT$|} |>
+       rep "$WIN$" (string_of_int obs_win) |>
+       rep "$TOP_N$" (string_of_int top_n) |>
+       rep "$CSVS$" (rebase_list ["tcp" ; "udp" ; "icmp" ; "other-ip"]) |>
+       rep "$EXPORT$" (if export_some export then "EXPORT" else ""))
+  and ip_scan_alert max_ips =
+    make_func "ip_scan_alert"
+      ({|FROM top_ip_scans
+         WHEN ip_count > $MAX_IPS$
+         EXECUTE
+            "insert_alert --name 'IP-Scan' --time '${start}' --title 'IP scan from ${client}' --text '${client} has probed at least ${ip_count} IPs from ${start} to ${end}'"|} |>
+       rep "$MAX_IPS$" (string_of_int max_ips))
+  in
   program_name,
-  program_of_funcs [
-    global_new_peers ; pred_func ; anom_func ]
+  program_of_funcs (
+    ddos 100 3600 @
+    (* one top every hour, as scans can be performed slowly *)
+    [ port_scan_detector 100 3600 ; port_scan_alert 100 ;
+      ip_scan_detector 100 3600 ; ip_scan_alert 200 ])
 
 (* Daemon *)
 
@@ -1486,10 +1553,10 @@ let compile_program ramen_cmd root_dir bundle_dir (program_name, _ as program) =
     !logger.debug "Compiled %s" program_name
     (* Now Ramen with autoreload should pick it up *)
   else
-    !logger.error "Failed to compile program %s" program_name
+    !logger.error "Failed to compile program %s with %S" program_name cmd
 
-let start debug monitor ramen_cmd root_dir bundle_dir db_name dataset_name 
-          delete uncompress csv_glob with_base with_bcns with_bcas with_ddos
+let start debug monitor ramen_cmd root_dir bundle_dir db_name dataset_name
+          delete uncompress csv_glob with_base with_bcns with_bcas with_sec
           export_all =
   logger := make_logger debug ;
   let open Conf_of_sqlite in
@@ -1510,10 +1577,10 @@ let start debug monitor ramen_cmd root_dir bundle_dir db_name dataset_name
       if bcas <> [] then (
         let bcas = program_of_bcas bcas dataset_name export_all in
         compile_program ramen_cmd root_dir bundle_dir bcas)) ;
-    if with_ddos then (
-      (* Several DDoS detection approaches, regrouped in a "DDoS" program. *)
-      let ddos = ddos_program dataset_name export_all in
-      compile_program ramen_cmd root_dir bundle_dir ddos)
+    if with_sec then (
+      (* Several bad behavior detectors, regrouped in a "Security" program. *)
+      let sec = sec_program dataset_name export_all in
+      compile_program ramen_cmd root_dir bundle_dir sec)
   in
   update () ;
   if monitor then
@@ -1598,9 +1665,10 @@ let with_bcas =
                    [ "with-bcas" ; "with-bca" ; "bcas" ; "bca" ] in
   Arg.(value (opt ~vopt:10 int 0 i))
 
-let with_ddos =
+let with_security =
   let i = Arg.info ~doc:"Also output the program with DDoS detection"
-                   [ "with-ddos" ; "with-dos" ; "ddos" ; "dos" ] in
+                   [ "with-security" ; "security" ;
+                     (* old *) "with-ddos" ; "with-dos" ; "ddos" ; "dos" ] in
   Arg.(value (flag i))
 
 let exports =
@@ -1629,7 +1697,7 @@ let start_cmd =
       $ with_base
       $ with_bcns
       $ with_bcas
-      $ with_ddos
+      $ with_security
       $ exports),
     info "ramen_configurator")
 
