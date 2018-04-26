@@ -16,39 +16,25 @@ let do_insert_alert debug name firing time title text =
   and create_q =
     getenv ~def:{|CREATE TABLE "alerts" (
                     "insert_time" INTEGER NOT NULL,
-                    "id" TEXT NOT NULL,
                     "name" TEXT NOT NULL,
-                    "started" INTEGER,
-                    "stopped" INTEGER,
+                    "time" REAL NOT NULL,
                     "title" TEXT NOT NULL,
                     "text" TEXT NOT NULL);|} "DB_CREATE"
   and insert_q =
     getenv ~def:{|INSERT INTO "alerts" (
-                    "insert_time", "id", "name", "started", "stopped",
-                    "title", "text"
+                    "insert_time", "name", "time", "title", "text"
                   ) VALUES (
                     datetime("now"),
-                    $ID$,
                     $NAME$,
-                    $STARTED$,
-                    $STOPPED$,
+                    $TIME$,
                     $TITLE$,
                     $TEXT$);|} "DB_INSERT"
   in
   let open Sqlite3 in
   let handle = db_open file in
-  let started_firing, stopped_firing =
-    if firing then string_of_float time, "NULL"
-    else "NULL", string_of_float time in
-  let max_rand = 1073741823 in
-  let id =
-    Printf.sprintf "%d-%d"
-      (int_of_float (Unix.time ())) (Random.int max_rand) in
   let replacements =
-    [ "$ID$", sql_quote id ;
-      "$NAME$", sql_quote name ;
-      "$STARTED$", started_firing ;
-      "$STOPPED$", stopped_firing ;
+    [ "$NAME$", sql_quote name ;
+      "$TIME$", string_of_float time ;
       "$TEXT$", sql_quote text ;
       "$TITLE$", sql_quote title ] in
   let q = List.fold_left (fun str (sub, by) ->
@@ -121,5 +107,4 @@ let cmd =
     info "insert_alert")
 
 let () =
-  Random.self_init () ;
   Term.eval cmd |> Term.exit
