@@ -1621,7 +1621,7 @@ let monitor =
                            ["m"; "monitor"])))
 
 let ramen_cmd =
-  let i = Arg.info ~doc:"Command line to run ramen."
+  let i = Arg.info ~doc:"Command line to run ramen"
                    [ "ramen" ] in
   Arg.(value (opt string "ramen" i))
 
@@ -1632,19 +1632,19 @@ let db_name =
 
 let dataset_name =
   let i = Arg.info ~doc:"Name identifying this data set. Will be used to \
-                         prefix any created programs."
+                         prefix any created programs"
                    [ "name" ; "dataset" ; "dataset-name" ] in
   Arg.(required (opt (some string) None i))
 
 let root_dir =
   let env = Term.env_info "RAMEN_ROOT" in
-  let i = Arg.info ~doc:"Path of root of ramen configuration tree."
+  let i = Arg.info ~doc:"Path of root of ramen configuration tree"
                    ~env [ "root" ] in
   Arg.(value (opt string "." i))
 
 let bundle_dir =
   let env = Term.env_info "RAMEN_BUNDLE_DIR" in
-  let i = Arg.info ~doc:"Path of ramen runtime libraries."
+  let i = Arg.info ~doc:"Path of ramen runtime libraries"
                    ~env [ "bundle-dir" ] in
   Arg.(value (opt string "." i))
 
