@@ -13,7 +13,7 @@ override OCAMLFLAGS    += -I src $(WARNS) -g -annot
 PACKAGES = \
 	batteries cmdliner stdint sqlite3 unix uri
 
-INSTALLED_BIN = src/ramen_configurator src/insert_alert
+INSTALLED_BIN = src/ramen_configurator
 INSTALLED = $(INSTALLED_BIN)
 
 bin_dir ?= /usr/bin/
@@ -41,8 +41,7 @@ CONFIGURATOR_SOURCES = \
 	src/ramen_configurator.ml
 
 INSERT_ALERT_SOURCES = \
-	src/RamenLog.ml src/RamenHelpers.ml \
-	src/SqliteHelpers.ml src/insert_alert.ml
+	src/RamenLog.ml src/RamenHelpers.ml
 
 SOURCES = $(CONFIGURATOR_SOURCES) $(INSERT_ALERT_SOURCES)
 
@@ -67,10 +66,6 @@ src/Conf_of_sqlite.cmx: src/Conf_of_sqlite.ml
 	@$(OCAMLOPT) $(OCAMLOPTFLAGS) -package "$(PACKAGES)" -c $<
 
 src/ramen_configurator: $(CONFIGURATOR_SOURCES:.ml=.cmx)
-	@echo "Linking $@"
-	@$(OCAMLOPT) $(OCAMLOPTFLAGS) -linkpkg -package "$(PACKAGES)" $(filter %.cmx, $^) -o $@
-
-src/insert_alert: $(INSERT_ALERT_SOURCES:.ml=.cmx)
 	@echo "Linking $@"
 	@$(OCAMLOPT) $(OCAMLOPTFLAGS) -linkpkg -package "$(PACKAGES)" $(filter %.cmx, $^) -o $@
 

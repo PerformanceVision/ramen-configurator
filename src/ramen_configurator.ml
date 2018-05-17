@@ -104,18 +104,6 @@ let tcp_traffic_func ?where dataset_name name dt export =
                    | Some w -> op ^"\nWHERE "^ w in
   make_func name op
 
-(* Alerts:
- *
- * We want to direct all alerts into a custom SQLite database that other
- * programs will monitor.
- * This DB will have a single table named "alerts" with fields: "id", "name",
- * "started", "stopped", "title" and "text" (coming straight from the EXECUTE
- * parameters). The interesting field here is "text"; we will make it a JSON
- * string with more informations depending on the context: IPs, BCA/BCN, etc *)
-let alert_text fields =
-  "{"^ (List.map (fun (n, v) -> Printf.sprintf "%S:%S" n v) fields |>
-        String.concat ", ") ^"}"
-
 (* Anomaly Detection
  *
  * For any func which output interesting timeseries (interesting = that we hand
@@ -192,22 +180,23 @@ let anomaly_detection_funcs avg_window from name timeseries alert_fields export 
           ("abnormality_"^ ts ^" > 0.75") :: cond
         ) [] timeseries in
     let condition = String.concat " OR\n     " conditions in
-    let title = Printf.sprintf "%s is off" from
-    and alert_name = from ^" "^ name ^" looks abnormal"
-    and text = alert_text alert_fields in
+    let alert_name = from ^" "^ name ^" looks abnormal" in
     let op =
       Printf.sprintf
         {|FROM '%s'
           SELECT start,
           (%s) AS abnormality,
           hysteresis (5-ma abnormality, 3/5, 4/5) AS firing
-          COMMIT, EXECUTE
-            "insert_alert --name '%s' --firing '${firing}' --time '${start}' --title '%s' --text '%s'"
-            AND KEEP ALL AFTER firing != COALESCE(previous.firing, false)
+          COMMIT,
+            NOTIFY %S WITH PARAMETERS
+              "firing"="${firing}",
+              "time"="${start}"
+            AND KEEP ALL
+          AFTER firing != COALESCE(previous.firing, false)
           %sEVENT STARTING AT start|}
         predictor_name
         condition
-        (enc alert_name) (enc title) (enc text)
+        alert_name
         (if export_all export then "EXPORT " else "") in
     make_func (from ^": "^ name ^" anomalies") op in
   predictor_func, anomaly_func
@@ -1020,107 +1009,126 @@ let program_of_bcns bcns dataset_name export =
          bcn.avg_window in
     make_func perc_per_obs_window_name op ;
     Option.may (fun min_bps ->
-        let title = Printf.sprintf "Too little traffic from zone %s to %s"
-                      bcn.source_name bcn.dest_name
-        and text = alert_text [
-          "descr", Printf.sprintf
-                     "The traffic from zone %s to %s has sunk below \
-                      the configured minimum of %d for the last %g minutes."
-                      bcn.source_name bcn.dest_name
-                      min_bps (bcn.obs_window /. 60.) ;
-          "bcn_id", string_of_int bcn.id ] in
+        let alert_name =
+          Printf.sprintf "Lowt traffic from zone %s to %s"
+            bcn.source_name bcn.dest_name
+        and descr =
+          Printf.sprintf
+            "The traffic from zone %s to %s has sunk below \
+             the configured minimum of %d for the last %g minutes."
+             bcn.source_name bcn.dest_name
+             min_bps (bcn.obs_window /. 60.) in
         let op = Printf.sprintf
           {|SELECT
               max_start,
               hysteresis (bytes_per_secs, %d, %d) AS firing
             FROM '%s'
-            COMMIT, EXECUTE
-              "insert_alert --name 'Low traffic' --firing '${firing}' --time '${max_start}' --title '%s' --text '%s'"
-              AND KEEP ALL AFTER firing != COALESCE(previous.firing, false)
-            %sEVENT STARTING AT max_start"|}
+            COMMIT,
+              NOTIFY %S WITH PARAMETERS
+                "firing"="${firing}",
+                "time"="${max_start}",
+                "descr"=%S,
+                "bcn"="%d"
+              AND KEEP ALL
+            AFTER firing != COALESCE(previous.firing, false)
+            %sEVENT STARTING AT max_start|}
             (min_bps + min_bps/10) min_bps
             perc_per_obs_window_name
-            (enc title) (enc text)
+            alert_name descr bcn.id
             (if export_all export then "EXPORT " else "") in
         let name = Printf.sprintf "%s: alert traffic too low" name_prefix in
         make_func name op
       ) bcn.min_bps ;
     Option.may (fun max_bps ->
-        let title = Printf.sprintf "Too much traffic from zone %s to %s"
-                        bcn.source_name bcn.dest_name
-        and text = alert_text [
-          "descr", Printf.sprintf
-                     "The traffic from zones %s to %s has raised above \
-                      the configured maximum of %d for the last %g minutes."
-                      bcn.source_name bcn.dest_name
-                      max_bps (bcn.obs_window /. 60.) ;
-          "bcn_id", string_of_int bcn.id ] in
+        let alert_name =
+          Printf.sprintf "High traffic from zone %s to %s"
+            bcn.source_name bcn.dest_name
+        and descr =
+          Printf.sprintf
+            "The traffic from zones %s to %s has raised above \
+             the configured maximum of %d for the last %g minutes."
+             bcn.source_name bcn.dest_name
+             max_bps (bcn.obs_window /. 60.) in
         let op = Printf.sprintf
           {|SELECT
               max_start,
               hysteresis (bytes_per_secs, %d, %d) AS firing
             FROM '%s'
-            COMMIT, EXECUTE
-              "insert_alert --name 'High traffic' --firing '${firing}' --time '${max_start}' --title '%s' --text '%s'"
-              AND KEEP ALL AFTER firing != COALESCE(previous.firing, false)
+            COMMIT,
+              NOTIFY %S WITH PARAMETERS
+                "firing"="${firing}",
+                "time"="${max_start}",
+                "descr"=%S,
+                "bcn"="%d"
+              AND KEEP ALL
+            AFTER firing != COALESCE(previous.firing, false)
             %sEVENT STARTING AT max_start|}
             (max_bps - max_bps/10) max_bps
             perc_per_obs_window_name
-            (enc title) (enc text)
+            alert_name descr bcn.id
             (if export_all export then "EXPORT " else "") in
         let name = Printf.sprintf "%s: alert traffic too high" name_prefix in
         make_func name op
       ) bcn.max_bps ;
     Option.may (fun max_rtt ->
-        let title = Printf.sprintf "RTT too high from zone %s to %s"
-                      bcn.source_name bcn.dest_name
-        and text = alert_text [
-          "descr", Printf.sprintf
-                     "Traffic from zone %s to zone %s has an average RTT \
-                      of _rtt_, greater than the configured maximum of %gs, \
-                      for the last %g minutes."
-                      bcn.source_name bcn.dest_name
-                      max_rtt (bcn.obs_window /. 60.) ;
-          "bcn_id", string_of_int bcn.id ] in
+        let alert_name =
+          Printf.sprintf "RTT too high from zone %s to %s"
+            bcn.source_name bcn.dest_name
+        and descr =
+          Printf.sprintf
+            "Traffic from zone %s to zone %s has an average RTT \
+             of ${rtt}, greater than the configured maximum of %gs, \
+             for the last %g minutes."
+             bcn.source_name bcn.dest_name
+             max_rtt (bcn.obs_window /. 60.) in
         let op = Printf.sprintf
           {|SELECT
               max_start, rtt,
               hysteresis (rtt, %f, %f) AS firing
             FROM '%s'
-            COMMIT, EXECUTE
-              "insert_alert --name 'High RTT' --firing '${firing}' --time '${max_start}' --title '%s' --text '%s'"
-              AND KEEP ALL AFTER firing != COALESCE(previous.firing, false)
+            COMMIT, NOTIFY %S WITH PARAMETERS
+              "firing"="${firing}",
+              "time"="${max_start}",
+              "descr"=%S,
+              "bcn"="%d"
+              AND KEEP ALL
+            AFTER firing != COALESCE(previous.firing, false)
             %sEVENT STARTING AT max_start|}
             (max_rtt -. max_rtt /. 10.) max_rtt
             perc_per_obs_window_name
-            (enc title) (enc text |> rep "_rtt_" "${rtt}")
+            alert_name descr bcn.id
             (if export_all export then "EXPORT " else "") in
         let name = Printf.sprintf "%s: alert RTT" name_prefix in
         make_func name op
       ) bcn.max_rtt ;
     Option.may (fun max_rr ->
-        let title = Printf.sprintf "Too many retransmissions from zone %s to %s"
-                      bcn.source_name bcn.dest_name
-        and text = alert_text [
-          "descr", Printf.sprintf
-                     "Traffic from zone %s to zone %s has an average \
-                      retransmission rate of _rr_%%, greater than the \
-                      configured maximum of %gs, for the last %g minutes."
-                      bcn.source_name bcn.dest_name
-                      max_rr (bcn.obs_window /. 60.) ;
-          "bcn_id", string_of_int bcn.id ] in
+        let alert_name =
+          Printf.sprintf "Too many retransmissions from zone %s to %s"
+            bcn.source_name bcn.dest_name
+        and descr =
+          Printf.sprintf
+            "Traffic from zone %s to zone %s has an average \
+             retransmission rate of ${rr}%%, greater than the \
+             configured maximum of %gs, for the last %g minutes."
+             bcn.source_name bcn.dest_name
+             max_rr (bcn.obs_window /. 60.) in
         let op = Printf.sprintf
           {|SELECT
               max_start, rr,
               hysteresis (rr, %f, %f) AS firing
             FROM '%s'
-            COMMIT, EXECUTE
-              "insert_alert --name 'High RR' --firing '${firing}' --time '${max_start}' --title '%s' --text '%s'"
-              AND KEEP ALL AFTER firing != COALESCE(previous.firing, false)
+            COMMIT,
+              NOTIFY %S WITH PARAMETERS
+                "firing"="${firing}",
+                "time"="${max_start}",
+                "descr"=%S,
+                "bcn"="%d"
+              AND KEEP ALL
+            AFTER firing != COALESCE(previous.firing, false)
             %sEVENT STARTING AT max_start|}
             (max_rr -. max_rr /. 10.) max_rr
             perc_per_obs_window_name
-            (enc title) (enc text |> rep "_rr_" "${rr}")
+            alert_name descr bcn.id
             (if export_all export then "EXPORT " else "") in
         let name = Printf.sprintf "%s: alert RR" name_prefix in
         make_func name op
@@ -1348,28 +1356,32 @@ let program_of_bcas bcas dataset_name export =
          (if export_some export then "EXPORT " else "")
          bca.obs_window in
     make_func perc_per_obs_window_name op ;
-    let title =
+    let alert_name =
       Printf.sprintf "EURT to %s is too large" bca.name
-    and text = alert_text [
-      "descr", Printf.sprintf
+    and descr =
+      Printf.sprintf
         "The average end user response time to application %s has raised \
          above the configured maximum of %gs for the last %g minutes."
-         bca.name bca.max_eurt (bca.obs_window /. 60.) ;
-      "bca_id", string_of_int bca.id ;
-      "service_id", string_of_int bca.service_id ] in
+         bca.name bca.max_eurt (bca.obs_window /. 60.) in
     let op =
       Printf.sprintf
         {|SELECT
             max_start,
             hysteresis (eurt, %g, %g) AS firing
           FROM '%s'
-          COMMIT, EXECUTE
-            "insert_alert --name 'EURT %s' --firing '${firing}' --time '${max_start}' --title '%s' --text '%s'"
-            AND KEEP ALL AFTER firing != COALESCE(previous.firing, false)
+          COMMIT,
+            NOTIFY %S WITH PARAMETERS
+              "firing"="${firing}",
+              "time"="${max_start}",
+              "descr"=%S,
+              "bca"="%d",
+              "service_id"="%d"
+            AND KEEP ALL
+          AFTER firing != COALESCE(previous.firing, false)
           %sEVENT STARTING AT max_start|}
           (bca.max_eurt -. bca.max_eurt /. 10.) bca.max_eurt
           perc_per_obs_window_name
-          (enc bca.name) (enc title) (enc text)
+          alert_name descr bca.id bca.service_id
           (if export_all export then "EXPORT " else "") in
     let name = bca.name ^": EURT too high" in
     make_func name op ;
@@ -1495,8 +1507,10 @@ let sec_program dataset_name export =
     make_func "port_scan_alert"
       ({|FROM top_port_scans
          WHEN port_count > $MAX_PORTS$
-         EXECUTE
-            "insert_alert --name 'Port-Scan' --time '${start}' --title 'Port scan from ${client} to ${server}' --text '${client} has probed at least ${port_count} ports of ${server} from ${start} to ${end}'"|} |>
+         NOTIFY "Port-Scan from ${client} to ${server}" WITH PARAMETERS
+           "time"="${start}",
+           "descr"="${client} has probed at least ${port_count} ports of ${server} from ${start} to ${end}'",
+           "ips"="${client},${server}"|} |>
        rep "$MAX_PORTS$" (string_of_int max_ports))
   and ip_scan_detector top_n obs_win =
     make_func "top_ip_scans"
@@ -1524,16 +1538,17 @@ let sec_program dataset_name export =
     make_func "ip_scan_alert"
       ({|FROM top_ip_scans
          WHEN ip_count > $MAX_IPS$
-         EXECUTE
-            "insert_alert --name 'IP-Scan' --time '${start}' --title 'IP scan from ${client}' --text '${client} has probed at least ${ip_count} IPs from ${start} to ${end}'"|} |>
+         NOTIFY "IP-Scan from ${client}" WITH PARAMETERS
+           "time"="${start}",
+           "ips"="${client}"|} |>
        rep "$MAX_IPS$" (string_of_int max_ips))
   in
   program_name,
   program_of_funcs (
     ddos 100 3600 @
     (* one top every hour, as scans can be performed slowly *)
-    [ port_scan_detector 100 3600 ; port_scan_alert 100 ;
-      ip_scan_detector 100 3600 ; ip_scan_alert 200 ])
+    [ port_scan_detector 100 3600 ; port_scan_alert 30 ;
+      ip_scan_detector 100 3600 ; ip_scan_alert 100 ])
 
 (* Daemon *)
 
