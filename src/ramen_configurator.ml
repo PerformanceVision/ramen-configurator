@@ -1086,11 +1086,12 @@ let program_of_bcns bcns dataset_name export =
               max_start, rtt,
               hysteresis (rtt, %f, %f) AS firing
             FROM '%s'
-            COMMIT, NOTIFY %S WITH PARAMETERS
-              "firing"="${firing}",
-              "time"="${max_start}",
-              "descr"=%S,
-              "bcn"="%d"
+            COMMIT,
+              NOTIFY %S WITH PARAMETERS
+                "firing"="${firing}",
+                "time"="${max_start}",
+                "descr"=%S,
+                "bcn"="%d"
               AND KEEP ALL
             AFTER firing != COALESCE(previous.firing, false)
             %sEVENT STARTING AT max_start|}
