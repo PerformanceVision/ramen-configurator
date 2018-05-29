@@ -182,7 +182,7 @@ let anomaly_detection_funcs avg_window from name timeseries alert_fields export 
     let condition = String.concat " OR\n     " conditions in
     let alert_name = from ^" "^ name ^" looks abnormal" in
     let op =
-      Printf.sprintf
+      Printf.sprintf2
         {|FROM '%s'
           SELECT start,
           (%s) AS abnormality,
@@ -190,13 +190,16 @@ let anomaly_detection_funcs avg_window from name timeseries alert_fields export 
           COMMIT,
             NOTIFY %S WITH PARAMETERS
               "firing"="${firing}",
-              "time"="${start}"
+              "time"="${start}"%a
             AND KEEP ALL
           AFTER firing != COALESCE(previous.firing, false)
           %sEVENT STARTING AT start|}
         predictor_name
         condition
         alert_name
+        (List.print ~first:",\n" ~sep:",\n" ~last:"\n"
+          (fun oc (n, v) -> Printf.fprintf oc "%S=\"${%s}\"" n v))
+          alert_fields
         (if export_all export then "EXPORT " else "") in
     make_func (from ^": "^ name ^" anomalies") op in
   predictor_func, anomaly_func
@@ -1012,7 +1015,7 @@ let program_of_bcns bcns dataset_name export =
         let alert_name =
           Printf.sprintf "Lowt traffic from zone %s to %s"
             bcn.source_name bcn.dest_name
-        and descr =
+        and desc =
           Printf.sprintf
             "The traffic from zone %s to %s has sunk below \
              the configured minimum of %d for the last %g minutes."
@@ -1027,14 +1030,17 @@ let program_of_bcns bcns dataset_name export =
               NOTIFY %S WITH PARAMETERS
                 "firing"="${firing}",
                 "time"="${max_start}",
-                "descr"=%S,
-                "bcn"="%d"
+                "desc"=%S,
+                "bcn"="%d",
+                "values"="${bytes_per_secs}",
+                "thresholds"="%d"
               AND KEEP ALL
             AFTER firing != COALESCE(previous.firing, false)
             %sEVENT STARTING AT max_start|}
             (min_bps + min_bps/10) min_bps
             perc_per_obs_window_name
-            alert_name descr bcn.id
+            alert_name desc bcn.id
+            min_bps
             (if export_all export then "EXPORT " else "") in
         let name = Printf.sprintf "%s: alert traffic too low" name_prefix in
         make_func name op
@@ -1043,7 +1049,7 @@ let program_of_bcns bcns dataset_name export =
         let alert_name =
           Printf.sprintf "High traffic from zone %s to %s"
             bcn.source_name bcn.dest_name
-        and descr =
+        and desc =
           Printf.sprintf
             "The traffic from zones %s to %s has raised above \
              the configured maximum of %d for the last %g minutes."
@@ -1058,14 +1064,17 @@ let program_of_bcns bcns dataset_name export =
               NOTIFY %S WITH PARAMETERS
                 "firing"="${firing}",
                 "time"="${max_start}",
-                "descr"=%S,
-                "bcn"="%d"
+                "desc"=%S,
+                "bcn"="%d",
+                "values"="${bytes_per_secs}",
+                "thresholds"="%d"
               AND KEEP ALL
             AFTER firing != COALESCE(previous.firing, false)
             %sEVENT STARTING AT max_start|}
             (max_bps - max_bps/10) max_bps
             perc_per_obs_window_name
-            alert_name descr bcn.id
+            alert_name desc bcn.id
+            max_bps
             (if export_all export then "EXPORT " else "") in
         let name = Printf.sprintf "%s: alert traffic too high" name_prefix in
         make_func name op
@@ -1074,7 +1083,7 @@ let program_of_bcns bcns dataset_name export =
         let alert_name =
           Printf.sprintf "RTT too high from zone %s to %s"
             bcn.source_name bcn.dest_name
-        and descr =
+        and desc =
           Printf.sprintf
             "Traffic from zone %s to zone %s has an average RTT \
              of ${rtt}, greater than the configured maximum of %gs, \
@@ -1090,14 +1099,17 @@ let program_of_bcns bcns dataset_name export =
               NOTIFY %S WITH PARAMETERS
                 "firing"="${firing}",
                 "time"="${max_start}",
-                "descr"=%S,
-                "bcn"="%d"
+                "desc"=%S,
+                "bcn"="%d",
+                "values"="${rtt}",
+                "thresholds"="%f"
               AND KEEP ALL
             AFTER firing != COALESCE(previous.firing, false)
             %sEVENT STARTING AT max_start|}
             (max_rtt -. max_rtt /. 10.) max_rtt
             perc_per_obs_window_name
-            alert_name descr bcn.id
+            alert_name desc bcn.id
+            max_rtt
             (if export_all export then "EXPORT " else "") in
         let name = Printf.sprintf "%s: alert RTT" name_prefix in
         make_func name op
@@ -1106,7 +1118,7 @@ let program_of_bcns bcns dataset_name export =
         let alert_name =
           Printf.sprintf "Too many retransmissions from zone %s to %s"
             bcn.source_name bcn.dest_name
-        and descr =
+        and desc =
           Printf.sprintf
             "Traffic from zone %s to zone %s has an average \
              retransmission rate of ${rr}%%, greater than the \
@@ -1122,14 +1134,17 @@ let program_of_bcns bcns dataset_name export =
               NOTIFY %S WITH PARAMETERS
                 "firing"="${firing}",
                 "time"="${max_start}",
-                "descr"=%S,
-                "bcn"="%d"
+                "desc"=%S,
+                "bcn"="%d",
+                "values"="${rr}",
+                "thresholds"="%f"
               AND KEEP ALL
             AFTER firing != COALESCE(previous.firing, false)
             %sEVENT STARTING AT max_start|}
             (max_rr -. max_rr /. 10.) max_rr
             perc_per_obs_window_name
-            alert_name descr bcn.id
+            alert_name desc bcn.id
+            max_rr
             (if export_all export then "EXPORT " else "") in
         let name = Printf.sprintf "%s: alert RR" name_prefix in
         make_func name op
@@ -1138,8 +1153,8 @@ let program_of_bcns bcns dataset_name export =
       tcp_traffic_func ~where dataset_name (name_prefix ^": TCP minutely traffic") 60 export in
     all_funcs := minutely :: !all_funcs ;
     let alert_fields = [
-      "descr", "anomaly detected" ;
-      "bcn_id", string_of_int bcn.id ] in
+      "desc", "anomaly detected" ;
+      "bcn", string_of_int bcn.id ] in
     let anom name timeseries =
       let alert_fields = ("metric", name) :: alert_fields in
       let pred, anom =
@@ -1359,7 +1374,7 @@ let program_of_bcas bcas dataset_name export =
     make_func perc_per_obs_window_name op ;
     let alert_name =
       Printf.sprintf "EURT to %s is too large" bca.name
-    and descr =
+    and desc =
       Printf.sprintf
         "The average end user response time to application %s has raised \
          above the configured maximum of %gs for the last %g minutes."
@@ -1374,21 +1389,24 @@ let program_of_bcas bcas dataset_name export =
             NOTIFY %S WITH PARAMETERS
               "firing"="${firing}",
               "time"="${max_start}",
-              "descr"=%S,
+              "desc"=%S,
               "bca"="%d",
-              "service_id"="%d"
+              "service_id"="%d",
+              "values"="${eurt}",
+              "thresholds"="%g"
             AND KEEP ALL
           AFTER firing != COALESCE(previous.firing, false)
           %sEVENT STARTING AT max_start|}
           (bca.max_eurt -. bca.max_eurt /. 10.) bca.max_eurt
           perc_per_obs_window_name
-          alert_name descr bca.id bca.service_id
+          alert_name desc bca.id bca.service_id
+          bca.max_eurt
           (if export_all export then "EXPORT " else "") in
     let name = bca.name ^": EURT too high" in
     make_func name op ;
     let alert_fields = [
-      "descr", "anomaly detected" ;
-      "bca_id", string_of_int bca.id ] in
+      "desc", "anomaly detected" ;
+      "bca", string_of_int bca.id ] in
     let anom name timeseries =
       let alert_fields = ("metric", name) :: alert_fields in
       let pred, anom =
@@ -1476,7 +1494,7 @@ let sec_program dataset_name export =
         (float_of_int avg_win) "new peers" "DDoS"
         [ "nb_new_cnxs_per_secs", "nb_new_cnxs_per_secs > 1", false, [] ;
           "nb_new_clients_per_secs", "nb_new_clients_per_secs > 1", false, [] ]
-        [ "descr", "possible DDoS" ]
+        [ "desc", "possible DDoS" ]
         export in
     [ global_new_peers ; pred_func ; anom_func ]
   and port_scan_detector top_n obs_win =
@@ -1510,8 +1528,10 @@ let sec_program dataset_name export =
          WHEN port_count > $MAX_PORTS$
          NOTIFY "Port-Scan from ${client} to ${server}" WITH PARAMETERS
            "time"="${start}",
-           "descr"="${client} has probed at least ${port_count} ports of ${server} from ${start} to ${end}'",
-           "ips"="${client},${server}"|} |>
+           "desc"="${client} has probed at least ${port_count} ports of ${server} from ${start} to ${end}'",
+           "ips"="${client},${server}",
+           "values"="${port_count}",
+           "thresholds"="$MAX_PORTS$"|} |>
        rep "$MAX_PORTS$" (string_of_int max_ports))
   and ip_scan_detector top_n obs_win =
     make_func "top_ip_scans"
@@ -1541,7 +1561,9 @@ let sec_program dataset_name export =
          WHEN ip_count > $MAX_IPS$
          NOTIFY "IP-Scan from ${client}" WITH PARAMETERS
            "time"="${start}",
-           "ips"="${client}"|} |>
+           "ips"="${client}",
+           "values"="${ip_count}",
+           "thresholds"="$MAX_IPS$"|} |>
        rep "$MAX_IPS$" (string_of_int max_ips))
   in
   program_name,
