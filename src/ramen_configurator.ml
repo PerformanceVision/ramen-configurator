@@ -1605,8 +1605,9 @@ let run_program ramen_cmd root_dir (program_name, _) =
     !logger.error "Failed to run program %s with %S" program_name cmd
 
 let compile and_run ramen_cmd root_dir bundle_dir program =
-  if compile_program ramen_cmd root_dir bundle_dir program && and_run then
-    run_program ramen_cmd root_dir program
+  if compile_program ramen_cmd root_dir bundle_dir program && and_run then (
+    !logger.info "Running program %s/%s.x" root_dir (fst program) ;
+    run_program ramen_cmd root_dir program)
 
 let start debug monitor ramen_cmd root_dir bundle_dir db_name dataset_name
           delete uncompress csv_glob with_base with_bcns with_bcas with_sec
