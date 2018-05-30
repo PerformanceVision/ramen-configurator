@@ -29,3 +29,5 @@ src/insert_alert
 *.html
 *.deb
 debtmp/
+tmp/
+*.tgz

@@ -14,7 +14,7 @@ PACKAGES = \
 	batteries cmdliner stdint sqlite3 unix uri
 
 INSTALLED_BIN = src/ramen_configurator
-INSTALLED = $(INSTALLED_BIN)
+INSTALLED = $(INSTALLED_BIN) alert_sqlite.conf
 
 bin_dir ?= /usr/bin/
 
@@ -23,7 +23,7 @@ all: $(INSTALLED)
 # Generic rules
 
 .SUFFIXES: .ml .mli .cmi .cmx .cmxs .annot .html .adoc
-.PHONY: clean all dep install uninstall reinstall doc deb
+.PHONY: clean all dep install uninstall reinstall doc deb tarball
 
 %.cmx %.annot: %.ml
 	@echo "Compiling $@ (native code)"
@@ -86,6 +86,8 @@ reinstall: uninstall install
 
 deb: ramen_configurator.$(VERSION).deb
 
+tarball: ramen_configurator.$(VERSION).tgz
+
 ramen_configurator.$(VERSION).deb: $(INSTALLED) debian.control
 	@echo "Building debian package $@"
 	@sudo rm -rf debtmp
@@ -98,6 +100,14 @@ ramen_configurator.$(VERSION).deb: $(INSTALLED) debian.control
 	@dpkg --build debtmp
 	@mv debtmp.deb $@
 
+ramen_configurator.$(VERSION).tgz: $(INSTALLED)
+	@echo 'Building tarball $@'
+	@$(RM) -r tmp/ramen
+	@install -d tmp/ramen
+	@install $(INSTALLED) tmp/ramen/
+	@for f in $(INSTALLED_BIN) ; do chmod a+x tmp/ramen/$$(basename $$f) ; done
+	@tar c -C tmp ramen | gzip > $@
+
 # Cleaning
 
 clean:
@@ -109,4 +119,5 @@ clean:
 	@$(RM) .depend src/*.opt src/*.byte src/*.top
 	@$(RM) src/ramen_configurator
 	@sudo rm -rf debtmp
-	@$(RM) ramen_configurator.*.deb
+	@$(RM) -r tmp
+	@$(RM) ramen_configurator.*.deb ramen_configurator.*.tgz
