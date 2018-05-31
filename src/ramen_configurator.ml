@@ -1596,22 +1596,24 @@ let compile_program ramen_cmd root_dir bundle_dir (program_name, _ as program) =
     false
   )
 
-let run_program ramen_cmd root_dir (program_name, _) =
+let run_program ramen_cmd root_dir persist_dir (program_name, _) =
   let fname = shell_quote (root_dir ^"/"^ program_name ^".x") in
-  let cmd = Printf.sprintf2 "%s run %s" ramen_cmd fname in
+  let cmd =
+    Printf.sprintf2 "%s run --persist-dir=%S %s"
+      ramen_cmd persist_dir fname in
   if 0 = Sys.command cmd then
     !logger.debug "Run %s" program_name
   else
     !logger.error "Failed to run program %s with %S" program_name cmd
 
-let compile and_run ramen_cmd root_dir bundle_dir program =
+let compile and_run ramen_cmd root_dir bundle_dir persist_dir program =
   if compile_program ramen_cmd root_dir bundle_dir program && and_run then (
     !logger.info "Running program %s/%s.x" root_dir (fst program) ;
-    run_program ramen_cmd root_dir program)
+    run_program ramen_cmd root_dir persist_dir program)
 
-let start debug monitor ramen_cmd root_dir bundle_dir db_name dataset_name
-          delete uncompress csv_glob with_base with_bcns with_bcas with_sec
-          export_all and_run =
+let start debug monitor ramen_cmd root_dir bundle_dir persist_dir db_name
+          dataset_name delete uncompress csv_glob with_base with_bcns
+          with_bcas with_sec export_all and_run =
   logger := make_logger debug ;
   let open Conf_of_sqlite in
   let db = get_db db_name in
@@ -1620,21 +1622,21 @@ let start debug monitor ramen_cmd root_dir bundle_dir db_name dataset_name
     if with_base then (
       let base =
         base_program dataset_name delete uncompress csv_glob export_all in
-      compile and_run ramen_cmd root_dir bundle_dir base) ;
+      compile and_run ramen_cmd root_dir bundle_dir persist_dir base) ;
     if with_bcns > 0 || with_bcas > 0 then (
       let bcns, bcas = get_config_from_db db in
       let bcns = List.take with_bcns bcns
       and bcas = List.take with_bcas bcas in
       if bcns <> [] then (
         let bcns = program_of_bcns bcns dataset_name export_all in
-        compile and_run ramen_cmd root_dir bundle_dir bcns) ;
+        compile and_run ramen_cmd root_dir bundle_dir persist_dir bcns) ;
       if bcas <> [] then (
         let bcas = program_of_bcas bcas dataset_name export_all in
-        compile and_run ramen_cmd root_dir bundle_dir bcas)) ;
+        compile and_run ramen_cmd root_dir bundle_dir persist_dir bcas)) ;
     if with_sec then (
       (* Several bad behavior detectors, regrouped in a "Security" program. *)
       let sec = sec_program dataset_name export_all in
-      compile and_run ramen_cmd root_dir bundle_dir sec)
+      compile and_run ramen_cmd root_dir bundle_dir persist_dir sec)
   in
   update () ;
   if monitor then
@@ -1686,6 +1688,12 @@ let bundle_dir =
   let i = Arg.info ~doc:"Path of ramen runtime libraries"
                    ~env [ "bundle-dir" ] in
   Arg.(value (opt string "." i))
+
+let persist_dir =
+  let env = Term.env_info "RAMEN_PERSIST_DIR" in
+  let i = Arg.info ~doc:"Path where ramen stores its state"
+                   ~env [ "persist-dir" ] in
+  Arg.(value (opt string "/tmp/ramen" i))
 
 let delete_opt =
   let i = Arg.info ~doc:"Delete CSV files once injected"
@@ -1748,6 +1756,7 @@ let start_cmd =
       $ ramen_cmd
       $ root_dir
       $ bundle_dir
+      $ persist_dir
       $ db_name
       $ dataset_name
       $ delete_opt
