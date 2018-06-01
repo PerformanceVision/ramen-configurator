@@ -1467,15 +1467,15 @@ let sec_program dataset_name export =
          sum (1.1 * float(not remember (
                 0.1, -- 10% of false positives
                 capture_begin // 1_000_000, $REM_WIN$,
-                (hash (coalesce (ip4_client, ip6_client, 0)) +
-                 hash (coalesce (ip4_server, ip6_server, 0)))))) /
+                coalesce (ip4_client, ip6_client, 0),
+                coalesce (ip4_server, ip6_server, 0)))) /
            $AVG_WIN$
            AS nb_new_cnxs_per_secs,
          -- Clients we haven't seen in the last $REM_WIN$ secs.
          sum (1.1 * float(not remember (
                 0.1,
                 capture_begin // 1_000_000, $REM_WIN$,
-                hash (coalesce (ip4_client, ip6_client, 0))))) /
+                coalesce (ip4_client, ip6_client, 0)))) /
             $AVG_WIN$
             AS nb_new_clients_per_secs
        GROUP BY capture_begin // $AVG_WIN_US$
@@ -1501,13 +1501,16 @@ let sec_program dataset_name export =
     make_func "top_port_scans"
       ({|FROM $CSVS$
          MERGE ON capture_begin TIMEOUT AFTER 2 SECONDS
-         WHEN not remember globally (
-           0.1, capture_begin / 1_000_000, $WIN$,
-           -- We do not take into account IP proto, so a ping on a TCP port
-           -- grants you a free ping on the same UDP port.
-           hash (coalesce (ip4_client, ip6_client, 0)) +
-           hash (coalesce (ip4_server, ip6_server, 0)) +
-           port_server)
+         WHEN
+           NOT remember globally (
+             0.1, capture_begin / 1_000_000, $WIN$,
+             -- We do not take into account IP proto, so a ping on a TCP port
+             -- grants you a free ping on the same UDP port.
+             coalesce (ip4_client, ip6_client, 0),
+             coalesce (ip4_server, ip6_server, 0),
+             port_server) AND
+           IS coalesce (ip4_client, ip6_client, 0),
+              coalesce (ip4_server, ip6_server, 0) IN TOP $TOP_N$
          SELECT min (capture_begin / 1_000_000) AS start,
                 max (capture_end / 1_000_000) AS end,
                 coalesce (ip4_client, ip6_client, 0) as client,
@@ -1515,8 +1518,7 @@ let sec_program dataset_name export =
                 sum 1 as port_count
          GROUP BY coalesce (ip4_client, ip6_client, 0),
                   coalesce (ip4_server, ip6_server, 0)
-         TOP $TOP_N$ BY out.port_count
-             WHEN out.end - out.start > $WIN$
+         COMMIT BEFORE end - start > $WIN$
            $EXPORT$|} |>
        rep "$WIN$" (string_of_int obs_win) |>
        rep "$TOP_N$" (string_of_int top_n) |>
@@ -1537,19 +1539,20 @@ let sec_program dataset_name export =
     make_func "top_ip_scans"
       ({|FROM $CSVS$
          MERGE ON capture_begin TIMEOUT AFTER 2 SECONDS
-         WHEN not remember globally (
-           0.1, capture_begin / 1_000_000, $WIN$,
-           -- An IP scanner could use varying proto/port to detect host
-           -- presence so we just care about src and dst here:
-           hash (coalesce (ip4_client, ip6_client, 0)) +
-           hash (coalesce (ip4_server, ip6_server, 0)))
+         WHEN
+           NOT remember globally (
+             0.1, capture_begin / 1_000_000, $WIN$,
+             -- An IP scanner could use varying proto/port to detect host
+             -- presence so we just care about src and dst here:
+             coalesce (ip4_client, ip6_client, 0),
+             coalesce (ip4_server, ip6_server, 0)) AND
+           IS coalesce (ip4_client, ip6_client, 0) IN TOP $TOP_N$
          SELECT min (capture_begin / 1_000_000) AS start,
                 max (capture_end / 1_000_000) AS end,
                 coalesce (ip4_client, ip6_client, 0) as client,
                 sum 1 as ip_count
          GROUP BY coalesce (ip4_client, ip6_client, 0)
-         TOP $TOP_N$ BY out.ip_count
-             WHEN out.end - out.start > $WIN$
+         COMMIT BEFORE end - start > $WIN$
            $EXPORT$|} |>
        rep "$WIN$" (string_of_int obs_win) |>
        rep "$TOP_N$" (string_of_int top_n) |>
