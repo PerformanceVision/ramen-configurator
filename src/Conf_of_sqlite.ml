@@ -153,7 +153,7 @@ let flow_alert_params_query =
           rtt_alert_asc / 1000000.0 AS \"max_rtt\", \
           rr_alert_asc AS \"max_rr\" \
    FROM bcnthresholds \
-   WHERE \"max\" > 0 \
+   WHERE \"max\" > 0 OR \"max_rtt\" > 0 OR \"max_rr\" > 0
    UNION \
    SELECT id, \
           zone_to AS source, \
@@ -167,7 +167,7 @@ let flow_alert_params_query =
           rtt_alert_dsc / 1000000.0 AS \"max_rtt\", \
           rr_alert_dsc AS \"max_rr\" \
    FROM bcnthresholds \
-   WHERE \"max\" > 0 AND NOT is_symmetric \
+   WHERE (\"max\" > 0 OR \"max_rtt\" > 0 OR \"max_rr\" > 0) AND NOT is_symmetric \
    UNION \
    SELECT id, \
           zone_to AS source, \
@@ -181,7 +181,7 @@ let flow_alert_params_query =
           rtt_alert_asc / 1000000.0 AS \"max_rtt\", \
           rr_alert_asc AS \"max_rr\" \
     FROM bcnthresholds \
-    WHERE \"max\" > 0 AND is_symmetric"
+    WHERE (\"max\" > 0 OR \"max_rtt\" > 0 OR \"max_rr\" > 0) AND is_symmetric"
 
 (* Query to get the critical services: *)
 (* Note: avg_window is 6 mins since the traffic to BCA is smaller and alerts
