@@ -198,7 +198,7 @@ let anomaly_detection_funcs avg_window from name timeseries alert_fields export 
         condition
         alert_name
         (List.print ~first:",\n" ~sep:",\n" ~last:"\n"
-          (fun oc (n, v) -> Printf.fprintf oc "%S=\"${%s}\"" n v))
+          (fun oc (n, v) -> Printf.fprintf oc "%S=%S" n v))
           alert_fields
         (if export_all export then "EXPORT " else "") in
     make_func (from ^": "^ name ^" anomalies") op in
