@@ -933,9 +933,9 @@ let program_of_bcns bcns dataset_name export =
     let in_zone what_zone = function
       | [] -> "true"
       | lst ->
-        "("^ List.fold_left (fun s z ->
-          s ^ (if s <> "" then " OR " else "") ^
-          what_zone ^ " = " ^ string_of_int z) "" lst ^")" in
+        Printf.sprintf2 "%s IN [%a]"
+          what_zone
+          (List.print ~first:"" ~last:"" ~sep:";" Int.print) lst in
     let where =
       (in_zone "in.zone_src" bcn.source) ^" AND "^
       (in_zone "in.zone_dst" bcn.dest) in
@@ -1187,19 +1187,7 @@ let program_of_bcns bcns dataset_name export =
     anom "RD" [ "rd_avg", "sum_rd_count_src > 10", false, [] ] ;
     anom "DTT" [ "dtt_avg", "sum_dtt_count_src > 10", false, [] ]
   in
-  let max_nb_zones = 20 in
-  List.filter (fun bcn ->
-    let open Conf_of_sqlite.BCN in
-    let skip =
-      List.length bcn.source > max_nb_zones ||
-      List.length bcn.dest > max_nb_zones in
-    if skip then (
-      !logger.error "Skipping BCN from %s to %s, which has more than %d zones"
-        bcn.source_name bcn.dest_name max_nb_zones ;
-      false
-    ) else true
-  ) bcns |>
-  List.iter conf_of_bcn ;
+  List.iter conf_of_bcn bcns ;
   program_name,
   program_of_funcs !all_funcs
 
