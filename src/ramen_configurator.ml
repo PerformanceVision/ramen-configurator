@@ -212,7 +212,7 @@ let base_program dataset_name delete uncompress csv_glob =
                  ^ field ^"_"^ dst ^" AS "^ alias ^"_dst,\n") ""
     in
     let op =
-      "FROM '"^ rebase dataset_name csv ^"' SELECT\n"^
+      "FROM '"^ csv ^"' SELECT\n"^
       cs_fields ^ non_cs_fields ^"\n"^
       "WHERE traffic_packets_"^ src ^" > 0\n"^
       "EVENT STARTING AT capture_begin * 1e-6 \
