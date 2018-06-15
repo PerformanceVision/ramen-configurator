@@ -20,13 +20,11 @@ let enc = Uri.pct_encode
  * If you wish to process traffic info you must feed on both c2s and s2c.
  *)
 
-type def = { name : string ; op : string }
-let make_func name op = { name ; op }
+let make_func name op =
+  "DEFINE '"^ name ^"' AS "^ op ^";\n"
 
 let program_of_funcs funcs =
-  List.fold_left (fun s def ->
-    s ^ "DEFINE '"^ def.name ^"' AS "^ def.op ^";\n"
-  ) "" funcs
+  String.concat "\n" funcs
 
 let rep sub by str = String.nreplace ~str ~sub ~by
 
@@ -168,7 +166,7 @@ let anomaly_detection_funcs avg_window from name timeseries alert_fields export 
            start,\n  \
            %s\n\
          FROM '%s'\n\
-         %sEVENT STARTING AT start WITH DURATION %f"
+         %sEVENT STARTING AT start WITH DURATION %s"
         (String.concat ",\n  " (List.rev predictions))
         from
         (if export_all export then "EXPORT " else "")
@@ -1149,8 +1147,9 @@ let program_of_bcns bcns dataset_name export =
         let name = Printf.sprintf "%s: alert RR" name_prefix in
         make_func name op
       ) bcn.max_rr ;
+    let minutely_name = name_prefix ^": TCP minutely traffic" in
     let minutely =
-      tcp_traffic_func ~where dataset_name (name_prefix ^": TCP minutely traffic") 60 export in
+      tcp_traffic_func ~where dataset_name minutely_name 60 export in
     all_funcs := minutely :: !all_funcs ;
     let alert_fields = [
       "desc", "anomaly detected" ;
@@ -1158,7 +1157,7 @@ let program_of_bcns bcns dataset_name export =
     let anom name timeseries =
       let alert_fields = ("metric", name) :: alert_fields in
       let pred, anom =
-        anomaly_detection_funcs bcn.avg_window minutely.name name timeseries alert_fields export in
+        anomaly_detection_funcs (string_of_float bcn.avg_window) minutely_name name timeseries alert_fields export in
       all_funcs := pred :: anom :: !all_funcs in
     (* TODO: a volume anomaly for other protocols as well *)
     anom "volume"
@@ -1189,249 +1188,224 @@ let program_of_bcns bcns dataset_name export =
   in
   List.iter conf_of_bcn bcns ;
   program_name,
-  program_of_funcs !all_funcs
+  program_of_funcs (List.rev !all_funcs)
 
 (* Build the func infos corresponding to the BCA configuration *)
-let program_of_bcas bcas dataset_name export =
+let program_of_bcas dataset_name export =
   let program_name = rebase dataset_name "BCA" in
-  let all_funcs = ref [] in
-  let make_func name operation =
-    let func = make_func name operation in
-    all_funcs := func :: !all_funcs
+  let csv = rebase dataset_name "tcp" in
+  let averages =
+    {|FROM '$CSV$' SELECT
+        -- Key
+        (capture_begin * 0.000001 // u32(bca_avg_window)) * u32(bca_avg_window) AS start,
+        -- Traffic
+        sum traffic_bytes_client / bca_avg_window AS c2s_bytes_per_secs,
+        sum traffic_bytes_server / bca_avg_window AS s2c_bytes_per_secs,
+        sum traffic_packets_client / bca_avg_window AS c2s_packets_per_secs,
+        sum traffic_packets_server / bca_avg_window AS s2c_packets_per_secs,
+        -- Retransmissions
+        sum COALESCE(retrans_traffic_bytes_client, 0) / bca_avg_window
+          AS c2s_retrans_bytes_per_secs,
+        sum COALESCE(retrans_traffic_bytes_server, 0) / bca_avg_window
+          AS s2c_retrans_bytes_per_secs,
+        -- TCP flags
+        sum COALESCE(syn_count_client, 0) / bca_avg_window AS c2s_syns_per_secs,
+        sum COALESCE(fin_count_client, 0) / bca_avg_window AS c2s_fins_per_secs,
+        sum COALESCE(fin_count_server, 0) / bca_avg_window AS s2c_fins_per_secs,
+        sum COALESCE(rst_count_client, 0) / bca_avg_window AS c2s_rsts_per_secs,
+        sum COALESCE(rst_count_server, 0) / bca_avg_window AS s2c_rsts_per_secs,
+        sum COALESCE(close_count, 0) / bca_avg_window AS close_per_secs,
+        -- TCP issues
+        sum COALESCE(dupack_count_client, 0) / bca_avg_window AS c2s_dupacks_per_secs,
+        sum COALESCE(dupack_count_server, 0) / bca_avg_window AS s2c_dupacks_per_secs,
+        sum COALESCE(zero_window_count_client, 0) / bca_avg_window AS c2s_0wins_per_secs,
+        sum COALESCE(zero_window_count_server, 0) / bca_avg_window AS s2c_0wins_per_secs,
+        -- Connection Time
+        sum COALESCE(ct_count, 0) AS sum_ct_count,
+        sum ct_sum AS _sum_ct_sum,
+        sum_ct_count / bca_avg_window AS ct_per_secs,
+        IF sum_ct_count = 0 THEN 0 ELSE
+          (_sum_ct_sum / sum_ct_count) / 1e6 AS ct_avg,
+        IF sum_ct_count = 0 THEN 0 ELSE
+          sqrt (((sum ct_square_sum - (_sum_ct_sum)^2) /
+                 sum_ct_count) / 1e12) AS ct_stddev,
+        -- Server Response Time
+        sum COALESCE(rt_count_server, 0) AS sum_rt_count_server,
+        sum rt_sum_server AS _sum_rt_sum_server,
+        sum_rt_count_server / bca_avg_window AS srt_per_secs,
+        IF sum_rt_count_server = 0 THEN 0 ELSE
+          (_sum_rt_sum_server / sum_rt_count_server) / 1e6 AS srt_avg,
+        IF sum_rt_count_server = 0 THEN 0 ELSE
+          sqrt (((sum rt_square_sum_server - (_sum_rt_sum_server)^2) /
+                 sum_rt_count_server) / 1e12) AS srt_stddev,
+        -- Round Trip Time CSC
+        sum COALESCE(rtt_count_server, 0) AS sum_rtt_count_server,
+        sum rtt_sum_server AS _sum_rtt_sum_server,
+        sum_rtt_count_server / bca_avg_window AS crtt_per_secs,
+        IF sum_rtt_count_server = 0 THEN 0 ELSE
+          (_sum_rtt_sum_server / sum_rtt_count_server) / 1e6 AS crtt_avg,
+        IF sum_rtt_count_server = 0 THEN 0 ELSE
+          sqrt (((sum rtt_square_sum_server - (_sum_rtt_sum_server)^2) /
+                 sum_rtt_count_server) / 1e12) AS crtt_stddev,
+        -- Round Trip Time SCS
+        sum COALESCE(rtt_count_client, 0) AS sum_rtt_count_client,
+        sum rtt_sum_client AS _sum_rtt_sum_client,
+        sum_rtt_count_client / bca_avg_window AS srtt_per_secs,
+        IF sum_rtt_count_client = 0 THEN 0 ELSE
+          (_sum_rtt_sum_client / sum_rtt_count_client) / 1e6 AS srtt_avg,
+        IF sum_rtt_count_client = 0 THEN 0 ELSE
+          sqrt (((sum rtt_square_sum_client - (_sum_rtt_sum_client)^2) /
+                 sum_rtt_count_client) / 1e12) AS srtt_stddev,
+        -- Retransmition Delay C2S
+        sum COALESCE(rd_count_client, 0) AS sum_rd_count_client,
+        sum rd_sum_client AS _sum_rd_sum_client,
+        sum_rd_count_client / bca_avg_window AS crd_per_secs,
+        IF sum_rd_count_client = 0 THEN 0 ELSE
+          (_sum_rd_sum_client / sum_rd_count_client) / 1e6 AS crd_avg,
+        IF sum_rd_count_client = 0 THEN 0 ELSE
+          sqrt (((sum rd_square_sum_client - (_sum_rd_sum_client)^2) /
+                 sum_rd_count_client) / 1e12) AS crd_stddev,
+        -- Retransmition Delay S2C
+        sum COALESCE(rd_count_server, 0) AS sum_rd_count_server,
+        sum rd_sum_server AS _sum_rd_sum_server,
+        sum_rd_count_server / bca_avg_window AS srd_per_secs,
+        IF sum_rd_count_server = 0 THEN 0 ELSE
+          (_sum_rd_sum_server / sum_rd_count_server) / 1e6 AS srd_avg,
+        IF sum_rd_count_server = 0 THEN 0 ELSE
+          sqrt (((sum rd_square_sum_server - (_sum_rd_sum_server)^2) /
+                 sum_rd_count_server) / 1e12) AS srd_stddev,
+        -- Data Transfer Time C2S
+        sum COALESCE(dtt_count_client, 0) AS sum_dtt_count_client,
+        sum dtt_sum_client AS _sum_dtt_sum_client,
+        sum_dtt_count_client / bca_avg_window AS cdtt_per_secs,
+        IF sum_dtt_count_client = 0 THEN 0 ELSE
+          (_sum_dtt_sum_client / sum_dtt_count_client) / 1e6 AS cdtt_avg,
+        IF sum_dtt_count_client = 0 THEN 0 ELSE
+          sqrt (((sum dtt_square_sum_client - (_sum_dtt_sum_client)^2) /
+                 sum_dtt_count_client) / 1e12) AS cdtt_stddev,
+        -- Data Transfer Time S2C
+        sum COALESCE(dtt_count_server, 0) AS sum_dtt_count_server,
+        sum dtt_sum_server AS _sum_dtt_sum_server,
+        sum_dtt_count_server / bca_avg_window AS sdtt_per_secs,
+        IF sum_dtt_count_server = 0 THEN 0 ELSE
+          (_sum_dtt_sum_server / sum_dtt_count_server) / 1e6 AS sdtt_avg,
+        IF sum_dtt_count_server = 0 THEN 0 ELSE
+          sqrt (((sum dtt_square_sum_server - (_sum_dtt_sum_server)^2) /
+                 sum_dtt_count_server) / 1e12) AS sdtt_stddev
+      WHERE application = bca_id AND
+            -- Exclude netflow
+            retrans_traffic_bytes_client IS NOT NULL AND
+            retrans_traffic_bytes_server IS NOT NULL AND
+            syn_count_client IS NOT NULL AND
+            fin_count_client IS NOT NULL AND
+            fin_count_server IS NOT NULL AND
+            rst_count_client IS NOT NULL AND
+            rst_count_server IS NOT NULL AND
+            close_count IS NOT NULL AND
+            dupack_count_client IS NOT NULL AND
+            dupack_count_server IS NOT NULL AND
+            zero_window_count_client IS NOT NULL AND
+            zero_window_count_server IS NOT NULL AND
+            ct_count IS NOT NULL AND
+            rt_count_server IS NOT NULL AND
+            rtt_count_server IS NOT NULL AND
+            rtt_count_client IS NOT NULL AND
+            rd_count_client IS NOT NULL AND
+            rd_count_server IS NOT NULL AND
+            dtt_count_client IS NOT NULL AND
+            dtt_count_server IS NOT NULL
+      GROUP BY capture_begin * 0.000001 // u32(bca_avg_window)
+      COMMIT AFTER
+        in.capture_begin * 0.000001 > out.start + 2 * bca_avg_window
+      $EXPORT$ EVENT STARTING AT start WITH DURATION bca_avg_window|} |>
+    rep "$CSV$" csv |>
+    rep "$EXPORT$" (if export_all export then "EXPORT" else "") in
+  let percentile =
+    (* Note: The event start at the end of the observation window and lasts
+     * for one avg window! *)
+    (* EURT = RTTs + SRT + DTTs (DTT server to client being optional) *)
+    (* FIXME: sum of percentiles rather than percentiles of avg *)
+    Printf.sprintf
+      {|FROM averages SELECT
+         min start, max start,
+         srtt_avg, crtt_avg, srt_avg, cdtt_avg, sdtt_avg,
+         bca_percentile percentile (
+          srtt_avg + crtt_avg + srt_avg + cdtt_avg + sdtt_avg) AS eurt
+       COMMIT AND SLIDE 1 AFTER
+         group.#count >= i32(bca_obs_window / bca_avg_window) OR
+         in.start > out.max_start + 5
+       %sEVENT STARTING AT max_start WITH DURATION bca_obs_window|}
+       (if export_some export then "EXPORT " else "")
   in
-  let conf_of_bca bca =
-    let open Conf_of_sqlite.BCA in
-    let avg_window_int = int_of_float bca.avg_window in
-    let avg_per_app = bca.name in
-    let csv = rebase dataset_name "tcp" in
-    let op =
-      {|FROM '$CSV$' SELECT
-          -- Key
-          (capture_begin * 0.000001 // $AVG_INT$) * $AVG_INT$ AS start,
-          -- Traffic
-          sum traffic_bytes_client / $AVG$ AS c2s_bytes_per_secs,
-          sum traffic_bytes_server / $AVG$ AS s2c_bytes_per_secs,
-          sum traffic_packets_client / $AVG$ AS c2s_packets_per_secs,
-          sum traffic_packets_server / $AVG$ AS s2c_packets_per_secs,
-          -- Retransmissions
-          sum COALESCE(retrans_traffic_bytes_client, 0) / $AVG$
-            AS c2s_retrans_bytes_per_secs,
-          sum COALESCE(retrans_traffic_bytes_server, 0) / $AVG$
-            AS s2c_retrans_bytes_per_secs,
-          -- TCP flags
-          sum COALESCE(syn_count_client, 0) / $AVG$ AS c2s_syns_per_secs,
-          sum COALESCE(fin_count_client, 0) / $AVG$ AS c2s_fins_per_secs,
-          sum COALESCE(fin_count_server, 0) / $AVG$ AS s2c_fins_per_secs,
-          sum COALESCE(rst_count_client, 0) / $AVG$ AS c2s_rsts_per_secs,
-          sum COALESCE(rst_count_server, 0) / $AVG$ AS s2c_rsts_per_secs,
-          sum COALESCE(close_count, 0) / $AVG$ AS close_per_secs,
-          -- TCP issues
-          sum COALESCE(dupack_count_client, 0) / $AVG$ AS c2s_dupacks_per_secs,
-          sum COALESCE(dupack_count_server, 0) / $AVG$ AS s2c_dupacks_per_secs,
-          sum COALESCE(zero_window_count_client, 0) / $AVG$ AS c2s_0wins_per_secs,
-          sum COALESCE(zero_window_count_server, 0) / $AVG$ AS s2c_0wins_per_secs,
-          -- Connection Time
-          sum COALESCE(ct_count, 0) AS sum_ct_count,
-          sum ct_sum AS _sum_ct_sum,
-          sum_ct_count / $AVG$ AS ct_per_secs,
-          IF sum_ct_count = 0 THEN 0 ELSE
-            (_sum_ct_sum / sum_ct_count) / 1e6 AS ct_avg,
-          IF sum_ct_count = 0 THEN 0 ELSE
-            sqrt (((sum ct_square_sum - (_sum_ct_sum)^2) /
-                   sum_ct_count) / 1e12) AS ct_stddev,
-          -- Server Response Time
-          sum COALESCE(rt_count_server, 0) AS sum_rt_count_server,
-          sum rt_sum_server AS _sum_rt_sum_server,
-          sum_rt_count_server / $AVG$ AS srt_per_secs,
-          IF sum_rt_count_server = 0 THEN 0 ELSE
-            (_sum_rt_sum_server / sum_rt_count_server) / 1e6 AS srt_avg,
-          IF sum_rt_count_server = 0 THEN 0 ELSE
-            sqrt (((sum rt_square_sum_server - (_sum_rt_sum_server)^2) /
-                   sum_rt_count_server) / 1e12) AS srt_stddev,
-          -- Round Trip Time CSC
-          sum COALESCE(rtt_count_server, 0) AS sum_rtt_count_server,
-          sum rtt_sum_server AS _sum_rtt_sum_server,
-          sum_rtt_count_server / $AVG$ AS crtt_per_secs,
-          IF sum_rtt_count_server = 0 THEN 0 ELSE
-            (_sum_rtt_sum_server / sum_rtt_count_server) / 1e6 AS crtt_avg,
-          IF sum_rtt_count_server = 0 THEN 0 ELSE
-            sqrt (((sum rtt_square_sum_server - (_sum_rtt_sum_server)^2) /
-                   sum_rtt_count_server) / 1e12) AS crtt_stddev,
-          -- Round Trip Time SCS
-          sum COALESCE(rtt_count_client, 0) AS sum_rtt_count_client,
-          sum rtt_sum_client AS _sum_rtt_sum_client,
-          sum_rtt_count_client / $AVG$ AS srtt_per_secs,
-          IF sum_rtt_count_client = 0 THEN 0 ELSE
-            (_sum_rtt_sum_client / sum_rtt_count_client) / 1e6 AS srtt_avg,
-          IF sum_rtt_count_client = 0 THEN 0 ELSE
-            sqrt (((sum rtt_square_sum_client - (_sum_rtt_sum_client)^2) /
-                   sum_rtt_count_client) / 1e12) AS srtt_stddev,
-          -- Retransmition Delay C2S
-          sum COALESCE(rd_count_client, 0) AS sum_rd_count_client,
-          sum rd_sum_client AS _sum_rd_sum_client,
-          sum_rd_count_client / $AVG$ AS crd_per_secs,
-          IF sum_rd_count_client = 0 THEN 0 ELSE
-            (_sum_rd_sum_client / sum_rd_count_client) / 1e6 AS crd_avg,
-          IF sum_rd_count_client = 0 THEN 0 ELSE
-            sqrt (((sum rd_square_sum_client - (_sum_rd_sum_client)^2) /
-                   sum_rd_count_client) / 1e12) AS crd_stddev,
-          -- Retransmition Delay S2C
-          sum COALESCE(rd_count_server, 0) AS sum_rd_count_server,
-          sum rd_sum_server AS _sum_rd_sum_server,
-          sum_rd_count_server / $AVG$ AS srd_per_secs,
-          IF sum_rd_count_server = 0 THEN 0 ELSE
-            (_sum_rd_sum_server / sum_rd_count_server) / 1e6 AS srd_avg,
-          IF sum_rd_count_server = 0 THEN 0 ELSE
-            sqrt (((sum rd_square_sum_server - (_sum_rd_sum_server)^2) /
-                   sum_rd_count_server) / 1e12) AS srd_stddev,
-          -- Data Transfer Time C2S
-          sum COALESCE(dtt_count_client, 0) AS sum_dtt_count_client,
-          sum dtt_sum_client AS _sum_dtt_sum_client,
-          sum_dtt_count_client / $AVG$ AS cdtt_per_secs,
-          IF sum_dtt_count_client = 0 THEN 0 ELSE
-            (_sum_dtt_sum_client / sum_dtt_count_client) / 1e6 AS cdtt_avg,
-          IF sum_dtt_count_client = 0 THEN 0 ELSE
-            sqrt (((sum dtt_square_sum_client - (_sum_dtt_sum_client)^2) /
-                   sum_dtt_count_client) / 1e12) AS cdtt_stddev,
-          -- Data Transfer Time S2C
-          sum COALESCE(dtt_count_server, 0) AS sum_dtt_count_server,
-          sum dtt_sum_server AS _sum_dtt_sum_server,
-          sum_dtt_count_server / $AVG$ AS sdtt_per_secs,
-          IF sum_dtt_count_server = 0 THEN 0 ELSE
-            (_sum_dtt_sum_server / sum_dtt_count_server) / 1e6 AS sdtt_avg,
-          IF sum_dtt_count_server = 0 THEN 0 ELSE
-            sqrt (((sum dtt_square_sum_server - (_sum_dtt_sum_server)^2) /
-                   sum_dtt_count_server) / 1e12) AS sdtt_stddev
-        WHERE application = $ID$ AND
-              -- Exclude netflow
-              retrans_traffic_bytes_client IS NOT NULL AND
-              retrans_traffic_bytes_server IS NOT NULL AND
-              syn_count_client IS NOT NULL AND
-              fin_count_client IS NOT NULL AND
-              fin_count_server IS NOT NULL AND
-              rst_count_client IS NOT NULL AND
-              rst_count_server IS NOT NULL AND
-              close_count IS NOT NULL AND
-              dupack_count_client IS NOT NULL AND
-              dupack_count_server IS NOT NULL AND
-              zero_window_count_client IS NOT NULL AND
-              zero_window_count_server IS NOT NULL AND
-              ct_count IS NOT NULL AND
-              rt_count_server IS NOT NULL AND
-              rtt_count_server IS NOT NULL AND
-              rtt_count_client IS NOT NULL AND
-              rd_count_client IS NOT NULL AND
-              rd_count_server IS NOT NULL AND
-              dtt_count_client IS NOT NULL AND
-              dtt_count_server IS NOT NULL
-        GROUP BY capture_begin * 0.000001 // $AVG_INT$
-        COMMIT AFTER
-          in.capture_begin * 0.000001 > out.start + 2 * $AVG$
-        $EXPORT$ EVENT STARTING AT start WITH DURATION $AVG$|} |>
-      rep "$CSV$" csv |>
-      rep "$ID$" (string_of_int bca.service_id) |>
-      rep "$AVG_INT$" (string_of_int avg_window_int) |>
-      rep "$AVG$" (string_of_float bca.avg_window) |>
-      rep "$EXPORT$" (if export_all export then "EXPORT" else "")
-    in
-    make_func avg_per_app op ;
-    let perc_per_obs_window_name =
-      Printf.sprintf "%s: %gth perc on last %gs"
-        bca.name bca.percentile bca.obs_window in
-    let op =
-      let nb_items_per_groups =
-        round_to_int (bca.obs_window /. bca.avg_window) in
-      (* Note: The event start at the end of the observation window and lasts
-       * for one avg window! *)
-      (* EURT = RTTs + SRT + DTTs (DTT server to client being optional *)
-      (* FIXME: sum of percentiles rather than percentiles of avg *)
-      Printf.sprintf
-        {|FROM '%s' SELECT
-           min start, max start,
-           srtt_avg, crtt_avg, srt_avg, cdtt_avg, sdtt_avg,
-           %gth percentile (
-            srtt_avg + crtt_avg + srt_avg + cdtt_avg + sdtt_avg) AS eurt
-         COMMIT AND SLIDE 1 AFTER
-           group.#count >= %d OR
-           in.start > out.max_start + 5
-         %sEVENT STARTING AT max_start WITH DURATION %g|}
-         avg_per_app bca.percentile
-         nb_items_per_groups
-         (if export_some export then "EXPORT " else "")
-         bca.obs_window in
-    make_func perc_per_obs_window_name op ;
-    let alert_name =
-      Printf.sprintf "EURT to %s is too large" bca.name
-    and desc =
-      Printf.sprintf
-        "The average end user response time to application %s has raised \
-         above the configured maximum of %gs for the last %g minutes."
-         bca.name bca.max_eurt (bca.obs_window /. 60.) in
-    let op =
-      Printf.sprintf
-        {|SELECT
-            max_start,
-            hysteresis (eurt, %g, %g) AS firing
-          FROM '%s'
-          COMMIT,
-            NOTIFY %S WITH PARAMETERS
-              "firing"="${firing}",
-              "time"="${max_start}",
-              "desc"=%S,
-              "bca"="%d",
-              "service_id"="%d",
-              "values"="${eurt}",
-              "thresholds"="%g"
-            AND KEEP ALL
-          AFTER firing != COALESCE(previous.firing, false)
-          %sEVENT STARTING AT max_start|}
-          (bca.max_eurt -. bca.max_eurt /. 10.) bca.max_eurt
-          perc_per_obs_window_name
-          alert_name desc bca.id bca.service_id
-          bca.max_eurt
-          (if export_all export then "EXPORT " else "") in
-    let name = bca.name ^": EURT too high" in
-    make_func name op ;
-    let alert_fields = [
-      "desc", "anomaly detected" ;
-      "bca", string_of_int bca.id ] in
-    let anom name timeseries =
-      let alert_fields = ("metric", name) :: alert_fields in
-      let pred, anom =
-        anomaly_detection_funcs bca.avg_window avg_per_app name timeseries alert_fields export in
-      all_funcs := pred :: anom :: !all_funcs in
+  let eurt_too_high =
+    Printf.sprintf
+      {|SELECT
+          max_start,
+          hysteresis (eurt, bca_max_eurt - bca_max_eurt/10, bca_max_eurt) AS firing
+        FROM percentile
+        COMMIT,
+          NOTIFY "EURT to ${param.bca_name} is too large" WITH PARAMETERS
+            "firing"="${firing}",
+            "time"="${max_start}",
+            "desc"="The average end user response time to application ${param.bca_name} has raised above the configured maximum of ${param.bca_max_eurt}s for the last ${param.bca_obs_window} seconds.",
+            "bca"="${param.bca_id}",
+            "service_id"="${param.bca_service_id}",
+            "values"="${eurt}",
+            "thresholds"="${param.bca_max_eurt}"
+          AND KEEP ALL
+        AFTER firing != COALESCE(previous.firing, false)
+        %sEVENT STARTING AT max_start|}
+        (if export_all export then "EXPORT " else "") in
+  let anom name timeseries funcs =
+    let alert_fields =
+      [ "metric", name ; "desc", "anomaly detected" ; "bca", "${param.bca_id}" ] in
+    let pred, anom =
+      anomaly_detection_funcs "bca_avg_window" "averages" name timeseries alert_fields export in
+    pred :: anom :: funcs in
+  let funcs =
     anom "volume"
       [ "c2s_bytes_per_secs", "c2s_bytes_per_secs > 1000", false, [] ;
         "s2c_bytes_per_secs", "s2c_bytes_per_secs > 1000", false, [] ;
         "c2s_packets_per_secs", "c2s_packets_per_secs > 10", false, [] ;
-        "s2c_packets_per_secs", "s2c_packets_per_secs > 10", false, [] ] ;
+        "s2c_packets_per_secs", "s2c_packets_per_secs > 10", false, [] ] [] |>
     anom "retransmissions"
       [ "c2s_retrans_bytes_per_secs", "c2s_retrans_bytes_per_secs > 1000", false, [] ;
         "s2c_retrans_bytes_per_secs", "s2c_retrans_bytes_per_secs > 1000", false, [] ;
         "c2s_dupacks_per_secs", "c2s_dupacks_per_secs > 10", false, [] ;
-        "s2c_dupacks_per_secs", "s2c_dupacks_per_secs > 10", false, [] ] ;
+        "s2c_dupacks_per_secs", "s2c_dupacks_per_secs > 10", false, [] ] |>
     anom "connections"
       [ "c2s_syns_per_secs", "c2s_syns_per_secs > 1", false, [] ;
         "s2c_rsts_per_secs", "s2c_rsts_per_secs > 1", false, [] ;
         "close_per_secs", "close_per_secs > 1", false, [] ;
-        "ct_avg", "sum_ct_count > 10", false, [] ] ;
+        "ct_avg", "sum_ct_count > 10", false, [] ] |>
     anom "0-windows"
       [ "c2s_0wins_per_secs", "c2s_0wins_per_secs > 1", false, [] ;
-        "s2c_0wins_per_secs", "s2c_0wins_per_secs > 1", false, [] ] ;
-    anom "SRT" [ "srt_avg", "sum_rt_count_server > 10", false, [] ] ;
+        "s2c_0wins_per_secs", "s2c_0wins_per_secs > 1", false, [] ] |>
+    anom "SRT" [ "srt_avg", "sum_rt_count_server > 10", false, [] ] |>
     anom "RTT"
       [ "crtt_avg", "sum_rtt_count_server > 10", false, [] ;
-        "srtt_avg", "sum_rtt_count_client > 10", false, [] ] ;
+        "srtt_avg", "sum_rtt_count_client > 10", false, [] ] |>
     anom "RD"
       [ "crd_avg", "sum_rd_count_client > 10", false, [] ;
-        "srd_avg", "sum_rd_count_server > 10", false, [] ] ;
+        "srd_avg", "sum_rd_count_server > 10", false, [] ] |>
     anom "DTT"
       [ "cdtt_avg", "sum_dtt_count_client > 10", false, [] ;
         "sdtt_avg", "sum_dtt_count_server > 10", false, [] ]
   in
-  List.iter conf_of_bca bcas ;
-  program_name,
-  program_of_funcs !all_funcs
+  let funcs =
+    "PARAMETERS bca_id DEFAULTS TO 0\n\
+     \tAND bca_service_id DEFAULTS TO 0\n\
+     \tAND bca_name DEFAULTS TO \"\"\n\
+     \tAND bca_max_eurt DEFAULTS TO 0.0\n\
+     \tAND bca_avg_window DEFAULTS TO 360.0\n\
+     \tAND bca_obs_window DEFAULTS TO 600.0\n\
+     \tAND bca_percentile DEFAULTS TO 90.0\n\
+     \tAND bca_min_handshake_count DEFAULTS TO 0;\n" ::
+    make_func "averages" averages ::
+    make_func "percentile" percentile ::
+    make_func "EURT too high" eurt_too_high ::
+    List.rev funcs in
+  program_name, program_of_funcs funcs
 
 let get_config_from_db db =
   Conf_of_sqlite.get_config db
@@ -1479,7 +1453,7 @@ let sec_program dataset_name export =
       make_func "new peers" op_new_peers in
     let pred_func, anom_func =
       anomaly_detection_funcs
-        (float_of_int avg_win) "new peers" "DDoS"
+        (string_of_int avg_win) "new peers" "DDoS"
         [ "nb_new_cnxs_per_secs", "nb_new_cnxs_per_secs > 1", false, [] ;
           "nb_new_clients_per_secs", "nb_new_clients_per_secs > 1", false, [] ]
         [ "desc", "possible DDoS" ]
@@ -1586,55 +1560,73 @@ let compile_program ramen_cmd root_dir bundle_dir fname =
     false
   )
 
-let run_program ramen_cmd root_dir persist_dir fname =
+let run_program ramen_cmd root_dir persist_dir fname params =
   let cmd =
-    Printf.sprintf2 "%s run --persist-dir=%S %s"
-      ramen_cmd persist_dir fname in
+    Printf.sprintf2 "%s run --persist-dir %s %a %s"
+      ramen_cmd
+      (shell_quote persist_dir)
+      (List.print ~first:"" ~last:"" ~sep:" " (fun oc (n, v) ->
+        Printf.fprintf oc "-p %s" (shell_quote (n ^"="^ v)))) params
+      (shell_quote fname) in
+  !logger.info "Running: %s" cmd ;
   if 0 = Sys.command cmd then
     !logger.debug "Run %s" fname
   else
     !logger.error "Failed to run program %s with %S" fname cmd
 
-let compile_file and_run ramen_cmd root_dir bundle_dir persist_dir fname =
-  if compile_program ramen_cmd root_dir bundle_dir fname && and_run then (
-    let bin_name =
-      root_dir ^"/"^ Filename.(basename (remove_extension fname)) ^".x" in
-    !logger.info "Running program %s" bin_name ;
-    run_program ramen_cmd root_dir persist_dir bin_name)
+let compile_file ramen_cmd root_dir bundle_dir persist_dir fname params =
+  if compile_program ramen_cmd root_dir bundle_dir fname then (
+    let bin_name = Filename.(remove_extension fname) ^".x" in
+    List.iter (fun params ->
+      !logger.info "Running program %s with parameters %a"
+        bin_name (List.print (Tuple2.print String.print String.print)) params ;
+      run_program ramen_cmd root_dir persist_dir bin_name params
+    ) params)
 
-let compile_code and_run ramen_cmd root_dir bundle_dir persist_dir program =
+let compile_code ramen_cmd root_dir bundle_dir persist_dir program params =
   let fname = write_program root_dir program in
-  compile_file and_run ramen_cmd root_dir bundle_dir persist_dir fname
+  compile_file ramen_cmd root_dir bundle_dir persist_dir fname params
 
 let start debug monitor ramen_cmd root_dir bundle_dir persist_dir db_name
           dataset_name delete uncompress csv_glob with_extra with_base
-          with_bcns with_bcas with_sec export_all and_run =
+          with_bcns with_bcas with_sec export_all =
   logger := make_logger debug ;
   let open Conf_of_sqlite in
   let db = get_db db_name in
   let update () =
     List.iter (fun extra ->
       let root_dir = Filename.dirname extra in
-      compile_file and_run ramen_cmd root_dir bundle_dir persist_dir extra
+      compile_file ramen_cmd root_dir bundle_dir persist_dir extra []
     ) with_extra ;
     if with_base then (
-      let base =
+      let prog =
         base_program dataset_name delete uncompress csv_glob export_all in
-      compile_code and_run ramen_cmd root_dir bundle_dir persist_dir base) ;
+      compile_code ramen_cmd root_dir bundle_dir persist_dir prog []) ;
     if with_bcns > 0 || with_bcas > 0 then (
       let bcns, bcas = get_config_from_db db in
       let bcns = List.take with_bcns bcns
       and bcas = List.take with_bcas bcas in
       if bcns <> [] then (
-        let bcns = program_of_bcns bcns dataset_name export_all in
-        compile_code and_run ramen_cmd root_dir bundle_dir persist_dir bcns) ;
-      if bcas <> [] then (
-        let bcas = program_of_bcas bcas dataset_name export_all in
-        compile_code and_run ramen_cmd root_dir bundle_dir persist_dir bcas)) ;
+        let prog = program_of_bcns bcns dataset_name export_all in
+        compile_code ramen_cmd root_dir bundle_dir persist_dir prog [[]]) ;
+      let params =
+        List.fold_left (fun lst bca ->
+          BCA.[
+            "bca_id", string_of_int bca.id ;
+            "bca_service_id", string_of_int bca.service_id ;
+            "bca_name", Printf.sprintf "%S" bca.name ;
+            "bca_max_eurt", string_of_float bca.max_eurt ;
+            "bca_avg_window", string_of_float bca.avg_window ;
+            "bca_obs_window", string_of_float bca.obs_window ;
+            "bca_min_handshake_count", string_of_int bca.min_srt_count
+          ] :: lst
+        ) [] bcas in
+      let prog = program_of_bcas dataset_name export_all in
+      compile_code ramen_cmd root_dir bundle_dir persist_dir prog params) ;
     if with_sec then (
       (* Several bad behavior detectors, regrouped in a "Security" program. *)
-      let sec = sec_program dataset_name export_all in
-      compile_code and_run ramen_cmd root_dir bundle_dir persist_dir sec)
+      let prog = sec_program dataset_name export_all in
+      compile_code ramen_cmd root_dir bundle_dir persist_dir prog [[]])
   in
   update () ;
   if monitor then
@@ -1747,11 +1739,6 @@ let exports =
                                debugging but expensive in CPU and IO)"
                          [ "export-all" ] ]))
 
-let and_run =
-  let i = Arg.info ~doc:"Also run the compiled programs"
-                   [ "run" ; "and-run" ] in
-  Arg.(value (flag i))
-
 let start_cmd =
   Term.(
     (const start
@@ -1771,8 +1758,7 @@ let start_cmd =
       $ with_bcns
       $ with_bcas
       $ with_security
-      $ exports
-      $ and_run),
+      $ exports),
     info "ramen_configurator")
 
 let () =
