@@ -2,10 +2,6 @@ open Batteries
 open RamenLog
 open RamenHelpers
 
-type export_what = ExportAll | ExportSome | ExportNone
-let export_some = function ExportAll | ExportSome -> true | _ -> false
-let export_all = function ExportAll -> true | _ -> false
-
 let rebase dataset_name name = dataset_name ^"/"^ name
 
 let enc = Uri.pct_encode
@@ -31,7 +27,7 @@ let rep sub by str = String.nreplace ~str ~sub ~by
 let print_squoted oc = Printf.fprintf oc "'%s'"
 
 (* Aggregating TCP metrics for alert discovery: *)
-let tcp_traffic_func ?where dataset_name name dt export =
+let tcp_traffic_func ?where dataset_name name dt =
   let dt_us = dt * 1_000_000 in
   let parents =
     List.map (rebase dataset_name) ["c2s tcp"; "s2c tcp"] |>
@@ -91,11 +87,10 @@ let tcp_traffic_func ?where dataset_name name dt export =
      GROUP BY capture_begin // $DT_US$
      COMMIT AFTER
        in.capture_begin > out.min_capture_begin + 2 * u64($DT_US$)
-     $EXPORT$ EVENT STARTING AT start WITH DURATION $DT$|} |>
+     EVENT STARTING AT start WITH DURATION $DT$|} |>
     rep "$DT$" (string_of_int dt) |>
     rep "$DT_US$" (string_of_int dt_us) |>
-    rep "$PARENTS$" parents |>
-    rep "$EXPORT$" (if export_some export then "EXPORT " else "")
+    rep "$PARENTS$" parents
   in
   let op =
     match where with None -> op
@@ -112,7 +107,7 @@ let tcp_traffic_func ?where dataset_name name dt export =
  * things. A good trade-off is to have one func per BCN/BCA.
  * For each timeseries to predict, we also pass a list of other timeseries that
  * we think are good predictors. *)
-let anomaly_detection_funcs avg_window from name timeseries alert_fields export =
+let anomaly_detection_funcs avg_window from name timeseries alert_fields =
   assert (timeseries <> []) ;
   let stand_alone_predictors = [ "smooth(" ; "fit(5, " ; "5-ma(" ; "lag(" ]
   and multi_predictors = [ "fit_multi(5, " ] in
@@ -166,10 +161,9 @@ let anomaly_detection_funcs avg_window from name timeseries alert_fields export 
            start,\n  \
            %s\n\
          FROM '%s'\n\
-         %sEVENT STARTING AT start WITH DURATION %s"
+         EVENT STARTING AT start WITH DURATION %s"
         (String.concat ",\n  " (List.rev predictions))
         from
-        (if export_all export then "EXPORT " else "")
         avg_window in
     make_func predictor_name op in
   let anomaly_func =
@@ -191,18 +185,17 @@ let anomaly_detection_funcs avg_window from name timeseries alert_fields export 
               "time"="${start}"%a
             AND KEEP ALL
           AFTER firing != COALESCE(previous.firing, false)
-          %sEVENT STARTING AT start|}
+          EVENT STARTING AT start|}
         predictor_name
         condition
         alert_name
         (List.print ~first:",\n" ~sep:",\n" ~last:"\n"
           (fun oc (n, v) -> Printf.fprintf oc "%S=%S" n v))
-          alert_fields
-        (if export_all export then "EXPORT " else "") in
+          alert_fields in
     make_func (from ^": "^ name ^" anomalies") op in
   predictor_func, anomaly_func
 
-let base_program dataset_name delete uncompress csv_glob export =
+let base_program dataset_name delete uncompress csv_glob =
   (* Outlines of CSV importers: *)
   let csv_import csv fields =
     "READ"^ (if delete then " AND DELETE" else "") ^
@@ -222,9 +215,8 @@ let base_program dataset_name delete uncompress csv_glob export =
       "FROM '"^ rebase dataset_name csv ^"' SELECT\n"^
       cs_fields ^ non_cs_fields ^"\n"^
       "WHERE traffic_packets_"^ src ^" > 0\n"^
-      if export_all export then "EXPORT\n" else "" ^{|
-         EVENT STARTING AT capture_begin * 1e-6
-           AND STOPPING AT capture_end * 1e-6|} in
+      "EVENT STARTING AT capture_begin * 1e-6 \
+       AND STOPPING AT capture_end * 1e-6" in
     make_func name op in
   (* TCP CSV Importer: *)
   let tcp = csv_import "tcp" {|
@@ -912,7 +904,7 @@ let base_program dataset_name delete uncompress csv_glob export =
     dns ; http ; citrix ; citrix_chanless ; smb ; sql ; voip ]
 
 (* Build the func infos corresponding to the BCN configuration *)
-let program_of_bcns bcns dataset_name export =
+let program_of_bcns bcns dataset_name =
   let program_name = rebase dataset_name "BCN" in
   let all_funcs = ref [] in
   let make_func name operation =
@@ -964,7 +956,7 @@ let program_of_bcns bcns dataset_name export =
           GROUP BY capture_begin // %d
           COMMIT AFTER
             in.capture_begin > out.min_capture_begin + 2 * u64(%d)
-          %sEVENT STARTING AT start WITH DURATION %g|}
+          EVENT STARTING AT start WITH DURATION %g|}
         (rebase dataset_name "c2s tcp") (rebase dataset_name "s2c tcp")
         (rebase dataset_name "c2s udp") (rebase dataset_name "s2c udp")
         (rebase dataset_name "c2s icmp") (rebase dataset_name "s2c icmp")
@@ -977,7 +969,6 @@ let program_of_bcns bcns dataset_name export =
         where
         avg_window
         avg_window
-        (if export_all export then "EXPORT " else "")
         bcn.avg_window
         (* Note: Ideally we would want to compute the max of all.capture_begin *)
     in
@@ -1002,11 +993,10 @@ let program_of_bcns bcns dataset_name export =
          COMMIT AND SLIDE 1 AFTER
            group.#count >= %d OR
            in.start > out.max_start + 5
-         %sEVENT STARTING AT max_capture_end * 0.000001 WITH DURATION %g|}
+         EVENT STARTING AT max_capture_end * 0.000001 WITH DURATION %g|}
          avg_per_zones_name
          bcn.percentile bcn.percentile bcn.percentile
          nb_items_per_groups
-         (if export_some export then "EXPORT " else "")
          bcn.avg_window in
     make_func perc_per_obs_window_name op ;
     Option.may (fun min_bps ->
@@ -1034,12 +1024,11 @@ let program_of_bcns bcns dataset_name export =
                 "thresholds"="%d"
               AND KEEP ALL
             AFTER firing != COALESCE(previous.firing, false)
-            %sEVENT STARTING AT max_start|}
+            EVENT STARTING AT max_start|}
             (min_bps + min_bps/10) min_bps
             perc_per_obs_window_name
             alert_name desc bcn.id
-            min_bps
-            (if export_all export then "EXPORT " else "") in
+            min_bps in
         let name = Printf.sprintf "%s: alert traffic too low" name_prefix in
         make_func name op
       ) bcn.min_bps ;
@@ -1068,12 +1057,11 @@ let program_of_bcns bcns dataset_name export =
                 "thresholds"="%d"
               AND KEEP ALL
             AFTER firing != COALESCE(previous.firing, false)
-            %sEVENT STARTING AT max_start|}
+            EVENT STARTING AT max_start|}
             (max_bps - max_bps/10) max_bps
             perc_per_obs_window_name
             alert_name desc bcn.id
-            max_bps
-            (if export_all export then "EXPORT " else "") in
+            max_bps in
         let name = Printf.sprintf "%s: alert traffic too high" name_prefix in
         make_func name op
       ) bcn.max_bps ;
@@ -1103,12 +1091,11 @@ let program_of_bcns bcns dataset_name export =
                 "thresholds"="%f"
               AND KEEP ALL
             AFTER firing != COALESCE(previous.firing, false)
-            %sEVENT STARTING AT max_start|}
+            EVENT STARTING AT max_start|}
             (max_rtt -. max_rtt /. 10.) max_rtt
             perc_per_obs_window_name
             alert_name desc bcn.id
-            max_rtt
-            (if export_all export then "EXPORT " else "") in
+            max_rtt in
         let name = Printf.sprintf "%s: alert RTT" name_prefix in
         make_func name op
       ) bcn.max_rtt ;
@@ -1138,18 +1125,17 @@ let program_of_bcns bcns dataset_name export =
                 "thresholds"="%f"
               AND KEEP ALL
             AFTER firing != COALESCE(previous.firing, false)
-            %sEVENT STARTING AT max_start|}
+            EVENT STARTING AT max_start|}
             (max_rr -. max_rr /. 10.) max_rr
             perc_per_obs_window_name
             alert_name desc bcn.id
-            max_rr
-            (if export_all export then "EXPORT " else "") in
+            max_rr in
         let name = Printf.sprintf "%s: alert RR" name_prefix in
         make_func name op
       ) bcn.max_rr ;
     let minutely_name = name_prefix ^": TCP minutely traffic" in
     let minutely =
-      tcp_traffic_func ~where dataset_name minutely_name 60 export in
+      tcp_traffic_func ~where dataset_name minutely_name 60 in
     all_funcs := minutely :: !all_funcs ;
     let alert_fields = [
       "desc", "anomaly detected" ;
@@ -1157,7 +1143,7 @@ let program_of_bcns bcns dataset_name export =
     let anom name timeseries =
       let alert_fields = ("metric", name) :: alert_fields in
       let pred, anom =
-        anomaly_detection_funcs (string_of_float bcn.avg_window) minutely_name name timeseries alert_fields export in
+        anomaly_detection_funcs (string_of_float bcn.avg_window) minutely_name name timeseries alert_fields in
       all_funcs := pred :: anom :: !all_funcs in
     (* TODO: a volume anomaly for other protocols as well *)
     anom "volume"
@@ -1191,7 +1177,7 @@ let program_of_bcns bcns dataset_name export =
   program_of_funcs (List.rev !all_funcs)
 
 (* Build the func infos corresponding to the BCA configuration *)
-let program_of_bcas dataset_name export =
+let program_of_bcas dataset_name =
   let program_name = rebase dataset_name "BCA" in
   let csv = rebase dataset_name "tcp" in
   let averages =
@@ -1317,9 +1303,8 @@ let program_of_bcas dataset_name export =
       GROUP BY capture_begin * 0.000001 // u32(bca_avg_window)
       COMMIT AFTER
         in.capture_begin * 0.000001 > out.start + 2 * bca_avg_window
-      $EXPORT$ EVENT STARTING AT start WITH DURATION bca_avg_window|} |>
-    rep "$CSV$" csv |>
-    rep "$EXPORT$" (if export_all export then "EXPORT" else "") in
+      EVENT STARTING AT start WITH DURATION bca_avg_window|} |>
+    rep "$CSV$" csv in
   let percentile =
     (* Note: The event start at the end of the observation window and lasts
      * for one avg window! *)
@@ -1334,8 +1319,7 @@ let program_of_bcas dataset_name export =
        COMMIT AND SLIDE 1 AFTER
          group.#count >= i32(bca_obs_window / bca_avg_window) OR
          in.start > out.max_start + 5
-       %sEVENT STARTING AT max_start WITH DURATION bca_obs_window|}
-       (if export_some export then "EXPORT " else "")
+       EVENT STARTING AT max_start WITH DURATION bca_obs_window|}
   in
   let eurt_too_high =
     Printf.sprintf
@@ -1354,13 +1338,12 @@ let program_of_bcas dataset_name export =
             "thresholds"="${param.bca_max_eurt}"
           AND KEEP ALL
         AFTER firing != COALESCE(previous.firing, false)
-        %sEVENT STARTING AT max_start|}
-        (if export_all export then "EXPORT " else "") in
+        EVENT STARTING AT max_start|} in
   let anom name timeseries funcs =
     let alert_fields =
       [ "metric", name ; "desc", "anomaly detected" ; "bca", "${param.bca_id}" ] in
     let pred, anom =
-      anomaly_detection_funcs "bca_avg_window" "averages" name timeseries alert_fields export in
+      anomaly_detection_funcs "bca_avg_window" "averages" name timeseries alert_fields in
     pred :: anom :: funcs in
   let funcs =
     anom "volume"
@@ -1410,7 +1393,7 @@ let program_of_bcas dataset_name export =
 let get_config_from_db db =
   Conf_of_sqlite.get_config db
 
-let sec_program dataset_name export =
+let sec_program dataset_name =
   let program_name = rebase dataset_name "Security" in
   let rebase_list csvs =
     List.map (fun p -> "'"^ rebase dataset_name p ^"'") csvs |>
@@ -1443,12 +1426,11 @@ let sec_program dataset_name export =
        GROUP BY capture_begin // $AVG_WIN_US$
        COMMIT AFTER
          in.capture_begin > out.min_capture_begin + 2 * u64($AVG_WIN_US$)
-       $EXPORT$ EVENT STARTING AT start WITH DURATION $AVG_WIN$|} |>
+       EVENT STARTING AT start WITH DURATION $AVG_WIN$|} |>
       rep "$AVG_WIN_US$" (string_of_int avg_win_us) |>
       rep "$AVG_WIN$" (string_of_int avg_win) |>
       rep "$REM_WIN$" (string_of_int rem_win) |>
-      rep "$CSVS$" (rebase_list ["tcp" ; "udp" ; "icmp" ; "other-ip"]) |>
-      rep "$EXPORT$" (if export_some export then "EXPORT" else "") in
+      rep "$CSVS$" (rebase_list ["tcp" ; "udp" ; "icmp" ; "other-ip"]) in
     let global_new_peers =
       make_func "new peers" op_new_peers in
     let pred_func, anom_func =
@@ -1456,8 +1438,7 @@ let sec_program dataset_name export =
         (string_of_int avg_win) "new peers" "DDoS"
         [ "nb_new_cnxs_per_secs", "nb_new_cnxs_per_secs > 1", false, [] ;
           "nb_new_clients_per_secs", "nb_new_clients_per_secs > 1", false, [] ]
-        [ "desc", "possible DDoS" ]
-        export in
+        [ "desc", "possible DDoS" ] in
     [ global_new_peers ; pred_func ; anom_func ]
   and port_scan_detector top_n obs_win =
     make_func "top_port_scans"
@@ -1480,12 +1461,10 @@ let sec_program dataset_name export =
                 sum 1 as port_count
          GROUP BY coalesce (ip4_client, ip6_client, 0),
                   coalesce (ip4_server, ip6_server, 0)
-         COMMIT BEFORE end - start > $WIN$
-           $EXPORT$|} |>
+         COMMIT BEFORE end - start > $WIN$|} |>
        rep "$WIN$" (string_of_int obs_win) |>
        rep "$TOP_N$" (string_of_int top_n) |>
-       rep "$CSVS$" (rebase_list ["tcp" ; "udp"]) |>
-       rep "$EXPORT$" (if export_some export then "EXPORT" else ""))
+       rep "$CSVS$" (rebase_list ["tcp" ; "udp"]))
   and port_scan_alert max_ports =
     make_func "port_scan_alert"
       ({|FROM top_port_scans
@@ -1514,12 +1493,10 @@ let sec_program dataset_name export =
                 coalesce (ip4_client, ip6_client, 0) as client,
                 sum 1 as ip_count
          GROUP BY coalesce (ip4_client, ip6_client, 0)
-         COMMIT BEFORE end - start > $WIN$
-           $EXPORT$|} |>
+         COMMIT BEFORE end - start > $WIN$|} |>
        rep "$WIN$" (string_of_int obs_win) |>
        rep "$TOP_N$" (string_of_int top_n) |>
-       rep "$CSVS$" (rebase_list ["tcp" ; "udp" ; "icmp" ; "other-ip"]) |>
-       rep "$EXPORT$" (if export_some export then "EXPORT" else ""))
+       rep "$CSVS$" (rebase_list ["tcp" ; "udp" ; "icmp" ; "other-ip"]))
   and ip_scan_alert max_ips =
     make_func "ip_scan_alert"
       ({|FROM top_ip_scans
@@ -1589,7 +1566,7 @@ let compile_code ramen_cmd root_dir bundle_dir persist_dir program params =
 
 let start debug monitor ramen_cmd root_dir bundle_dir persist_dir db_name
           dataset_name delete uncompress csv_glob with_extra with_base
-          with_bcns with_bcas with_sec export_all =
+          with_bcns with_bcas with_sec =
   logger := make_logger debug ;
   let open Conf_of_sqlite in
   let db = get_db db_name in
@@ -1600,14 +1577,14 @@ let start debug monitor ramen_cmd root_dir bundle_dir persist_dir db_name
     ) with_extra ;
     if with_base then (
       let prog =
-        base_program dataset_name delete uncompress csv_glob export_all in
+        base_program dataset_name delete uncompress csv_glob in
       compile_code ramen_cmd root_dir bundle_dir persist_dir prog []) ;
     if with_bcns > 0 || with_bcas > 0 then (
       let bcns, bcas = get_config_from_db db in
       let bcns = List.take with_bcns bcns
       and bcas = List.take with_bcas bcas in
       if bcns <> [] then (
-        let prog = program_of_bcns bcns dataset_name export_all in
+        let prog = program_of_bcns bcns dataset_name in
         compile_code ramen_cmd root_dir bundle_dir persist_dir prog [[]]) ;
       let params =
         List.fold_left (fun lst bca ->
@@ -1621,11 +1598,11 @@ let start debug monitor ramen_cmd root_dir bundle_dir persist_dir db_name
             "bca_min_handshake_count", string_of_int bca.min_srt_count
           ] :: lst
         ) [] bcas in
-      let prog = program_of_bcas dataset_name export_all in
+      let prog = program_of_bcas dataset_name in
       compile_code ramen_cmd root_dir bundle_dir persist_dir prog params) ;
     if with_sec then (
       (* Several bad behavior detectors, regrouped in a "Security" program. *)
-      let prog = sec_program dataset_name export_all in
+      let prog = sec_program dataset_name in
       compile_code ramen_cmd root_dir bundle_dir persist_dir prog [[]])
   in
   update () ;
@@ -1729,16 +1706,6 @@ let with_security =
                      (* old *) "with-ddos" ; "with-dos" ; "ddos" ; "dos" ] in
   Arg.(value (flag i))
 
-let exports =
-  Arg.(value (vflag ExportNone [
-    ExportNone, Arg.info ~doc:"No func will export data (the default)"
-                         [ "export-none" ; "no-exports" ] ;
-    ExportSome, Arg.info ~doc:"A few important funcs will export data"
-                         [ "export-some" ; "exports" ] ;
-    ExportAll,  Arg.info ~doc:"All func will export data (useful for \
-                               debugging but expensive in CPU and IO)"
-                         [ "export-all" ] ]))
-
 let start_cmd =
   Term.(
     (const start
@@ -1757,8 +1724,7 @@ let start_cmd =
       $ with_base
       $ with_bcns
       $ with_bcas
-      $ with_security
-      $ exports),
+      $ with_security),
     info "ramen_configurator")
 
 let () =
