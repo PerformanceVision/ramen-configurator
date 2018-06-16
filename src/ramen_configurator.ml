@@ -1552,6 +1552,7 @@ let run_program ramen_cmd root_dir persist_dir fname params =
     !logger.error "Failed to run program %s with %S" fname cmd
 
 let compile_file ramen_cmd root_dir bundle_dir persist_dir fname params =
+  assert (params <> []) ;
   if compile_program ramen_cmd root_dir bundle_dir fname then (
     let bin_name = Filename.(remove_extension fname) ^".x" in
     List.iter (fun params ->
@@ -1578,7 +1579,7 @@ let start debug monitor ramen_cmd root_dir bundle_dir persist_dir db_name
     if with_base then (
       let prog =
         base_program dataset_name delete uncompress csv_glob in
-      compile_code ramen_cmd root_dir bundle_dir persist_dir prog []) ;
+      compile_code ramen_cmd root_dir bundle_dir persist_dir prog [[]]) ;
     if with_bcns > 0 || with_bcas > 0 then (
       let bcns, bcas = get_config_from_db db in
       let bcns = List.take with_bcns bcns
