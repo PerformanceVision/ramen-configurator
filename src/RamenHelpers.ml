@@ -72,3 +72,8 @@ let getenv ?def n =
     | None ->
       Printf.sprintf "Cannot find envvar %s" n |>
       failwith
+
+let dquote s = Printf.sprintf "%S" s
+
+let vector_print p oc v =
+  List.print ~first:"[" ~last:"]" ~sep:";" p oc v
