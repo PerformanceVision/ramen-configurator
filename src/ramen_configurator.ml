@@ -1203,7 +1203,7 @@ let program_of_bcas dataset_name =
         IF sum_dtt_count_server = 0 THEN 0 ELSE
           sqrt (((sum dtt_square_sum_server - (_sum_dtt_sum_server)^2) /
                  sum_dtt_count_server) / 1e12) AS sdtt_stddev
-      WHERE application = id AND
+      WHERE application = service_id AND
             -- Exclude netflow
             retrans_traffic_bytes_client IS NOT NULL AND
             retrans_traffic_bytes_server IS NOT NULL AND
