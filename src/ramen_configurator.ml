@@ -1501,7 +1501,7 @@ let start debug monitor ramen_cmd root_dir bundle_dir persist_dir db_name
   let update () =
     List.iter (fun extra ->
       let root_dir = Filename.dirname extra in
-      compile_file ramen_cmd root_dir bundle_dir persist_dir extra []
+      compile_file ramen_cmd root_dir bundle_dir persist_dir extra [[]]
     ) with_extra ;
     if with_base then (
       let prog =
