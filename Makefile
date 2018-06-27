@@ -1,6 +1,7 @@
 # Configuration
 
 VERSION = 1.2.0
+RAMEN_VERSION = 2.2.4
 
 DUPS_IN = $(shell ocamlfind ocamlc -where)/compiler-libs
 OCAMLOPT   = OCAMLPATH=$(OCAMLPATH) OCAMLRUNPARAM= OCAMLFIND_IGNORE_DUPS_IN="$(DUPS_IN)" ocamlfind ocamlopt
@@ -23,7 +24,8 @@ all: $(INSTALLED)
 # Generic rules
 
 .SUFFIXES: .ml .mli .cmi .cmx .cmxs .annot .html .adoc
-.PHONY: clean all dep install uninstall reinstall doc deb tarball
+.PHONY: clean all dep install uninstall reinstall doc deb tarball \
+        docker-latest docker-push
 
 %.cmx %.annot: %.ml
 	@echo "Compiling $@ (native code)"
@@ -107,6 +109,17 @@ ramen_configurator.$(VERSION).tgz: $(INSTALLED)
 	@install $(INSTALLED) tmp/ramen/
 	@for f in $(INSTALLED_BIN) ; do chmod a+x tmp/ramen/$$(basename $$f) ; done
 	@tar c -C tmp ramen | gzip > $@
+
+# Docker images
+
+docker-latest: docker/Dockerfile docker/ramen_configurator.$(VERSION).deb docker/ramen.$(RAMEN_VERSION).deb
+	@echo 'Building docker image for nevrax v5.0.x'
+	@docker build -t rixed/ramen:pv-5.0.x --squash -f $< docker/
+
+docker-push:
+	@echo 'Uploading docker images'
+	@docker push rixed/ramen:pv-5.0.x
+
 
 # Cleaning
 
