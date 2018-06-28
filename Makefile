@@ -112,7 +112,14 @@ ramen_configurator.$(VERSION).tgz: $(INSTALLED)
 
 # Docker images
 
-docker-latest: docker/Dockerfile docker/ramen_configurator.$(VERSION).deb docker/ramen.$(RAMEN_VERSION).deb
+docker/alert.conf: alert_sqlite.conf
+	@ln $< $@
+
+docker/ramen_configurator.$(VERSION).deb: ramen_configurator.$(VERSION).deb
+	@ln $< $@
+
+docker-latest: docker/Dockerfile docker/alert.conf docker/protocols docker/services docker/start \
+               docker/ramen_configurator.$(VERSION).deb docker/ramen.$(RAMEN_VERSION).deb
 	@echo 'Building docker image for nevrax v5.0.x'
 	@docker build -t rixed/ramen:pv-5.0.x --squash -f $< docker/
 
