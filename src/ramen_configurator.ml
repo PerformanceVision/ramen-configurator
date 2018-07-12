@@ -178,7 +178,7 @@ let anomaly_detection_funcs avg_window from name timeseries alert_fields =
         {|FROM '%s'
           SELECT start,
           (%s) AS abnormality,
-          hysteresis (5-ma abnormality, 3/5, 4/5) AS firing
+          hysteresis (5-ma float(abnormality), 3/5, 4/5) AS firing
           COMMIT,
             NOTIFY %S WITH PARAMETERS
               "firing"="${firing}",
