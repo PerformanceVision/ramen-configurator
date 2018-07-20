@@ -55,21 +55,21 @@ let tcp_traffic_func ?where dataset_name name dt =
        sum COALESCE(rtt_count_src, 0) AS sum_rtt_count_src,
        sum rtt_sum_src AS _sum_rtt_sum_src,
        (_sum_rtt_sum_src / sum_rtt_count_src) / 1e6 AS rtt_avg,
-       ((sum rtt_sum2_src - float(_sum_rtt_sum_src)^2 / sum_rtt_count_src) /
+       ((float(sum rtt_sum2_src) - float(_sum_rtt_sum_src)^2 / sum_rtt_count_src) /
            sum_rtt_count_src) / 1e12 AS rtt_var,
        sum COALESCE(rd_count_src, 0) AS sum_rd_count_src,
        sum rd_sum_src AS _sum_rd_sum_src,
        (_sum_rd_sum_src / sum_rd_count_src) / 1e6 AS rd_avg,
-       ((sum rd_sum2_src - float(_sum_rd_sum_src)^2 / sum_rd_count_src) /
+       ((float(sum rd_sum2_src) - float(_sum_rd_sum_src)^2 / sum_rd_count_src) /
            sum_rd_count_src) / 1e12 AS rd_var,
        sum COALESCE(dtt_count_src, 0) AS sum_dtt_count_src,
        sum dtt_sum_src AS _sum_dtt_sum_src,
        (_sum_dtt_sum_src / sum_dtt_count_src) / 1e6 AS dtt_avg,
-       ((sum dtt_sum2_src - float(_sum_dtt_sum_src)^2 / sum_dtt_count_src) /
+       ((float(sum dtt_sum2_src) - float(_sum_dtt_sum_src)^2 / sum_dtt_count_src) /
            sum_dtt_count_src) / 1e12 AS dtt_var,
        sum connections_time AS _sum_connections_time,
        (_sum_connections_time / _sum_connections) / 1e6 AS connection_time_avg,
-       ((sum connections_time2 - float(_sum_connections_time)^2 / _sum_connections) /
+       ((float(sum connections_time2) - float(_sum_connections_time)^2 / _sum_connections) /
            _sum_connections) / 1e12 AS connection_time_var
      -- Exclude netflow traffic
      WHERE retrans_bytes_src IS NOT NULL AND
@@ -1138,7 +1138,7 @@ let program_of_bcas dataset_name =
         IF sum_ct_count = 0 THEN 0 ELSE
           (_sum_ct_sum / sum_ct_count) / 1e6 AS ct_avg,
         IF sum_ct_count = 0 THEN 0 ELSE
-          sqrt (((sum ct_square_sum - (_sum_ct_sum)^2) /
+          sqrt (((float(sum ct_square_sum) - (_sum_ct_sum)^2) /
                  sum_ct_count) / 1e12) AS ct_stddev,
         -- Server Response Time
         sum COALESCE(rt_count_server, 0) AS sum_rt_count_server,
@@ -1147,7 +1147,7 @@ let program_of_bcas dataset_name =
         IF sum_rt_count_server = 0 THEN 0 ELSE
           (_sum_rt_sum_server / sum_rt_count_server) / 1e6 AS srt_avg,
         IF sum_rt_count_server = 0 THEN 0 ELSE
-          sqrt (((sum rt_square_sum_server - (_sum_rt_sum_server)^2) /
+          sqrt (((float(sum rt_square_sum_server) - (_sum_rt_sum_server)^2) /
                  sum_rt_count_server) / 1e12) AS srt_stddev,
         -- Round Trip Time CSC
         sum COALESCE(rtt_count_server, 0) AS sum_rtt_count_server,
@@ -1156,7 +1156,7 @@ let program_of_bcas dataset_name =
         IF sum_rtt_count_server = 0 THEN 0 ELSE
           (_sum_rtt_sum_server / sum_rtt_count_server) / 1e6 AS crtt_avg,
         IF sum_rtt_count_server = 0 THEN 0 ELSE
-          sqrt (((sum rtt_square_sum_server - (_sum_rtt_sum_server)^2) /
+          sqrt (((float(sum rtt_square_sum_server) - (_sum_rtt_sum_server)^2) /
                  sum_rtt_count_server) / 1e12) AS crtt_stddev,
         -- Round Trip Time SCS
         sum COALESCE(rtt_count_client, 0) AS sum_rtt_count_client,
@@ -1165,7 +1165,7 @@ let program_of_bcas dataset_name =
         IF sum_rtt_count_client = 0 THEN 0 ELSE
           (_sum_rtt_sum_client / sum_rtt_count_client) / 1e6 AS srtt_avg,
         IF sum_rtt_count_client = 0 THEN 0 ELSE
-          sqrt (((sum rtt_square_sum_client - (_sum_rtt_sum_client)^2) /
+          sqrt (((float(sum rtt_square_sum_client) - (_sum_rtt_sum_client)^2) /
                  sum_rtt_count_client) / 1e12) AS srtt_stddev,
         -- Retransmition Delay C2S
         sum COALESCE(rd_count_client, 0) AS sum_rd_count_client,
@@ -1174,7 +1174,7 @@ let program_of_bcas dataset_name =
         IF sum_rd_count_client = 0 THEN 0 ELSE
           (_sum_rd_sum_client / sum_rd_count_client) / 1e6 AS crd_avg,
         IF sum_rd_count_client = 0 THEN 0 ELSE
-          sqrt (((sum rd_square_sum_client - (_sum_rd_sum_client)^2) /
+          sqrt (((float(sum rd_square_sum_client) - (_sum_rd_sum_client)^2) /
                  sum_rd_count_client) / 1e12) AS crd_stddev,
         -- Retransmition Delay S2C
         sum COALESCE(rd_count_server, 0) AS sum_rd_count_server,
@@ -1183,7 +1183,7 @@ let program_of_bcas dataset_name =
         IF sum_rd_count_server = 0 THEN 0 ELSE
           (_sum_rd_sum_server / sum_rd_count_server) / 1e6 AS srd_avg,
         IF sum_rd_count_server = 0 THEN 0 ELSE
-          sqrt (((sum rd_square_sum_server - (_sum_rd_sum_server)^2) /
+          sqrt (((float(sum rd_square_sum_server) - (_sum_rd_sum_server)^2) /
                  sum_rd_count_server) / 1e12) AS srd_stddev,
         -- Data Transfer Time C2S
         sum COALESCE(dtt_count_client, 0) AS sum_dtt_count_client,
@@ -1192,7 +1192,7 @@ let program_of_bcas dataset_name =
         IF sum_dtt_count_client = 0 THEN 0 ELSE
           (_sum_dtt_sum_client / sum_dtt_count_client) / 1e6 AS cdtt_avg,
         IF sum_dtt_count_client = 0 THEN 0 ELSE
-          sqrt (((sum dtt_square_sum_client - (_sum_dtt_sum_client)^2) /
+          sqrt (((float(sum dtt_square_sum_client) - (_sum_dtt_sum_client)^2) /
                  sum_dtt_count_client) / 1e12) AS cdtt_stddev,
         -- Data Transfer Time S2C
         sum COALESCE(dtt_count_server, 0) AS sum_dtt_count_server,
@@ -1201,7 +1201,7 @@ let program_of_bcas dataset_name =
         IF sum_dtt_count_server = 0 THEN 0 ELSE
           (_sum_dtt_sum_server / sum_dtt_count_server) / 1e6 AS sdtt_avg,
         IF sum_dtt_count_server = 0 THEN 0 ELSE
-          sqrt (((sum dtt_square_sum_server - (_sum_dtt_sum_server)^2) /
+          sqrt (((float(sum dtt_square_sum_server) - (_sum_dtt_sum_server)^2) /
                  sum_dtt_count_server) / 1e12) AS sdtt_stddev
       WHERE application = service_id AND
             -- Exclude netflow
