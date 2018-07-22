@@ -178,11 +178,12 @@ let anomaly_detection_funcs avg_window from name timeseries alert_fields =
         {|FROM '%s'
           SELECT start,
           (%s) AS abnormality,
-          hysteresis (5-ma float(abnormality), 3/5, 4/5) AS firing
+          5-ma float(abnormality) AS _recent_abnormality,
+          hysteresis (_recent_abnormality, 3/5, 4/5) AS firing
           COMMIT,
-            NOTIFY %S WITH PARAMETERS
-              "firing"="${firing}",
-              "time"="${start}"%a
+            NOTIFY %S WITH
+              "${firing}" AS firing,
+              abs(_recent_abnormality - 3/5) AS certainty%a
             AND KEEP ALL
           AFTER firing != COALESCE(previous.firing, false)
           EVENT STARTING AT start|}
@@ -190,7 +191,7 @@ let anomaly_detection_funcs avg_window from name timeseries alert_fields =
         condition
         alert_name
         (List.print ~first:",\n" ~sep:",\n" ~last:"\n"
-          (fun oc (n, v) -> Printf.fprintf oc "%S=%S" n v))
+          (fun oc (n, v) -> Printf.fprintf oc "%S AS %s" v n))
           alert_fields in
     make_func (from ^": "^ name ^" anomalies") op in
   predictor_func, anomaly_func
@@ -998,13 +999,13 @@ let program_of_bcns dataset_name =
             hysteresis (bytes_per_secs, min_bps*1.1, min_bps),
             false) AS firing
         COMMIT,
-          NOTIFY "Low traffic from ${param.source_name} to ${dest_name}" WITH PARAMETERS
-            "firing"="${firing}",
-            "time"="${max_start}",
-            "desc"="The traffic from zone ${param.source_name} to ${param.dest_name} has sunk below the configured minimum of ${param.min_bps} for the last ${obs_window} seconds.",
-            "bcn"="${id}",
-            "values"="${bytes_per_secs}",
-            "thresholds"="${min_bps}"
+          NOTIFY "Low traffic from ${param.source_name} to ${dest_name}" WITH
+            "${firing}" AS firing,
+            COALESCE(reldiff(bytes_per_secs, min_bps), 0) AS certainty,
+            "The traffic from zone ${param.source_name} to ${param.dest_name} has sunk below the configured minimum of ${param.min_bps} for the last ${obs_window} seconds." AS desc,
+            "${id}" AS bcn,
+            "${bytes_per_secs}" AS values,
+            "${min_bps}" AS thresholds
           AND KEEP ALL
         AFTER firing != COALESCE(previous.firing, false)
         EVENT STARTING AT max_start;
@@ -1018,13 +1019,13 @@ let program_of_bcns dataset_name =
               hysteresis (bytes_per_secs, max_bps*0.9, max_bps),
               false) AS firing
         COMMIT,
-          NOTIFY "High traffic from ${param.source_name} to ${param.dest_name}" WITH PARAMETERS
-            "firing"="${firing}",
-            "time"="${max_start}",
-            "desc"="The traffic from zone ${source_name} to ${dest_name} has raised above the configured maximum of ${param.max_bps} for the last ${obs_window} seconds.",
-            "bcn"="${id}",
-            "values"="${bytes_per_secs}",
-            "thresholds"="${max_bps}"
+          NOTIFY "High traffic from ${param.source_name} to ${param.dest_name}" WITH
+            "${firing}" AS firing,
+            COALESCE(reldiff(bytes_per_secs, max_bps), 0) AS certainty,
+            "The traffic from zone ${source_name} to ${dest_name} has raised above the configured maximum of ${param.max_bps} for the last ${obs_window} seconds." AS desc,
+            "${id}" AS bcn,
+            "${bytes_per_secs}" AS values,
+            "${max_bps}" AS thresholds
           AND KEEP ALL
         AFTER firing != COALESCE(previous.firing, false)
         EVENT STARTING AT max_start;
@@ -1038,13 +1039,13 @@ let program_of_bcns dataset_name =
             hysteresis (rtt, max_rtt*0.9, max_rtt),
             false) AS firing
         COMMIT,
-          NOTIFY "RTT too high from ${source_name} to ${dest_name}" WITH PARAMETERS
-            "firing"="${firing}",
-            "time"="${max_start}",
-            "desc"="Traffic from zone ${source_name} to zone ${dest_name} has an average RTT of ${rtt}, greater than the configured maximum of ${max_rtt}s, for the last ${obs_window} seconds.",
-            "bcn"="${id}",
-            "values"="${rtt}",
-            "thresholds"="${max_rtt}"
+          NOTIFY "RTT too high from ${source_name} to ${dest_name}" WITH
+            "${firing}" AS firing,
+            COALESCE(reldiff(rtt, max_rtt), 0) AS certainty,
+            "Traffic from zone ${source_name} to zone ${dest_name} has an average RTT of ${rtt}, greater than the configured maximum of ${max_rtt}s, for the last ${obs_window} seconds." AS desc,
+            "${id}" AS bcn,
+            "${rtt}" AS values,
+            "${max_rtt}" AS thresholds
           AND KEEP ALL
         AFTER firing != COALESCE(previous.firing, false)
         EVENT STARTING AT max_start;
@@ -1058,13 +1059,13 @@ let program_of_bcns dataset_name =
             hysteresis (rr, max_rr*0.9, max_rr),
             false) AS firing
         COMMIT,
-          NOTIFY "Too many retransmissions from ${source_name} to ${dest_name}" WITH PARAMETERS
-            "firing"="${firing}",
-            "time"="${max_start}",
-            "desc"="Traffic from zone ${source_name} to zone ${dest_name} has an average retransmission rate of ${rr}%%, greater than the configured maximum of ${max_rr}s, for the last ${obs_window} seconds.",
-            "bcn"="${id}",
-            "values"="${rr}",
-            "thresholds"="${max_rr}"
+          NOTIFY "Too many retransmissions from ${source_name} to ${dest_name}" WITH
+            "${firing}" AS firing,
+            COALESCE(reldiff(rr, max_rr), 0) AS certainty,
+            "Traffic from zone ${source_name} to zone ${dest_name} has an average retransmission rate of ${rr}%%, greater than the configured maximum of ${max_rr}s, for the last ${obs_window} seconds." AS desc,
+            "${id}" AS bcn,
+            "${rr}" AS values,
+            "${max_rr}" AS thresholds
           AND KEEP ALL
         AFTER firing != COALESCE(previous.firing, false)
         EVENT STARTING AT max_start;
@@ -1253,14 +1254,14 @@ let program_of_bcas dataset_name =
           hysteresis (eurt, max_eurt - max_eurt/10, max_eurt) AS firing
         FROM percentiles
         COMMIT,
-          NOTIFY "EURT to ${param.name} is too large" WITH PARAMETERS
-            "firing"="${firing}",
-            "time"="${max_start}",
-            "desc"="The average end user response time to application ${param.name} has raised above the configured maximum of ${param.max_eurt}s for the last ${param.obs_window} seconds.",
-            "bca"="${param.id}",
-            "service_id"="${param.service_id}",
-            "values"="${eurt}",
-            "thresholds"="${param.max_eurt}"
+          NOTIFY "EURT to ${param.name} is too large" WITH
+            "${firing}" AS firing,
+            reldiff(eurt, max_eurt) AS certainty,
+            "The average end user response time to application ${param.name} has raised above the configured maximum of ${param.max_eurt}s for the last ${param.obs_window} seconds." AS desc,
+            "${param.id}" AS bca,
+            "${param.service_id}" AS service_id,
+            "${eurt}" AS values,
+            "${param.max_eurt}" AS thresholds
           AND KEEP ALL
         AFTER firing != COALESCE(previous.firing, false)
         EVENT STARTING AT max_start|} in
@@ -1396,12 +1397,12 @@ let sec_program dataset_name =
     make_func "port_scan_alert"
       ({|FROM top_port_scans
          WHEN port_count > $MAX_PORTS$
-         NOTIFY "Port-Scan from ${client} to ${server}" WITH PARAMETERS
-           "time"="${start}",
-           "desc"="${client} has probed at least ${port_count} ports of ${server} from ${start} to ${end}'",
-           "ips"="${client},${server}",
-           "values"="${port_count}",
-           "thresholds"="$MAX_PORTS$"|} |>
+         NOTIFY "Port-Scan from ${client} to ${server}" WITH
+           reldiff(port_count, $MAX_PORTS$) AS certainty,
+           "${client} has probed at least ${port_count} ports of ${server} from ${start} to ${end}'" AS desc,
+           "${client},${server}" AS ips,
+           "${port_count}" AS values,
+           "$MAX_PORTS$" AS thresholds|} |>
        rep "$MAX_PORTS$" (string_of_int max_ports))
   and ip_scan_detector top_n obs_win =
     make_func "top_ip_scans"
@@ -1428,11 +1429,11 @@ let sec_program dataset_name =
     make_func "ip_scan_alert"
       ({|FROM top_ip_scans
          WHEN ip_count > $MAX_IPS$
-         NOTIFY "IP-Scan from ${client}" WITH PARAMETERS
-           "time"="${start}",
-           "ips"="${client}",
-           "values"="${ip_count}",
-           "thresholds"="$MAX_IPS$"|} |>
+         NOTIFY "IP-Scan from ${client}" WITH
+           reldiff(ip_count, $MAX_IPS$) AS certainty,
+           "${client}" AS ips,
+           "${ip_count}" AS values,
+           "$MAX_IPS$" AS thresholds|} |>
        rep "$MAX_IPS$" (string_of_int max_ips))
   in
   program_name,
