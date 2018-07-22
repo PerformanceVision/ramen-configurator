@@ -87,7 +87,7 @@ let tcp_traffic_func ?where dataset_name name dt =
      GROUP BY capture_begin // $DT_US$
      COMMIT AFTER
        in.capture_begin > out.min_capture_begin + 2 * u64($DT_US$)
-     EVENT STARTING AT start WITH DURATION $DT$|} |>
+     EVENT STARTING AT start WITH DURATION $DT$s|} |>
     rep "$DT$" (string_of_int dt) |>
     rep "$DT_US$" (string_of_int dt_us) |>
     rep "$PARENTS$" parents
@@ -1353,7 +1353,7 @@ let sec_program dataset_name =
        GROUP BY capture_begin // $AVG_WIN_US$
        COMMIT AFTER
          in.capture_begin > out.min_capture_begin + 2 * u64($AVG_WIN_US$)
-       EVENT STARTING AT start WITH DURATION $AVG_WIN$|} |>
+       EVENT STARTING AT start WITH DURATION $AVG_WIN$s|} |>
       rep "$AVG_WIN_US$" (string_of_int avg_win_us) |>
       rep "$AVG_WIN$" (string_of_int avg_win) |>
       rep "$REM_WIN$" (string_of_int rem_win) |>
@@ -1362,7 +1362,7 @@ let sec_program dataset_name =
       make_func "new peers" op_new_peers in
     let pred_func, anom_func =
       anomaly_detection_funcs
-        (string_of_int avg_win) "new peers" "DDoS"
+        ((string_of_int avg_win)^"s") "new peers" "DDoS"
         [ "nb_new_cnxs_per_secs", "nb_new_cnxs_per_secs > 1", false, [] ;
           "nb_new_clients_per_secs", "nb_new_clients_per_secs > 1", false, [] ]
         [ "desc", "possible DDoS" ] in
