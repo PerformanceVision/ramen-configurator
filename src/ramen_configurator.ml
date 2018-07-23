@@ -216,7 +216,7 @@ let base_program dataset_name delete uncompress csv_glob =
       "FROM '"^ csv ^"' SELECT\n"^
       cs_fields ^ non_cs_fields ^"\n"^
       "WHERE traffic_packets_"^ src ^" > 0\n"^
-      "EVENT STARTING AT capture_begin / 1e6 \
+      "EVENT STARTING AT capture_begin * 1e-6 \
        AND STOPPING AT capture_end * 1e-6" in
     make_func name op in
   (* TCP CSV Importer: *)
