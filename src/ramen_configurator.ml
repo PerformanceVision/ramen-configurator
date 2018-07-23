@@ -86,7 +86,7 @@ let tcp_traffic_func ?where dataset_name name dt =
            dtt_count_src IS NOT NULL
      GROUP BY capture_begin // $DT_US$
      COMMIT AFTER
-       in.capture_begin > out.min_capture_begin + 2 * u64($DT_US$)
+       in.capture_begin / 1e6 > out.min_capture_begin + 2 * u64($DT$)
      EVENT STARTING AT start WITH DURATION $DT$s|} |>
     rep "$DT$" (string_of_int dt) |>
     rep "$DT_US$" (string_of_int dt_us) |>
@@ -216,7 +216,7 @@ let base_program dataset_name delete uncompress csv_glob =
       "FROM '"^ csv ^"' SELECT\n"^
       cs_fields ^ non_cs_fields ^"\n"^
       "WHERE traffic_packets_"^ src ^" > 0\n"^
-      "EVENT STARTING AT capture_begin * 1e-6 \
+      "EVENT STARTING AT capture_begin / 1e6 \
        AND STOPPING AT capture_end * 1e-6" in
     make_func name op in
   (* TCP CSV Importer: *)
@@ -945,7 +945,8 @@ let program_of_bcns dataset_name =
         FROM '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s'
         MERGE ON capture_begin TIMEOUT AFTER 2 SECONDS
         SELECT
-          (capture_begin // u32(avg_window)) * u32(avg_window) AS start,
+          ((capture_begin / 1e6) // u32(avg_window)) * u32(avg_window)
+            AS start,
           min capture_begin, max capture_end,
           -- Traffic
           sum packets_src / avg_window AS packets_per_secs,
@@ -961,9 +962,9 @@ let program_of_bcns dataset_name =
           source_name AS zone_src, dest_name AS zone_dst
         WHERE
           %s
-        GROUP BY capture_begin // u32(avg_window)
+        GROUP BY (capture_begin / 1e6) // u32(avg_window)
         COMMIT AFTER
-          in.capture_begin > out.min_capture_begin + 2 * u64(avg_window)
+          in.capture_begin / 1e6 > out.min_capture_begin + 2 * u64(avg_window)
         EVENT STARTING AT start WITH DURATION avg_window;
       |}
       (rebase dataset_name "c2s tcp") (rebase dataset_name "s2c tcp")
@@ -1109,7 +1110,8 @@ let program_of_bcas dataset_name =
   let averages =
     {|FROM '$CSV$' SELECT
         -- Key
-        (capture_begin * 0.000001 // u32(avg_window)) * u32(avg_window) AS start,
+        ((capture_begin / 1e6) // u32(avg_window)) * u32(avg_window)
+          AS start,
         -- Traffic
         sum traffic_bytes_client / avg_window AS c2s_bytes_per_secs,
         sum traffic_bytes_server / avg_window AS s2c_bytes_per_secs,
@@ -1226,9 +1228,9 @@ let program_of_bcas dataset_name =
             rd_count_server IS NOT NULL AND
             dtt_count_client IS NOT NULL AND
             dtt_count_server IS NOT NULL
-      GROUP BY capture_begin * 0.000001 // u32(avg_window)
+      GROUP BY (capture_begin / 1e6) // u32(avg_window)
       COMMIT AFTER
-        in.capture_begin * 0.000001 > out.start + 2 * avg_window
+        in.capture_begin / 1e6 > out.start + 2 * avg_window
       EVENT STARTING AT start WITH DURATION avg_window|} |>
     rep "$CSV$" csv in
   let percentiles =
@@ -1339,7 +1341,7 @@ let sec_program dataset_name =
          -- false positives.
          sum (1.1 * float(not remember (
                 0.1, -- 10% of false positives
-                capture_begin // 1_000_000, $REM_WIN$,
+                capture_begin // 1e6, $REM_WIN$,
                 coalesce (ip4_client, ip6_client, 0),
                 coalesce (ip4_server, ip6_server, 0)))) /
            $AVG_WIN$
@@ -1347,13 +1349,13 @@ let sec_program dataset_name =
          -- Clients we haven't seen in the last $REM_WIN$ secs.
          sum (1.1 * float(not remember (
                 0.1,
-                capture_begin // 1_000_000, $REM_WIN$,
+                capture_begin // 1e6, $REM_WIN$,
                 coalesce (ip4_client, ip6_client, 0)))) /
             $AVG_WIN$
             AS nb_new_clients_per_secs
        GROUP BY capture_begin // $AVG_WIN_US$
        COMMIT AFTER
-         in.capture_begin > out.min_capture_begin + 2 * u64($AVG_WIN_US$)
+         in.capture_begin / 1e6 > out.min_capture_begin + 2 * u64($AVG_WIN$)
        EVENT STARTING AT start WITH DURATION $AVG_WIN$s|} |>
       rep "$AVG_WIN_US$" (string_of_int avg_win_us) |>
       rep "$AVG_WIN$" (string_of_int avg_win) |>
@@ -1374,7 +1376,7 @@ let sec_program dataset_name =
          MERGE ON capture_begin TIMEOUT AFTER 2 SECONDS
          WHEN
            NOT remember globally (
-             0.1, capture_begin / 1_000_000, $WIN$,
+             0.1, capture_begin / 1e6, $WIN$,
              -- We do not take into account IP proto, so a ping on a TCP port
              -- grants you a free ping on the same UDP port.
              coalesce (ip4_client, ip6_client, 0),
@@ -1382,8 +1384,8 @@ let sec_program dataset_name =
              port_server) AND
            IS coalesce (ip4_client, ip6_client, 0),
               coalesce (ip4_server, ip6_server, 0) IN TOP $TOP_N$
-         SELECT min (capture_begin / 1_000_000) AS start,
-                max (capture_end / 1_000_000) AS end,
+         SELECT min (capture_begin / 1e6) AS start,
+                max (capture_end / 1e6) AS end,
                 coalesce (ip4_client, ip6_client, 0) as client,
                 coalesce (ip4_server, ip6_server, 0) as server,
                 sum 1 as port_count
@@ -1410,14 +1412,14 @@ let sec_program dataset_name =
          MERGE ON capture_begin TIMEOUT AFTER 2 SECONDS
          WHEN
            NOT remember globally (
-             0.1, capture_begin / 1_000_000, $WIN$,
+             0.1, capture_begin / 1e6, $WIN$,
              -- An IP scanner could use varying proto/port to detect host
              -- presence so we just care about src and dst here:
              coalesce (ip4_client, ip6_client, 0),
              coalesce (ip4_server, ip6_server, 0)) AND
            IS coalesce (ip4_client, ip6_client, 0) IN TOP $TOP_N$
-         SELECT min (capture_begin / 1_000_000) AS start,
-                max (capture_end / 1_000_000) AS end,
+         SELECT min (capture_begin / 1e6) AS start,
+                max (capture_end / 1e6) AS end,
                 coalesce (ip4_client, ip6_client, 0) as client,
                 sum 1 as ip_count
          GROUP BY coalesce (ip4_client, ip6_client, 0)
