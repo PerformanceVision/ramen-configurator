@@ -1257,10 +1257,10 @@ let program_of_bcas dataset_name =
           hysteresis (eurt, max_eurt - max_eurt/10, max_eurt) AS firing
         FROM percentiles
         COMMIT,
-          NOTIFY "EURT to ${param.uniq_name} is too large" WITH
+          NOTIFY "EURT to ${param.name} is too large" WITH
             "${firing}" AS firing,
             reldiff(eurt, max_eurt) AS certainty,
-            "The average end user response time to application ${param.uniq_name} has raised above the configured maximum of ${param.max_eurt}s for the last ${param.obs_window} seconds." AS desc,
+            "The average end user response time to application ${param.name} has raised above the configured maximum of ${param.max_eurt}s for the last ${param.obs_window} seconds." AS desc,
             "${param.id}" AS bca,
             "${param.service_id}" AS service_id,
             "${eurt}" AS values,
@@ -1310,6 +1310,7 @@ let program_of_bcas dataset_name =
     "PARAMETERS uniq_name DEFAULTS TO \"\"\n\
      \tAND id DEFAULTS TO 0\n\
      \tAND service_id DEFAULTS TO 0\n\
+     \tAND name DEFAULTS TO \"\"\n\
      \tAND max_eurt DEFAULTS TO 0.0\n\
      \tAND avg_window DEFAULTS TO 360.0\n\
      \tAND obs_window DEFAULTS TO 600.0\n\
@@ -1552,6 +1553,7 @@ let start debug monitor ramen_cmd root_dir bundle_dir persist_dir db_name
               "uniq_name", dquote bca.name ;
               "id", string_of_int bca.id ;
               "service_id", string_of_int bca.service_id ;
+              "name", dquote bca.name ;
               "max_eurt", string_of_float bca.max_eurt ;
               "avg_window", string_of_float bca.avg_window ;
               "obs_window", string_of_float bca.obs_window ;
