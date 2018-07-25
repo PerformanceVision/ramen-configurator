@@ -209,9 +209,9 @@ let base_program dataset_name delete uncompress csv_glob =
     let cs_fields = cs_fields |>
       List.fold_left (fun s (field, alias) ->
         let alias = if alias <> "" then alias else field in
-        s ^"    "^ field ^"_"^ src ^" AS "^ alias ^"_src, "
-                 ^ field ^"_"^ dst ^" AS "^ alias ^"_dst,\n") ""
+        s ^"    "^ field ^"_"^ src ^" AS "^ alias ^"_src,\n") ""
     in
+    let cs_fields = cs_fields ^"    zone_"^ dst ^" AS zone_dst,\n" in
     let op =
       "FROM '"^ csv ^"' SELECT\n"^
       cs_fields ^ non_cs_fields ^"\n"^
