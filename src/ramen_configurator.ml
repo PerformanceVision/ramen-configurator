@@ -1488,7 +1488,7 @@ let compile_file ramen_cmd root_dir bundle_dir persist_dir fname params =
   if compile_program ramen_cmd root_dir bundle_dir fname then (
     let bin_name = Filename.(remove_extension fname) ^".x" in
     List.iter (fun params ->
-      !logger.info "Running program %s with parameters %a"
+      !logger.debug "Running program %s with parameters %a"
         bin_name (List.print (Tuple2.print String.print String.print)) params ;
       run_program ramen_cmd root_dir persist_dir bin_name params
     ) params)
