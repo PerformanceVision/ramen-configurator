@@ -1471,7 +1471,7 @@ let compile_program ramen_cmd root_dir bundle_dir fname =
 
 let run_program ramen_cmd root_dir persist_dir fname params =
   let cmd =
-    Printf.sprintf2 "%s run --persist-dir %s %a %s"
+    Printf.sprintf2 "%s run --replace --persist-dir %s %a %s"
       ramen_cmd
       (shell_quote persist_dir)
       (List.print ~first:"" ~last:"" ~sep:" " (fun oc (n, v) ->
