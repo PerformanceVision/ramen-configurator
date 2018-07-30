@@ -1,0 +1,657 @@
+PARAMETERS
+  uniq_name DEFAULTS TO "",
+	id DEFAULTS TO 0,
+	service_id DEFAULTS TO 0,
+	name DEFAULTS TO "",
+	max_eurt DEFAULTS TO 0.0,
+	avg_window DEFAULTS TO 360.0,
+	obs_window DEFAULTS TO 600.0,
+	perc DEFAULTS TO 90.0,
+	min_handshake_count DEFAULTS TO 0;
+
+DEFINE 'averages' AS
+  FROM ../../../base/tcp
+  SELECT
+    -- Key
+    ((capture_begin / 1e6) // u32(avg_window)) * u32(avg_window)
+      AS start,
+    -- Traffic
+    sum traffic_bytes_client / avg_window AS c2s_bytes_per_secs,
+    sum traffic_bytes_server / avg_window AS s2c_bytes_per_secs,
+    sum traffic_packets_client / avg_window AS c2s_packets_per_secs,
+    sum traffic_packets_server / avg_window AS s2c_packets_per_secs,
+    -- Retransmissions
+    sum COALESCE(retrans_traffic_bytes_client, 0) / avg_window
+      AS c2s_retrans_bytes_per_secs,
+    sum COALESCE(retrans_traffic_bytes_server, 0) / avg_window
+      AS s2c_retrans_bytes_per_secs,
+    -- TCP flags
+    sum COALESCE(syn_count_client, 0) / avg_window AS c2s_syns_per_secs,
+    sum COALESCE(fin_count_client, 0) / avg_window AS c2s_fins_per_secs,
+    sum COALESCE(fin_count_server, 0) / avg_window AS s2c_fins_per_secs,
+    sum COALESCE(rst_count_client, 0) / avg_window AS c2s_rsts_per_secs,
+    sum COALESCE(rst_count_server, 0) / avg_window AS s2c_rsts_per_secs,
+    sum COALESCE(close_count, 0) / avg_window AS close_per_secs,
+    -- TCP issues
+    sum COALESCE(dupack_count_client, 0) / avg_window AS c2s_dupacks_per_secs,
+    sum COALESCE(dupack_count_server, 0) / avg_window AS s2c_dupacks_per_secs,
+    sum COALESCE(zero_window_count_client, 0) / avg_window AS c2s_0wins_per_secs,
+    sum COALESCE(zero_window_count_server, 0) / avg_window AS s2c_0wins_per_secs,
+    -- Connection Time
+    sum COALESCE(ct_count, 0) AS sum_ct_count,
+    sum ct_sum AS _sum_ct_sum,
+    sum_ct_count / avg_window AS ct_per_secs,
+    IF sum_ct_count = 0 THEN 0 ELSE
+      (_sum_ct_sum / sum_ct_count) / 1e6 AS ct_avg,
+    IF sum_ct_count = 0 THEN 0 ELSE
+      sqrt (((float(sum ct_square_sum) - (_sum_ct_sum)^2) /
+             sum_ct_count) / 1e12) AS ct_stddev,
+    -- Server Response Time
+    sum COALESCE(rt_count_server, 0) AS sum_rt_count_server,
+    sum rt_sum_server AS _sum_rt_sum_server,
+    sum_rt_count_server / avg_window AS srt_per_secs,
+    IF sum_rt_count_server = 0 THEN 0 ELSE
+      (_sum_rt_sum_server / sum_rt_count_server) / 1e6 AS srt_avg,
+    IF sum_rt_count_server = 0 THEN 0 ELSE
+      sqrt (((float(sum rt_square_sum_server) - (_sum_rt_sum_server)^2) /
+             sum_rt_count_server) / 1e12) AS srt_stddev,
+    -- Round Trip Time CSC
+    sum COALESCE(rtt_count_server, 0) AS sum_rtt_count_server,
+    sum rtt_sum_server AS _sum_rtt_sum_server,
+    sum_rtt_count_server / avg_window AS crtt_per_secs,
+    IF sum_rtt_count_server = 0 THEN 0 ELSE
+      (_sum_rtt_sum_server / sum_rtt_count_server) / 1e6 AS crtt_avg,
+    IF sum_rtt_count_server = 0 THEN 0 ELSE
+      sqrt (((float(sum rtt_square_sum_server) - (_sum_rtt_sum_server)^2) /
+             sum_rtt_count_server) / 1e12) AS crtt_stddev,
+    -- Round Trip Time SCS
+    sum COALESCE(rtt_count_client, 0) AS sum_rtt_count_client,
+    sum rtt_sum_client AS _sum_rtt_sum_client,
+    sum_rtt_count_client / avg_window AS srtt_per_secs,
+    IF sum_rtt_count_client = 0 THEN 0 ELSE
+      (_sum_rtt_sum_client / sum_rtt_count_client) / 1e6 AS srtt_avg,
+    IF sum_rtt_count_client = 0 THEN 0 ELSE
+      sqrt (((float(sum rtt_square_sum_client) - (_sum_rtt_sum_client)^2) /
+             sum_rtt_count_client) / 1e12) AS srtt_stddev,
+    -- Retransmition Delay C2S
+    sum COALESCE(rd_count_client, 0) AS sum_rd_count_client,
+    sum rd_sum_client AS _sum_rd_sum_client,
+    sum_rd_count_client / avg_window AS crd_per_secs,
+    IF sum_rd_count_client = 0 THEN 0 ELSE
+      (_sum_rd_sum_client / sum_rd_count_client) / 1e6 AS crd_avg,
+    IF sum_rd_count_client = 0 THEN 0 ELSE
+      sqrt (((float(sum rd_square_sum_client) - (_sum_rd_sum_client)^2) /
+             sum_rd_count_client) / 1e12) AS crd_stddev,
+    -- Retransmition Delay S2C
+    sum COALESCE(rd_count_server, 0) AS sum_rd_count_server,
+    sum rd_sum_server AS _sum_rd_sum_server,
+    sum_rd_count_server / avg_window AS srd_per_secs,
+    IF sum_rd_count_server = 0 THEN 0 ELSE
+      (_sum_rd_sum_server / sum_rd_count_server) / 1e6 AS srd_avg,
+    IF sum_rd_count_server = 0 THEN 0 ELSE
+      sqrt (((float(sum rd_square_sum_server) - (_sum_rd_sum_server)^2) /
+             sum_rd_count_server) / 1e12) AS srd_stddev,
+    -- Data Transfer Time C2S
+    sum COALESCE(dtt_count_client, 0) AS sum_dtt_count_client,
+    sum dtt_sum_client AS _sum_dtt_sum_client,
+    sum_dtt_count_client / avg_window AS cdtt_per_secs,
+    IF sum_dtt_count_client = 0 THEN 0 ELSE
+      (_sum_dtt_sum_client / sum_dtt_count_client) / 1e6 AS cdtt_avg,
+    IF sum_dtt_count_client = 0 THEN 0 ELSE
+      sqrt (((float(sum dtt_square_sum_client) - (_sum_dtt_sum_client)^2) /
+             sum_dtt_count_client) / 1e12) AS cdtt_stddev,
+    -- Data Transfer Time S2C
+    sum COALESCE(dtt_count_server, 0) AS sum_dtt_count_server,
+    sum dtt_sum_server AS _sum_dtt_sum_server,
+    sum_dtt_count_server / avg_window AS sdtt_per_secs,
+    IF sum_dtt_count_server = 0 THEN 0 ELSE
+      (_sum_dtt_sum_server / sum_dtt_count_server) / 1e6 AS sdtt_avg,
+    IF sum_dtt_count_server = 0 THEN 0 ELSE
+      sqrt (((float(sum dtt_square_sum_server) - (_sum_dtt_sum_server)^2) /
+             sum_dtt_count_server) / 1e12) AS sdtt_stddev
+  WHERE
+    application = service_id AND
+    -- Exclude netflow
+    retrans_traffic_bytes_client IS NOT NULL AND
+    retrans_traffic_bytes_server IS NOT NULL AND
+    syn_count_client IS NOT NULL AND
+    fin_count_client IS NOT NULL AND
+    fin_count_server IS NOT NULL AND
+    rst_count_client IS NOT NULL AND
+    rst_count_server IS NOT NULL AND
+    close_count IS NOT NULL AND
+    dupack_count_client IS NOT NULL AND
+    dupack_count_server IS NOT NULL AND
+    zero_window_count_client IS NOT NULL AND
+    zero_window_count_server IS NOT NULL AND
+    ct_count IS NOT NULL AND
+    rt_count_server IS NOT NULL AND
+    rtt_count_server IS NOT NULL AND
+    rtt_count_client IS NOT NULL AND
+    rd_count_client IS NOT NULL AND
+    rd_count_server IS NOT NULL AND
+    dtt_count_client IS NOT NULL AND
+    dtt_count_server IS NOT NULL
+  GROUP BY (capture_begin / 1e6) // u32(avg_window)
+  COMMIT AFTER
+    in.capture_begin / 1e6 > out.start + 2 * avg_window
+  EVENT STARTING AT start WITH DURATION avg_window;
+
+DEFINE 'percentiles' AS
+  FROM averages
+  SELECT
+    min start, max start,
+    srtt_avg, crtt_avg, srt_avg, cdtt_avg, sdtt_avg,
+    perc percentile (
+      srtt_avg + crtt_avg + srt_avg + cdtt_avg + sdtt_avg) AS eurt
+  COMMIT AND SLIDE 1 AFTER
+    group.#count >= i32(obs_window / avg_window) OR
+    in.start > out.max_start + 5
+  EVENT STARTING AT max_start WITH DURATION obs_window;
+
+DEFINE 'EURT too high' AS
+  FROM percentiles
+  SELECT
+    max_start,
+    hysteresis (eurt, max_eurt - max_eurt/10, max_eurt) AS firing
+  COMMIT,
+    NOTIFY "EURT to ${param.name} is too large" WITH
+      "${firing}" AS firing,
+      reldiff(eurt, max_eurt) AS certainty,
+      "The average end user response time to application ${param.name} has raised above the configured maximum of ${param.max_eurt}s for the last ${param.obs_window} seconds." AS desc,
+      "${param.id}" AS bca,
+      "${param.service_id}" AS service_id,
+      "${eurt}" AS values,
+      "${param.max_eurt}" AS thresholds
+    AND KEEP ALL
+    AFTER firing != COALESCE(previous.firing, false)
+  EVENT STARTING AT max_start;
+
+DEFINE 'averages: volume anomalies' AS
+  FROM 'averages: volume predictions'
+  SELECT
+    start,
+    (abnormality_s2c_packets_per_secs > 0.75 OR
+     abnormality_c2s_packets_per_secs > 0.75 OR
+     abnormality_s2c_bytes_per_secs > 0.75 OR
+     abnormality_c2s_bytes_per_secs > 0.75) AS abnormality,
+    5-ma float(abnormality) AS _recent_abnormality,
+    hysteresis (_recent_abnormality, 3/5, 4/5) AS firing
+  COMMIT,
+    NOTIFY "averages volume looks abnormal" WITH
+      "${firing}" AS firing,
+      abs(_recent_abnormality - 3/5) AS certainty,
+      "volume" AS metric,
+      "anomaly detected" AS desc,
+      "${param.id}" AS bca
+    AND KEEP ALL
+    AFTER firing != COALESCE(previous.firing, false)
+  EVENT STARTING AT start;
+
+DEFINE 'averages: volume predictions' AS
+  FROM averages
+  SELECT
+    start,
+    -- bytes_per_secs
+    c2s_bytes_per_secs,
+    smooth(c2s_bytes_per_secs) AS pred_0_c2s_bytes_per_secs,
+    fit(5, c2s_bytes_per_secs) AS pred_1_c2s_bytes_per_secs,
+    5-ma(c2s_bytes_per_secs) AS pred_2_c2s_bytes_per_secs,
+    lag(c2s_bytes_per_secs) AS pred_3_c2s_bytes_per_secs,
+    IF c2s_bytes_per_secs > 1000 THEN (abs(pred_3_c2s_bytes_per_secs - c2s_bytes_per_secs) /
+       max(abs pred_3_c2s_bytes_per_secs, abs c2s_bytes_per_secs) +
+     abs(pred_2_c2s_bytes_per_secs - c2s_bytes_per_secs) /
+       max(abs pred_2_c2s_bytes_per_secs, abs c2s_bytes_per_secs) +
+     abs(pred_1_c2s_bytes_per_secs - c2s_bytes_per_secs) /
+       max(abs pred_1_c2s_bytes_per_secs, abs c2s_bytes_per_secs) +
+     abs(pred_0_c2s_bytes_per_secs - c2s_bytes_per_secs) /
+       max(abs pred_0_c2s_bytes_per_secs, abs c2s_bytes_per_secs)) / 4 ELSE 0 AS abnormality_c2s_bytes_per_secs,
+    s2c_bytes_per_secs,
+    smooth(s2c_bytes_per_secs) AS pred_0_s2c_bytes_per_secs,
+    fit(5, s2c_bytes_per_secs) AS pred_1_s2c_bytes_per_secs,
+    5-ma(s2c_bytes_per_secs) AS pred_2_s2c_bytes_per_secs,
+    lag(s2c_bytes_per_secs) AS pred_3_s2c_bytes_per_secs,
+    IF s2c_bytes_per_secs > 1000 THEN (abs(pred_3_s2c_bytes_per_secs - s2c_bytes_per_secs) /
+       max(abs pred_3_s2c_bytes_per_secs, abs s2c_bytes_per_secs) +
+     abs(pred_2_s2c_bytes_per_secs - s2c_bytes_per_secs) /
+       max(abs pred_2_s2c_bytes_per_secs, abs s2c_bytes_per_secs) +
+     abs(pred_1_s2c_bytes_per_secs - s2c_bytes_per_secs) /
+       max(abs pred_1_s2c_bytes_per_secs, abs s2c_bytes_per_secs) +
+     abs(pred_0_s2c_bytes_per_secs - s2c_bytes_per_secs) /
+       max(abs pred_0_s2c_bytes_per_secs, abs s2c_bytes_per_secs)) / 4 ELSE 0 AS abnormality_s2c_bytes_per_secs,
+    -- packets_per_secs
+    c2s_packets_per_secs,
+    smooth(c2s_packets_per_secs) AS pred_0_c2s_packets_per_secs,
+    fit(5, c2s_packets_per_secs) AS pred_1_c2s_packets_per_secs,
+    5-ma(c2s_packets_per_secs) AS pred_2_c2s_packets_per_secs,
+    lag(c2s_packets_per_secs) AS pred_3_c2s_packets_per_secs,
+    IF c2s_packets_per_secs > 10 THEN (abs(pred_3_c2s_packets_per_secs - c2s_packets_per_secs) /
+       max(abs pred_3_c2s_packets_per_secs, abs c2s_packets_per_secs) +
+     abs(pred_2_c2s_packets_per_secs - c2s_packets_per_secs) /
+       max(abs pred_2_c2s_packets_per_secs, abs c2s_packets_per_secs) +
+     abs(pred_1_c2s_packets_per_secs - c2s_packets_per_secs) /
+       max(abs pred_1_c2s_packets_per_secs, abs c2s_packets_per_secs) +
+     abs(pred_0_c2s_packets_per_secs - c2s_packets_per_secs) /
+       max(abs pred_0_c2s_packets_per_secs, abs c2s_packets_per_secs)) / 4 ELSE 0 AS abnormality_c2s_packets_per_secs,
+    s2c_packets_per_secs,
+    smooth(s2c_packets_per_secs) AS pred_0_s2c_packets_per_secs,
+    fit(5, s2c_packets_per_secs) AS pred_1_s2c_packets_per_secs,
+    5-ma(s2c_packets_per_secs) AS pred_2_s2c_packets_per_secs,
+    lag(s2c_packets_per_secs) AS pred_3_s2c_packets_per_secs,
+    IF s2c_packets_per_secs > 10 THEN (abs(pred_3_s2c_packets_per_secs - s2c_packets_per_secs) /
+       max(abs pred_3_s2c_packets_per_secs, abs s2c_packets_per_secs) +
+     abs(pred_2_s2c_packets_per_secs - s2c_packets_per_secs) /
+       max(abs pred_2_s2c_packets_per_secs, abs s2c_packets_per_secs) +
+     abs(pred_1_s2c_packets_per_secs - s2c_packets_per_secs) /
+       max(abs pred_1_s2c_packets_per_secs, abs s2c_packets_per_secs) +
+     abs(pred_0_s2c_packets_per_secs - s2c_packets_per_secs) /
+       max(abs pred_0_s2c_packets_per_secs, abs s2c_packets_per_secs)) / 4 ELSE 0 AS abnormality_s2c_packets_per_secs
+  EVENT STARTING AT start WITH DURATION avg_window;
+
+DEFINE 'averages: retransmissions anomalies' AS
+  FROM 'averages: retransmissions predictions'
+  SELECT
+    start,
+    (abnormality_s2c_dupacks_per_secs > 0.75 OR
+     abnormality_c2s_dupacks_per_secs > 0.75 OR
+     abnormality_s2c_retrans_bytes_per_secs > 0.75 OR
+     abnormality_c2s_retrans_bytes_per_secs > 0.75) AS abnormality,
+    5-ma float(abnormality) AS _recent_abnormality,
+    hysteresis (_recent_abnormality, 3/5, 4/5) AS firing
+  COMMIT,
+    NOTIFY "averages retransmissions looks abnormal" WITH
+      "${firing}" AS firing,
+      abs(_recent_abnormality - 3/5) AS certainty,
+      "retransmissions" AS metric,
+      "anomaly detected" AS desc,
+      "${param.id}" AS bca
+    AND KEEP ALL
+    AFTER firing != COALESCE(previous.firing, false)
+  EVENT STARTING AT start;
+
+DEFINE 'averages: retransmissions predictions' AS
+  FROM 'averages'
+  SELECT
+    start,
+    -- retrans_bytes
+    c2s_retrans_bytes_per_secs,
+    smooth(c2s_retrans_bytes_per_secs) AS pred_0_c2s_retrans_bytes_per_secs,
+    fit(5, c2s_retrans_bytes_per_secs) AS pred_1_c2s_retrans_bytes_per_secs,
+    5-ma(c2s_retrans_bytes_per_secs) AS pred_2_c2s_retrans_bytes_per_secs,
+    lag(c2s_retrans_bytes_per_secs) AS pred_3_c2s_retrans_bytes_per_secs,
+    IF c2s_retrans_bytes_per_secs > 1000 THEN (abs(pred_3_c2s_retrans_bytes_per_secs - c2s_retrans_bytes_per_secs) /
+       max(abs pred_3_c2s_retrans_bytes_per_secs, abs c2s_retrans_bytes_per_secs) +
+     abs(pred_2_c2s_retrans_bytes_per_secs - c2s_retrans_bytes_per_secs) /
+       max(abs pred_2_c2s_retrans_bytes_per_secs, abs c2s_retrans_bytes_per_secs) +
+     abs(pred_1_c2s_retrans_bytes_per_secs - c2s_retrans_bytes_per_secs) /
+       max(abs pred_1_c2s_retrans_bytes_per_secs, abs c2s_retrans_bytes_per_secs) +
+     abs(pred_0_c2s_retrans_bytes_per_secs - c2s_retrans_bytes_per_secs) /
+       max(abs pred_0_c2s_retrans_bytes_per_secs, abs c2s_retrans_bytes_per_secs)) / 4 ELSE 0 AS abnormality_c2s_retrans_bytes_per_secs,
+    s2c_retrans_bytes_per_secs,
+    smooth(s2c_retrans_bytes_per_secs) AS pred_0_s2c_retrans_bytes_per_secs,
+    fit(5, s2c_retrans_bytes_per_secs) AS pred_1_s2c_retrans_bytes_per_secs,
+    5-ma(s2c_retrans_bytes_per_secs) AS pred_2_s2c_retrans_bytes_per_secs,
+    lag(s2c_retrans_bytes_per_secs) AS pred_3_s2c_retrans_bytes_per_secs,
+    IF s2c_retrans_bytes_per_secs > 1000 THEN (abs(pred_3_s2c_retrans_bytes_per_secs - s2c_retrans_bytes_per_secs) /
+       max(abs pred_3_s2c_retrans_bytes_per_secs, abs s2c_retrans_bytes_per_secs) +
+     abs(pred_2_s2c_retrans_bytes_per_secs - s2c_retrans_bytes_per_secs) /
+       max(abs pred_2_s2c_retrans_bytes_per_secs, abs s2c_retrans_bytes_per_secs) +
+     abs(pred_1_s2c_retrans_bytes_per_secs - s2c_retrans_bytes_per_secs) /
+       max(abs pred_1_s2c_retrans_bytes_per_secs, abs s2c_retrans_bytes_per_secs) +
+     abs(pred_0_s2c_retrans_bytes_per_secs - s2c_retrans_bytes_per_secs) /
+       max(abs pred_0_s2c_retrans_bytes_per_secs, abs s2c_retrans_bytes_per_secs)) / 4 ELSE 0 AS abnormality_s2c_retrans_bytes_per_secs,
+    -- dupacks_per_secs
+    c2s_dupacks_per_secs,
+    smooth(c2s_dupacks_per_secs) AS pred_0_c2s_dupacks_per_secs,
+    fit(5, c2s_dupacks_per_secs) AS pred_1_c2s_dupacks_per_secs,
+    5-ma(c2s_dupacks_per_secs) AS pred_2_c2s_dupacks_per_secs,
+    lag(c2s_dupacks_per_secs) AS pred_3_c2s_dupacks_per_secs,
+    IF c2s_dupacks_per_secs > 10 THEN (abs(pred_3_c2s_dupacks_per_secs - c2s_dupacks_per_secs) /
+       max(abs pred_3_c2s_dupacks_per_secs, abs c2s_dupacks_per_secs) +
+     abs(pred_2_c2s_dupacks_per_secs - c2s_dupacks_per_secs) /
+       max(abs pred_2_c2s_dupacks_per_secs, abs c2s_dupacks_per_secs) +
+     abs(pred_1_c2s_dupacks_per_secs - c2s_dupacks_per_secs) /
+       max(abs pred_1_c2s_dupacks_per_secs, abs c2s_dupacks_per_secs) +
+     abs(pred_0_c2s_dupacks_per_secs - c2s_dupacks_per_secs) /
+       max(abs pred_0_c2s_dupacks_per_secs, abs c2s_dupacks_per_secs)) / 4 ELSE 0 AS abnormality_c2s_dupacks_per_secs,
+    s2c_dupacks_per_secs,
+    smooth(s2c_dupacks_per_secs) AS pred_0_s2c_dupacks_per_secs,
+    fit(5, s2c_dupacks_per_secs) AS pred_1_s2c_dupacks_per_secs,
+    5-ma(s2c_dupacks_per_secs) AS pred_2_s2c_dupacks_per_secs,
+    lag(s2c_dupacks_per_secs) AS pred_3_s2c_dupacks_per_secs,
+    IF s2c_dupacks_per_secs > 10 THEN (abs(pred_3_s2c_dupacks_per_secs - s2c_dupacks_per_secs) /
+       max(abs pred_3_s2c_dupacks_per_secs, abs s2c_dupacks_per_secs) +
+     abs(pred_2_s2c_dupacks_per_secs - s2c_dupacks_per_secs) /
+       max(abs pred_2_s2c_dupacks_per_secs, abs s2c_dupacks_per_secs) +
+     abs(pred_1_s2c_dupacks_per_secs - s2c_dupacks_per_secs) /
+       max(abs pred_1_s2c_dupacks_per_secs, abs s2c_dupacks_per_secs) +
+     abs(pred_0_s2c_dupacks_per_secs - s2c_dupacks_per_secs) /
+       max(abs pred_0_s2c_dupacks_per_secs, abs s2c_dupacks_per_secs)) / 4 ELSE 0 AS abnormality_s2c_dupacks_per_secs
+  EVENT STARTING AT start WITH DURATION avg_window;
+
+DEFINE 'averages: connections anomalies' AS
+  FROM 'averages: connections predictions'
+  SELECT
+    start,
+    (abnormality_ct_avg > 0.75 OR
+     abnormality_close_per_secs > 0.75 OR
+     abnormality_s2c_rsts_per_secs > 0.75 OR
+     abnormality_c2s_syns_per_secs > 0.75) AS abnormality,
+    5-ma float(abnormality) AS _recent_abnormality,
+    hysteresis (_recent_abnormality, 3/5, 4/5) AS firing
+  COMMIT,
+    NOTIFY "averages connections looks abnormal" WITH
+      "${firing}" AS firing,
+      abs(_recent_abnormality - 3/5) AS certainty,
+      "connections" AS metric,
+      "anomaly detected" AS desc,
+      "${param.id}" AS bca
+    AND KEEP ALL
+    AFTER firing != COALESCE(previous.firing, false)
+  EVENT STARTING AT start;
+
+DEFINE 'averages: connections predictions' AS
+  FROM 'averages'
+  SELECT
+    start,
+    -- syns_per_secs
+    c2s_syns_per_secs,
+    smooth(c2s_syns_per_secs) AS pred_0_c2s_syns_per_secs,
+    fit(5, c2s_syns_per_secs) AS pred_1_c2s_syns_per_secs,
+    5-ma(c2s_syns_per_secs) AS pred_2_c2s_syns_per_secs,
+    lag(c2s_syns_per_secs) AS pred_3_c2s_syns_per_secs,
+    IF c2s_syns_per_secs > 1 THEN (abs(pred_3_c2s_syns_per_secs - c2s_syns_per_secs) /
+       max(abs pred_3_c2s_syns_per_secs, abs c2s_syns_per_secs) +
+     abs(pred_2_c2s_syns_per_secs - c2s_syns_per_secs) /
+       max(abs pred_2_c2s_syns_per_secs, abs c2s_syns_per_secs) +
+     abs(pred_1_c2s_syns_per_secs - c2s_syns_per_secs) /
+       max(abs pred_1_c2s_syns_per_secs, abs c2s_syns_per_secs) +
+     abs(pred_0_c2s_syns_per_secs - c2s_syns_per_secs) /
+       max(abs pred_0_c2s_syns_per_secs, abs c2s_syns_per_secs)) / 4 ELSE 0 AS abnormality_c2s_syns_per_secs,
+    -- rsts_per_secs
+    s2c_rsts_per_secs,
+    smooth(s2c_rsts_per_secs) AS pred_0_s2c_rsts_per_secs,
+    fit(5, s2c_rsts_per_secs) AS pred_1_s2c_rsts_per_secs,
+    5-ma(s2c_rsts_per_secs) AS pred_2_s2c_rsts_per_secs,
+    lag(s2c_rsts_per_secs) AS pred_3_s2c_rsts_per_secs,
+    IF s2c_rsts_per_secs > 1 THEN (abs(pred_3_s2c_rsts_per_secs - s2c_rsts_per_secs) /
+       max(abs pred_3_s2c_rsts_per_secs, abs s2c_rsts_per_secs) +
+     abs(pred_2_s2c_rsts_per_secs - s2c_rsts_per_secs) /
+       max(abs pred_2_s2c_rsts_per_secs, abs s2c_rsts_per_secs) +
+     abs(pred_1_s2c_rsts_per_secs - s2c_rsts_per_secs) /
+       max(abs pred_1_s2c_rsts_per_secs, abs s2c_rsts_per_secs) +
+     abs(pred_0_s2c_rsts_per_secs - s2c_rsts_per_secs) /
+       max(abs pred_0_s2c_rsts_per_secs, abs s2c_rsts_per_secs)) / 4 ELSE 0 AS abnormality_s2c_rsts_per_secs,
+    -- close_per_secs
+    close_per_secs,
+    smooth(close_per_secs) AS pred_0_close_per_secs,
+    fit(5, close_per_secs) AS pred_1_close_per_secs,
+    5-ma(close_per_secs) AS pred_2_close_per_secs,
+    lag(close_per_secs) AS pred_3_close_per_secs,
+    IF close_per_secs > 1 THEN (abs(pred_3_close_per_secs - close_per_secs) /
+       max(abs pred_3_close_per_secs, abs close_per_secs) +
+     abs(pred_2_close_per_secs - close_per_secs) /
+       max(abs pred_2_close_per_secs, abs close_per_secs) +
+     abs(pred_1_close_per_secs - close_per_secs) /
+       max(abs pred_1_close_per_secs, abs close_per_secs) +
+     abs(pred_0_close_per_secs - close_per_secs) /
+       max(abs pred_0_close_per_secs, abs close_per_secs)) / 4 ELSE 0 AS abnormality_close_per_secs,
+    -- ct_avt
+    ct_avg,
+    smooth(ct_avg) AS pred_0_ct_avg,
+    fit(5, ct_avg) AS pred_1_ct_avg,
+    5-ma(ct_avg) AS pred_2_ct_avg,
+    lag(ct_avg) AS pred_3_ct_avg,
+    IF sum_ct_count > 10 THEN (abs(pred_3_ct_avg - ct_avg) /
+       max(abs pred_3_ct_avg, abs ct_avg) +
+     abs(pred_2_ct_avg - ct_avg) /
+       max(abs pred_2_ct_avg, abs ct_avg) +
+     abs(pred_1_ct_avg - ct_avg) /
+       max(abs pred_1_ct_avg, abs ct_avg) +
+     abs(pred_0_ct_avg - ct_avg) /
+       max(abs pred_0_ct_avg, abs ct_avg)) / 4 ELSE 0 AS abnormality_ct_avg
+  EVENT STARTING AT start WITH DURATION avg_window;
+
+DEFINE 'averages: 0-windows anomalies' AS
+  FROM 'averages: 0-windows predictions'
+  SELECT start,
+    (abnormality_s2c_0wins_per_secs > 0.75 OR
+     abnormality_c2s_0wins_per_secs > 0.75) AS abnormality,
+    5-ma float(abnormality) AS _recent_abnormality,
+    hysteresis (_recent_abnormality, 3/5, 4/5) AS firing
+  COMMIT,
+    NOTIFY "averages 0-windows looks abnormal" WITH
+      "${firing}" AS firing,
+      abs(_recent_abnormality - 3/5) AS certainty,
+      "0-windows" AS metric,
+      "anomaly detected" AS desc,
+      "${param.id}" AS bca
+    AND KEEP ALL
+    AFTER firing != COALESCE(previous.firing, false)
+  EVENT STARTING AT start;
+
+DEFINE 'averages: 0-windows predictions' AS
+  FROM 'averages'
+  SELECT
+    start,
+    -- 0wins_per_secs
+    c2s_0wins_per_secs,
+    smooth(c2s_0wins_per_secs) AS pred_0_c2s_0wins_per_secs,
+    fit(5, c2s_0wins_per_secs) AS pred_1_c2s_0wins_per_secs,
+    5-ma(c2s_0wins_per_secs) AS pred_2_c2s_0wins_per_secs,
+    lag(c2s_0wins_per_secs) AS pred_3_c2s_0wins_per_secs,
+    IF c2s_0wins_per_secs > 1 THEN (abs(pred_3_c2s_0wins_per_secs - c2s_0wins_per_secs) /
+       max(abs pred_3_c2s_0wins_per_secs, abs c2s_0wins_per_secs) +
+     abs(pred_2_c2s_0wins_per_secs - c2s_0wins_per_secs) /
+       max(abs pred_2_c2s_0wins_per_secs, abs c2s_0wins_per_secs) +
+     abs(pred_1_c2s_0wins_per_secs - c2s_0wins_per_secs) /
+       max(abs pred_1_c2s_0wins_per_secs, abs c2s_0wins_per_secs) +
+     abs(pred_0_c2s_0wins_per_secs - c2s_0wins_per_secs) /
+       max(abs pred_0_c2s_0wins_per_secs, abs c2s_0wins_per_secs)) / 4 ELSE 0 AS abnormality_c2s_0wins_per_secs,
+    s2c_0wins_per_secs,
+    smooth(s2c_0wins_per_secs) AS pred_0_s2c_0wins_per_secs,
+    fit(5, s2c_0wins_per_secs) AS pred_1_s2c_0wins_per_secs,
+    5-ma(s2c_0wins_per_secs) AS pred_2_s2c_0wins_per_secs,
+    lag(s2c_0wins_per_secs) AS pred_3_s2c_0wins_per_secs,
+    IF s2c_0wins_per_secs > 1 THEN (abs(pred_3_s2c_0wins_per_secs - s2c_0wins_per_secs) /
+       max(abs pred_3_s2c_0wins_per_secs, abs s2c_0wins_per_secs) +
+     abs(pred_2_s2c_0wins_per_secs - s2c_0wins_per_secs) /
+       max(abs pred_2_s2c_0wins_per_secs, abs s2c_0wins_per_secs) +
+     abs(pred_1_s2c_0wins_per_secs - s2c_0wins_per_secs) /
+       max(abs pred_1_s2c_0wins_per_secs, abs s2c_0wins_per_secs) +
+     abs(pred_0_s2c_0wins_per_secs - s2c_0wins_per_secs) /
+       max(abs pred_0_s2c_0wins_per_secs, abs s2c_0wins_per_secs)) / 4 ELSE 0 AS abnormality_s2c_0wins_per_secs
+  EVENT STARTING AT start WITH DURATION avg_window;
+
+DEFINE 'averages: SRT anomalies' AS
+  FROM 'averages: SRT predictions'
+  SELECT
+    start,
+    (abnormality_srt_avg > 0.75) AS abnormality,
+    5-ma float(abnormality) AS _recent_abnormality,
+    hysteresis (_recent_abnormality, 3/5, 4/5) AS firing
+  COMMIT,
+    NOTIFY "averages SRT looks abnormal" WITH
+      "${firing}" AS firing,
+      abs(_recent_abnormality - 3/5) AS certainty,
+      "SRT" AS metric,
+      "anomaly detected" AS desc,
+      "${param.id}" AS bca
+    AND KEEP ALL
+    AFTER firing != COALESCE(previous.firing, false)
+  EVENT STARTING AT start;
+
+DEFINE 'averages: SRT predictions' AS
+  FROM averages
+  SELECT
+    start,
+    srt_avg,
+    smooth(srt_avg) AS pred_0_srt_avg,
+    fit(5, srt_avg) AS pred_1_srt_avg,
+    5-ma(srt_avg) AS pred_2_srt_avg,
+    lag(srt_avg) AS pred_3_srt_avg,
+    IF sum_rt_count_server > 10 THEN (abs(pred_3_srt_avg - srt_avg) /
+       max(abs pred_3_srt_avg, abs srt_avg) +
+     abs(pred_2_srt_avg - srt_avg) /
+       max(abs pred_2_srt_avg, abs srt_avg) +
+     abs(pred_1_srt_avg - srt_avg) /
+       max(abs pred_1_srt_avg, abs srt_avg) +
+     abs(pred_0_srt_avg - srt_avg) /
+       max(abs pred_0_srt_avg, abs srt_avg)) / 4 ELSE 0 AS abnormality_srt_avg
+  EVENT STARTING AT start WITH DURATION avg_window;
+
+DEFINE 'averages: RTT anomalies' AS
+  FROM 'averages: RTT predictions'
+  SELECT
+    start,
+    (abnormality_srtt_avg > 0.75 OR
+     abnormality_crtt_avg > 0.75) AS abnormality,
+    5-ma float(abnormality) AS _recent_abnormality,
+    hysteresis (_recent_abnormality, 3/5, 4/5) AS firing
+  COMMIT,
+    NOTIFY "averages RTT looks abnormal" WITH
+      "${firing}" AS firing,
+      abs(_recent_abnormality - 3/5) AS certainty,
+      "RTT" AS metric,
+      "anomaly detected" AS desc,
+      "${param.id}" AS bca
+    AND KEEP ALL
+    AFTER firing != COALESCE(previous.firing, false)
+  EVENT STARTING AT start;
+
+DEFINE 'averages: RTT predictions' AS
+  FROM averages
+  SELECT
+    start,
+    -- rtt_avg
+    crtt_avg,
+    smooth(crtt_avg) AS pred_0_crtt_avg,
+    fit(5, crtt_avg) AS pred_1_crtt_avg,
+    5-ma(crtt_avg) AS pred_2_crtt_avg,
+    lag(crtt_avg) AS pred_3_crtt_avg,
+    IF sum_rtt_count_server > 10 THEN (abs(pred_3_crtt_avg - crtt_avg) /
+       max(abs pred_3_crtt_avg, abs crtt_avg) +
+     abs(pred_2_crtt_avg - crtt_avg) /
+       max(abs pred_2_crtt_avg, abs crtt_avg) +
+     abs(pred_1_crtt_avg - crtt_avg) /
+       max(abs pred_1_crtt_avg, abs crtt_avg) +
+     abs(pred_0_crtt_avg - crtt_avg) /
+       max(abs pred_0_crtt_avg, abs crtt_avg)) / 4 ELSE 0 AS abnormality_crtt_avg,
+    srtt_avg,
+    smooth(srtt_avg) AS pred_0_srtt_avg,
+    fit(5, srtt_avg) AS pred_1_srtt_avg,
+    5-ma(srtt_avg) AS pred_2_srtt_avg,
+    lag(srtt_avg) AS pred_3_srtt_avg,
+    IF sum_rtt_count_client > 10 THEN (abs(pred_3_srtt_avg - srtt_avg) /
+       max(abs pred_3_srtt_avg, abs srtt_avg) +
+     abs(pred_2_srtt_avg - srtt_avg) /
+       max(abs pred_2_srtt_avg, abs srtt_avg) +
+     abs(pred_1_srtt_avg - srtt_avg) /
+       max(abs pred_1_srtt_avg, abs srtt_avg) +
+     abs(pred_0_srtt_avg - srtt_avg) /
+       max(abs pred_0_srtt_avg, abs srtt_avg)) / 4 ELSE 0 AS abnormality_srtt_avg
+  EVENT STARTING AT start WITH DURATION avg_window;
+
+DEFINE 'averages: RD anomalies' AS
+  FROM 'averages: RD predictions'
+  SELECT
+    start,
+    (abnormality_srd_avg > 0.75 OR
+     abnormality_crd_avg > 0.75) AS abnormality,
+    5-ma float(abnormality) AS _recent_abnormality,
+    hysteresis (_recent_abnormality, 3/5, 4/5) AS firing
+  COMMIT,
+    NOTIFY "averages RD looks abnormal" WITH
+      "${firing}" AS firing,
+      abs(_recent_abnormality - 3/5) AS certainty,
+      "RD" AS metric,
+      "anomaly detected" AS desc,
+      "${param.id}" AS bca
+    AND KEEP ALL
+    AFTER firing != COALESCE(previous.firing, false)
+  EVENT STARTING AT start;
+
+DEFINE 'averages: RD predictions' AS
+  FROM averages
+  SELECT
+    start,
+    -- rd_avg
+    crd_avg,
+    smooth(crd_avg) AS pred_0_crd_avg,
+    fit(5, crd_avg) AS pred_1_crd_avg,
+    5-ma(crd_avg) AS pred_2_crd_avg,
+    lag(crd_avg) AS pred_3_crd_avg,
+    IF sum_rd_count_client > 10 THEN (abs(pred_3_crd_avg - crd_avg) /
+       max(abs pred_3_crd_avg, abs crd_avg) +
+     abs(pred_2_crd_avg - crd_avg) /
+       max(abs pred_2_crd_avg, abs crd_avg) +
+     abs(pred_1_crd_avg - crd_avg) /
+       max(abs pred_1_crd_avg, abs crd_avg) +
+     abs(pred_0_crd_avg - crd_avg) /
+       max(abs pred_0_crd_avg, abs crd_avg)) / 4 ELSE 0 AS abnormality_crd_avg,
+    srd_avg,
+    smooth(srd_avg) AS pred_0_srd_avg,
+    fit(5, srd_avg) AS pred_1_srd_avg,
+    5-ma(srd_avg) AS pred_2_srd_avg,
+    lag(srd_avg) AS pred_3_srd_avg,
+    IF sum_rd_count_server > 10 THEN (abs(pred_3_srd_avg - srd_avg) /
+       max(abs pred_3_srd_avg, abs srd_avg) +
+     abs(pred_2_srd_avg - srd_avg) /
+       max(abs pred_2_srd_avg, abs srd_avg) +
+     abs(pred_1_srd_avg - srd_avg) /
+       max(abs pred_1_srd_avg, abs srd_avg) +
+     abs(pred_0_srd_avg - srd_avg) /
+       max(abs pred_0_srd_avg, abs srd_avg)) / 4 ELSE 0 AS abnormality_srd_avg
+  EVENT STARTING AT start WITH DURATION avg_window;
+
+DEFINE 'averages: DTT anomalies' AS
+  FROM 'averages: DTT predictions'
+  SELECT
+    start,
+    (abnormality_sdtt_avg > 0.75 OR
+     abnormality_cdtt_avg > 0.75) AS abnormality,
+    5-ma float(abnormality) AS _recent_abnormality,
+    hysteresis (_recent_abnormality, 3/5, 4/5) AS firing
+  COMMIT,
+    NOTIFY "averages DTT looks abnormal" WITH
+      "${firing}" AS firing,
+      abs(_recent_abnormality - 3/5) AS certainty,
+      "DTT" AS metric,
+      "anomaly detected" AS desc,
+      "${param.id}" AS bca
+    AND KEEP ALL
+    AFTER firing != COALESCE(previous.firing, false)
+  EVENT STARTING AT start;
+
+DEFINE 'averages: DTT predictions' AS
+  FROM averages
+  SELECT
+    start,
+    -- dtt_avg
+    cdtt_avg,
+    smooth(cdtt_avg) AS pred_0_cdtt_avg,
+    fit(5, cdtt_avg) AS pred_1_cdtt_avg,
+    5-ma(cdtt_avg) AS pred_2_cdtt_avg,
+    lag(cdtt_avg) AS pred_3_cdtt_avg,
+    IF sum_dtt_count_client > 10 THEN (abs(pred_3_cdtt_avg - cdtt_avg) /
+       max(abs pred_3_cdtt_avg, abs cdtt_avg) +
+     abs(pred_2_cdtt_avg - cdtt_avg) /
+       max(abs pred_2_cdtt_avg, abs cdtt_avg) +
+     abs(pred_1_cdtt_avg - cdtt_avg) /
+       max(abs pred_1_cdtt_avg, abs cdtt_avg) +
+     abs(pred_0_cdtt_avg - cdtt_avg) /
+       max(abs pred_0_cdtt_avg, abs cdtt_avg)) / 4 ELSE 0 AS abnormality_cdtt_avg,
+    sdtt_avg,
+    smooth(sdtt_avg) AS pred_0_sdtt_avg,
+    fit(5, sdtt_avg) AS pred_1_sdtt_avg,
+    5-ma(sdtt_avg) AS pred_2_sdtt_avg,
+    lag(sdtt_avg) AS pred_3_sdtt_avg,
+    IF sum_dtt_count_server > 10 THEN (abs(pred_3_sdtt_avg - sdtt_avg) /
+       max(abs pred_3_sdtt_avg, abs sdtt_avg) +
+     abs(pred_2_sdtt_avg - sdtt_avg) /
+       max(abs pred_2_sdtt_avg, abs sdtt_avg) +
+     abs(pred_1_sdtt_avg - sdtt_avg) /
+       max(abs pred_1_sdtt_avg, abs sdtt_avg) +
+     abs(pred_0_sdtt_avg - sdtt_avg) /
+       max(abs pred_0_sdtt_avg, abs sdtt_avg)) / 4 ELSE 0 AS abnormality_sdtt_avg
+  EVENT STARTING AT start WITH DURATION avg_window;

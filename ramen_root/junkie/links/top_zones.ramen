@@ -1,0 +1,252 @@
+-- vim: ft=sql expandtab
+-- Simple program that will track the top links of the cartesian product of
+-- zones, and aggregate interesting metrics every minutes.
+-- The "top" links are, for now, the ones with the most distinct individual
+-- host-host pairings (approximate).
+
+-- Innovation: we use a parameter to build function names
+
+PARAMETERS
+  -- We actually do not need this since there will be only one instance, but
+  -- it's for shortening the program name:
+  uniq_name DEFAULTS TO "",
+  base_name DEFAULTS TO "",
+  top_size DEFAULT TO 100,
+  top_duration DEFAULT TO 3600,
+  aggr_duration DEFAULT TO 60;
+
+-- We are going to sum tcp, udp, and all other metrics that together form
+-- the whole traffic, wo that we can compute the volumetry. Unfortunately,
+-- only TCP comes with any metric that bear any relation to quality of
+-- service. We blanks these metrics for other sources below:
+
+-- Shouldn't we be able to cram at least an RTT in here, from the many UDP
+-- protocols we support?
+DEFINE extended_udp AS
+  FROM ../../base/udp
+  SELECT *,
+    0u32 AS payload_packets_client,
+    0u32 AS payload_packets_server,
+    0u32n AS rtt_count_client,
+    0u32n AS rtt_count_server,
+    0u64 AS rtt_sum_client,
+    0u64 AS rtt_sum_server,
+    0u32n AS rd_count_client,
+    0u32n AS rd_count_server;
+
+-- Same here regarding RTT: isn't a ping response time essentially the
+-- canonical way to measure RTT?
+DEFINE extended_icmp AS
+  FROM ../../base/icmp
+  SELECT *,
+    0u32 AS payload_packets_client,
+    0u32 AS payload_packets_server,
+    0u64 AS payload_bytes_client,
+    0u64 AS payload_bytes_server,
+    0u32n AS rtt_count_client,
+    0u32n AS rtt_count_server,
+    0u64 AS rtt_sum_client,
+    0u64 AS rtt_sum_server,
+    0u32n AS rd_count_client,
+    0u32n AS rd_count_server;
+
+-- These, on the other hand, are more legit dark matter:
+DEFINE extended_other_ip AS
+  FROM '../../base/other-ip'
+  SELECT *,
+    0u32 AS payload_packets_client,
+    0u32 AS payload_packets_server,
+    0u64 AS payload_bytes_client,
+    0u64 AS payload_bytes_server,
+    0u32n AS rtt_count_client,
+    0u32n AS rtt_count_server,
+    0u64 AS rtt_sum_client,
+    0u64 AS rtt_sum_server,
+    0u32n AS rd_count_client,
+    0u32n AS rd_count_server;
+
+DEFINE extended_non_ip AS
+  FROM '../../base/non-ip'
+  SELECT *,
+    0u32 AS payload_packets_client,
+    0u32 AS payload_packets_server,
+    0u64 AS payload_bytes_client,
+    0u64 AS payload_bytes_server,
+    0u32n AS rtt_count_client,
+    0u32n AS rtt_count_server,
+    0u64 AS rtt_sum_client,
+    0u64 AS rtt_sum_server,
+    0u32n AS rd_count_client,
+    0u32n AS rd_count_server,
+    u32(NULL) AS ip4_client,
+    i128(NULL) AS ip6_client,
+    u32(NULL) AS ip4_server,
+    i128(NULL) AS ip6_server;
+
+-- In c2s and s2c we have a unidirectional view of the traffic.
+-- Here, we'd like to build a view where all the data concerning all
+-- transferts bewtween Z1 and Z2 are in a single tuple.
+-- We must then go back to the tcp/udp/icmp and other-ip tables, and
+-- takes either client or server columns depending on whether zone_client
+-- or ip_client is smaller.
+DEFINE link_c2s AS
+  FROM
+    ../../base/tcp,
+    extended_udp,
+    extended_icmp,
+    extended_other_ip,
+    extended_non_ip
+  WHERE
+    zone_client < zone_server OR
+    zone_client = zone_server AND
+    COALESCE(ip4_client, ip6_client, 0) <= COALESCE(ip4_server, ip6_server, 0)
+  SELECT
+    capture_begin / 1e6 AS start,
+    capture_end / 1e6 AS stop,
+
+    zone_client AS zone_1, zone_server AS zone_2,
+    vlan_client AS vlan_1, vlan_server AS vlan_2,
+    ip4_client AS ip4_1, ip6_client AS ip6_1,
+    ip4_server AS ip4_2, ip6_server AS ip6_2,
+    mtu_client AS mtu_1, mtu_server AS mtu_2,
+
+    traffic_packets_client AS packets_1, traffic_packets_server AS packets_2,
+    traffic_bytes_client AS bytes_1, traffic_bytes_server AS bytes_2,
+    payload_packets_client AS packets_with_payload_1, payload_packets_server AS packets_with_payload_2,
+    payload_bytes_client AS payload_1, payload_bytes_server AS payload_2,
+
+    rtt_count_client AS rtt_count_1, rtt_count_server AS rtt_count_2,
+    rtt_sum_client AS rtt_sum_1, rtt_sum_server AS rtt_sum_2,
+    rd_count_client AS rd_count_1, rd_count_server AS rd_count_2;
+
+-- In the other way around for the other tuples:
+DEFINE link_s2c AS
+  FROM
+    ../../base/tcp,
+    extended_udp,
+    extended_icmp,
+    extended_other_ip,
+    extended_non_ip
+  WHERE
+    zone_server < zone_client OR
+    zone_server = zone_client AND
+    COALESCE(ip4_server, ip6_server, 0) < COALESCE(ip4_client, ip6_client, 0)
+  SELECT
+    capture_begin / 1e6 AS start,
+    capture_end / 1e6 AS stop,
+
+    zone_server AS zone_1, zone_client AS zone_2,
+    vlan_server AS vlan_1, vlan_client AS vlan_2,
+    ip4_server AS ip4_1, ip6_server AS ip6_1,
+    ip4_client AS ip4_2, ip6_client AS ip6_2,
+    mtu_server AS mtu_1, mtu_client AS mtu_2,
+
+    traffic_packets_server AS packets_1, traffic_packets_client AS packets_2,
+    traffic_bytes_server AS bytes_1, traffic_bytes_client AS bytes_2,
+    payload_packets_server AS packets_with_payload_1, payload_packets_client AS packets_with_payload_2,
+    payload_bytes_server AS payload_1, payload_bytes_client AS payload_2,
+
+    rtt_count_server AS rtt_count_1, rtt_count_client AS rtt_count_2,
+    rtt_sum_server AS rtt_sum_1, rtt_sum_client AS rtt_sum_2,
+    rd_count_server AS rd_count_1, rd_count_client AS rd_count_2;
+
+
+-- This node merely computes the number of unique host-host connections, and
+-- accordingly blanks the zone_src/dst.
+-- The number of distinct pairs of hosts is approximated using a single large
+-- rotating bloom filter.
+DEFINE degraded AS
+  FROM
+    'link_c2s', 'link_s2c'
+  MERGE ON start TIMEOUT AFTER 2 SECONDS
+  SELECT
+    *,
+    REMEMBER globally (
+      0.03, -- false positive rate
+      start, -- time
+      3600, -- memory duration
+      -- What to remember:
+      -- Notice we want to avoid remembering a nullable value.
+      -- Also, in theory vlan_1 = vlan_2.
+      COALESCE(vlan_1, vlan_2, 0),
+      COALESCE(ip4_1, ip6_1, 0),
+      COALESCE(ip4_2, ip6_2, 0)
+    ) AS is_new_hosts_pair,
+    -- nullifies the zones if not important:
+    IS zone_1, zone_2 IN TOP top_size BY u32(is_new_hosts_pair)
+      IN THE LAST top_duration AT TIME start AS _important,
+    IF _important THEN zone_1 ELSE NULL AS zone_1,
+    IF _important THEN zone_2 ELSE NULL AS zone_2;
+
+-- Now that we have reduced that dimension, we can aggregate on
+-- zone_1*zone_2
+DEFINE top AS
+  FROM degraded
+  GROUP BY zone_1, zone_2
+  SELECT
+    -- Zone info
+    zone_1,
+    zone_2,
+    sum u32(is_new_hosts_pair) AS host_pairs,
+
+    -- Time info
+    min start AS _min_start,
+    (_min_start // aggr_duration) * aggr_duration AS start,
+
+    -- Volumetry 1 -> 2
+    sum packets_1 / aggr_duration AS packets_per_secs_1,
+    sum bytes_1 / aggr_duration AS bytes_per_secs_1,
+    sum payload_1 / aggr_duration AS payload_bytes_per_secs_1,
+    -- Volumetry 2 -> 1
+    sum packets_2 / aggr_duration AS packets_per_secs_2,
+    sum bytes_2 / aggr_duration AS bytes_per_secs_2,
+    sum payload_2 / aggr_duration AS payload_bytes_per_secs_2,
+
+    -- RTT 1 -> 2 (in seconds)
+    sum COALESCE(rtt_count_1, 0) AS _sum_rtt_count_1,
+    IF _sum_rtt_count_1 = 0 THEN NULL ELSE
+      (sum rtt_sum_1 / _sum_rtt_count_1) / 1e6 AS avg_rtt_1,
+    -- Also try to retain an idea of what the measured max avg had been:
+    max (COALESCE(rtt_sum_1 / rtt_count_1, 0) / 1e6) AS _max_avg_rtt_1,
+    IF _max_avg_rtt_1 = 0 THEN NULL ELSE _max_avg_rtt_1 AS max_avg_rtt_1,
+    -- RTT 2 -> 1
+    sum COALESCE(rtt_count_2, 0) AS _sum_rtt_count_2,
+    IF _sum_rtt_count_2 = 0 THEN NULL ELSE
+      (sum rtt_sum_2 / _sum_rtt_count_2) / 1e6 AS avg_rtt_2,
+    max (COALESCE(rtt_sum_2 / rtt_count_2, 0) / 1e6) AS _max_avg_rtt_2,
+    IF _max_avg_rtt_2 = 0 THEN NULL ELSE _max_avg_rtt_2 AS max_avg_rtt_2,
+
+    -- RD: percentage of retransmitted packets over packets with payload
+    sum packets_with_payload_1 AS _sum_packets_with_payload_1,
+    IF _sum_packets_with_payload_1 = 0 THEN NULL ELSE
+      (sum COALESCE(rd_count_1, 0) / _sum_packets_with_payload_1) / 100
+        AS avg_rr_1,
+    -- Again, try to retain an idea of the max measured:
+    max (
+      IF packets_with_payload_1 = 0 OR rd_count_1 IS NULL THEN 0 ELSE
+        (COALESCE(rd_count_1, 0) / packets_with_payload_1) / 100
+    ) AS _max_avg_rr_1,
+    IF _max_avg_rr_1 = 0 THEN NULL ELSE _max_avg_rr_1 AS max_avg_rr_1,
+    -- RD 2 -> 1
+    sum packets_with_payload_2 AS _sum_packets_with_payload_2,
+    IF _sum_packets_with_payload_2 = 0 THEN NULL ELSE
+      (sum COALESCE(rd_count_2, 0) / _sum_packets_with_payload_2) / 100
+        AS avg_rr_2,
+    -- Again, try to retain an idea of the max measured:
+    max (
+      IF packets_with_payload_2 = 0 OR rd_count_2 IS NULL THEN 0 ELSE
+        (COALESCE(rd_count_2, 0) / packets_with_payload_2) / 100
+    ) AS _max_avg_rr_2,
+    IF _max_avg_rr_2 = 0 THEN NULL ELSE _max_avg_rr_2 AS max_avg_rr_2,
+
+    -- Everything we can aggregate by zone:
+    max mtu_1, max mtu_2
+
+    -- TODO: other metrics, but need to be able to select fields present only
+    -- in one parent (will be forced nullable and written as NULL by other
+    -- parents) ; meanwhile we could also do it using converting nodes but
+    -- that will be verbose and less efficient.
+
+  EVENT STARTS AT start WITH DURATION aggr_duration
+  COMMIT AFTER in.start > out.start + aggr_duration + 20s
+  FACTORS zone_1, zone_2;

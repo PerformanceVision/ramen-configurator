@@ -1,0 +1,80 @@
+DEFINE 'new peers' AS
+  FROM
+    ../../base/tcp,
+    ../../base/udp,
+    ../../base/icmp,
+    '../../base/other-ip'
+  MERGE ON capture_begin TIMEOUT AFTER 2 SECONDS
+  SELECT
+    (capture_begin // 1e9) * 100 AS start,
+    min capture_begin, max capture_end,
+    -- Traffic (of any kind) we haven't seen in the last 3600 secs.
+    -- Increase the estimate of *not* remembering since we ask for 10% of
+    -- false positives.
+    sum (1.1 * float(not remember (
+           0.1, -- 10% of false positives
+           capture_begin // 1e6, 3600,
+           coalesce (ip4_client, ip6_client, 0),
+           coalesce (ip4_server, ip6_server, 0)))) /
+      100
+        AS nb_new_cnxs_per_secs,
+    -- Clients we haven't seen in the last 3600 secs.
+    sum (1.1 * float(not remember (
+           0.1,
+           capture_begin // 1e6, 3600,
+           coalesce (ip4_client, ip6_client, 0)))) /
+       100
+         AS nb_new_clients_per_secs
+  GROUP BY capture_begin // 100000000
+  COMMIT AFTER
+    in.capture_begin / 1e6 > out.min_capture_begin + 2 * u64(100)
+  EVENT STARTING AT start WITH DURATION 100s;
+
+DEFINE 'new peers: DDoS predictions' AS
+  FROM 'new peers'
+  SELECT
+    start,
+    nb_new_cnxs_per_secs,
+    smooth(nb_new_cnxs_per_secs) AS pred_0_nb_new_cnxs_per_secs,
+    fit(5, nb_new_cnxs_per_secs) AS pred_1_nb_new_cnxs_per_secs,
+    5-ma(nb_new_cnxs_per_secs) AS pred_2_nb_new_cnxs_per_secs,
+    lag(nb_new_cnxs_per_secs) AS pred_3_nb_new_cnxs_per_secs,
+    IF nb_new_cnxs_per_secs > 1 THEN (abs(pred_3_nb_new_cnxs_per_secs - nb_new_cnxs_per_secs) /
+       max(abs pred_3_nb_new_cnxs_per_secs, abs nb_new_cnxs_per_secs) +
+     abs(pred_2_nb_new_cnxs_per_secs - nb_new_cnxs_per_secs) /
+       max(abs pred_2_nb_new_cnxs_per_secs, abs nb_new_cnxs_per_secs) +
+     abs(pred_1_nb_new_cnxs_per_secs - nb_new_cnxs_per_secs) /
+       max(abs pred_1_nb_new_cnxs_per_secs, abs nb_new_cnxs_per_secs) +
+     abs(pred_0_nb_new_cnxs_per_secs - nb_new_cnxs_per_secs) /
+       max(abs pred_0_nb_new_cnxs_per_secs, abs nb_new_cnxs_per_secs)) / 4 ELSE 0 AS abnormality_nb_new_cnxs_per_secs,
+    nb_new_clients_per_secs,
+    smooth(nb_new_clients_per_secs) AS pred_0_nb_new_clients_per_secs,
+    fit(5, nb_new_clients_per_secs) AS pred_1_nb_new_clients_per_secs,
+    5-ma(nb_new_clients_per_secs) AS pred_2_nb_new_clients_per_secs,
+    lag(nb_new_clients_per_secs) AS pred_3_nb_new_clients_per_secs,
+    IF nb_new_clients_per_secs > 1 THEN (abs(pred_3_nb_new_clients_per_secs - nb_new_clients_per_secs) /
+       max(abs pred_3_nb_new_clients_per_secs, abs nb_new_clients_per_secs) +
+     abs(pred_2_nb_new_clients_per_secs - nb_new_clients_per_secs) /
+       max(abs pred_2_nb_new_clients_per_secs, abs nb_new_clients_per_secs) +
+     abs(pred_1_nb_new_clients_per_secs - nb_new_clients_per_secs) /
+       max(abs pred_1_nb_new_clients_per_secs, abs nb_new_clients_per_secs) +
+     abs(pred_0_nb_new_clients_per_secs - nb_new_clients_per_secs) /
+       max(abs pred_0_nb_new_clients_per_secs, abs nb_new_clients_per_secs)) / 4 ELSE 0 AS abnormality_nb_new_clients_per_secs
+  EVENT STARTING AT start WITH DURATION 100s;
+
+DEFINE 'new peers: DDoS anomalies' AS
+  FROM 'new peers: DDoS predictions'
+  SELECT
+    start,
+    (abnormality_nb_new_clients_per_secs > 0.75 OR
+     abnormality_nb_new_cnxs_per_secs > 0.75) AS abnormality,
+    5-ma float(abnormality) AS _recent_abnormality,
+    hysteresis (_recent_abnormality, 3/5, 4/5) AS firing
+  COMMIT,
+    NOTIFY "new peers DDoS looks abnormal" WITH
+      "${firing}" AS firing,
+      abs(_recent_abnormality - 3/5) AS certainty,
+      "possible DDoS" AS desc
+    AND KEEP ALL
+    AFTER firing != COALESCE(previous.firing, false)
+  EVENT STARTING AT start;

@@ -1,0 +1,66 @@
+DEFINE 'top_port_scans' AS
+  FROM
+    ../../base/tcp,
+    ../../base/udp
+  MERGE ON capture_begin TIMEOUT AFTER 2 SECONDS
+  WHEN
+    NOT remember globally (
+      0.1, capture_begin / 1e6, 3600,
+      -- We do not take into account IP proto, so a ping on a TCP port
+      -- grants you a free ping on the same UDP port.
+      coalesce (ip4_client, ip6_client, 0),
+      coalesce (ip4_server, ip6_server, 0),
+      port_server) AND
+    IS coalesce (ip4_client, ip6_client, 0),
+       coalesce (ip4_server, ip6_server, 0) IN TOP 100
+  SELECT
+    min (capture_begin / 1e6) AS start,
+    max (capture_end / 1e6) AS end,
+    coalesce (ip4_client, ip6_client, 0) as client,
+    coalesce (ip4_server, ip6_server, 0) as server,
+    sum 1 as port_count
+  GROUP BY coalesce (ip4_client, ip6_client, 0),
+           coalesce (ip4_server, ip6_server, 0)
+  COMMIT BEFORE end - start > 3600;
+
+DEFINE 'port_scan_alert' AS
+  FROM top_port_scans
+  WHEN port_count > 30
+  NOTIFY "Port-Scan from ${client} to ${server}" WITH
+    reldiff(port_count, 30) AS certainty,
+    "${client} has probed at least ${port_count} ports of ${server} from ${start} to ${end}'" AS desc,
+    "${client},${server}" AS ips,
+    "${port_count}" AS values,
+    "30" AS thresholds;
+
+DEFINE 'top_ip_scans' AS
+  FROM
+    ../../base/tcp,
+    ../../base/udp,
+    ../../base/icmp,
+    '../../base/other-ip'
+  MERGE ON capture_begin TIMEOUT AFTER 2 SECONDS
+  WHEN
+    NOT remember globally (
+      0.1, capture_begin / 1e6, 3600,
+      -- An IP scanner could use varying proto/port to detect host
+      -- presence so we just care about src and dst here:
+      coalesce (ip4_client, ip6_client, 0),
+      coalesce (ip4_server, ip6_server, 0)) AND
+    IS coalesce (ip4_client, ip6_client, 0) IN TOP 100
+  SELECT
+    min (capture_begin / 1e6) AS start,
+    max (capture_end / 1e6) AS end,
+    coalesce (ip4_client, ip6_client, 0) as client,
+    sum 1 as ip_count
+  GROUP BY coalesce (ip4_client, ip6_client, 0)
+  COMMIT BEFORE end - start > 3600;
+
+DEFINE 'ip_scan_alert' AS
+  FROM top_ip_scans
+  WHEN ip_count > 100
+  NOTIFY "IP-Scan from ${client}" WITH
+    reldiff(ip_count, 100) AS certainty,
+    "${client}" AS ips,
+    "${ip_count}" AS values,
+    "100" AS thresholds;

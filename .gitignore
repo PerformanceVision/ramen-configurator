@@ -31,3 +31,5 @@ src/insert_alert
 debtmp/
 tmp/
 *.tgz
+ramen_root/**/*.ml
+ramen_root/**/*.x
