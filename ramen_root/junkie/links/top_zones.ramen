@@ -117,7 +117,8 @@ DEFINE link_c2s AS
 
     rtt_count_client AS rtt_count_1, rtt_count_server AS rtt_count_2,
     rtt_sum_client AS rtt_sum_1, rtt_sum_server AS rtt_sum_2,
-    rd_count_client AS rd_count_1, rd_count_server AS rd_count_2;
+    rd_count_client AS rd_count_1, rd_count_server AS rd_count_2
+  EVENT STARTS AT start AND ENDS AT stop;
 
 -- In the other way around for the other tuples:
 DEFINE link_s2c AS
@@ -148,7 +149,8 @@ DEFINE link_s2c AS
 
     rtt_count_server AS rtt_count_1, rtt_count_client AS rtt_count_2,
     rtt_sum_server AS rtt_sum_1, rtt_sum_client AS rtt_sum_2,
-    rd_count_server AS rd_count_1, rd_count_client AS rd_count_2;
+    rd_count_server AS rd_count_1, rd_count_client AS rd_count_2
+  EVENT STARTS AT start AND ENDS AT stop;
 
 
 -- This node merely computes the number of unique host-host connections, and
