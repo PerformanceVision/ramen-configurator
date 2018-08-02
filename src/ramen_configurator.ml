@@ -82,6 +82,7 @@ let start debug monitor ramen_cmd root_dir bundle_dir persist_dir db_name
       h in
     comp "junkie/base" params ;
     comp "junkie/links/top_zones" no_params ;
+    comp "junkie/apps/top_servers" no_params ;
     let bcns, bcas = get_config_from_db db in
     let bcns = List.take with_bcns bcns
     and bcas = List.take with_bcas bcas in

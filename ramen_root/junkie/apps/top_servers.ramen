@@ -1,0 +1,145 @@
+-- vim: ft=sql expandtab
+-- Track the top services by number of distinct client hosts (approximate),
+-- and aggregate all possible metrics every minutes, per server and "protocol"
+-- (ie. CSV file, not protostack, although that might be worth a try).
+
+PARAMETERS
+  top_size DEFAULT TO 100,
+  top_duration DEFAULT TO 3600,
+  aggr_duration DEFAULT TO 60;
+
+-- We need to make all CSV similar before merging them:
+
+DEFINE tcp_services AS
+  FROM ../../base/tcp
+  SELECT
+    capture_begin / 1e6 AS start,
+    capture_end / 1e6 AS stop,
+    COALESCE(vlan_server, vlan_client, 0) AS vlan,
+    ip4_client, ip6_client, ip4_server, ip6_server, port_server,
+    "TCP" as protocol,
+    traffic_packets_client, traffic_packets_server,
+    traffic_bytes_client, traffic_bytes_server,
+    payload_packets_client, payload_packets_server,
+    rtt_count_client, rtt_count_server,
+    rtt_sum_client, rtt_sum_server,
+    rd_count_client, rd_count_server
+  EVENT STARTS AT start AND ENDS AT stop;
+
+DEFINE udp_services AS
+  FROM ../../base/udp
+  SELECT
+    capture_begin / 1e6 AS start,
+    capture_end / 1e6 AS stop,
+    COALESCE(vlan_server, vlan_client, 0) AS vlan,
+    ip4_client, ip6_client, ip4_server, ip6_server, port_server,
+    "UDP" as protocol,
+    traffic_packets_client, traffic_packets_server,
+    traffic_bytes_client, traffic_bytes_server,
+    0u32 AS payload_packets_client, 0u32 AS payload_packets_server,
+    u32(NULL) AS rtt_count_client, u32(NULL) AS rtt_count_server,
+    0u64 AS rtt_sum_client, 0u64 AS rtt_sum_server,
+    u32(NULL) AS rd_count_client, u32(NULL) AS rd_count_server
+  EVENT STARTS AT start AND ENDS AT stop;
+
+-- Merge all possible CSV together
+DEFINE degraded AS
+  FROM
+    tcp_services, udp_services
+  MERGE ON start TIMEOUT AFTER 2 SECONDS
+  SELECT
+    *,
+    IF ip4_server IS NOT NULL THEN ip(COALESCE(ip4_server,0))
+    -- For some reason, the CSV files use a signed 128bits int for
+    -- IPv6 rather than unsigned:
+    ELSE ip(u128(COALESCE(ip6_server,0))) AS _ip,
+    REMEMBER globally (
+      0.03, -- false positive rate
+      start, -- time
+      3600, -- memory duration
+      -- What to remember:
+      vlan, _ip, port_server, protocol,
+      COALESCE(ip4_client, ip6_client, 0)
+    ) AS is_new_client,
+    -- nullifies the service identity if not important:
+    IS vlan, _ip, port_server, protocol IN TOP top_size BY u32(is_new_client)
+      IN THE LAST top_duration AT TIME start AS _important,
+    -- Note: This would fail to typecheck with the internal typechecker
+    -- without the casts around the NULLs because of a bug in CASE/NULL:
+    -- NULL is not constrained and will eventually be assigned the bool type.
+    -- Whereas with the external typechecker the else clause is constrained
+    -- to have the same type as the CASE.
+    IF _important THEN vlan ELSE u32(NULL) AS vlan,
+    IF _important THEN _ip ELSE ip(NULL) AS ip,
+    IF _important THEN port_server ELSE u16(NULL) AS port,
+    IF _important THEN protocol ELSE string(NULL) AS protocol;
+
+-- Aggregate on service, per minute:
+DEFINE top AS
+  FROM degraded
+  GROUP BY vlan, ip, port, protocol
+  SELECT
+    vlan, ip, port, protocol,
+    sum u32(is_new_client) AS clients,
+
+    -- Time info
+    min start AS _min_start,
+    (_min_start // aggr_duration) * aggr_duration AS start,
+
+    -- Volumetry
+    sum traffic_packets_client AS packets_from_client,
+    sum traffic_packets_server AS packets_from_server,
+    sum traffic_bytes_client AS bytes_from_client,
+    sum traffic_bytes_server AS bytes_from_server,
+    sum payload_packets_client AS packets_with_tcp_payload_from_client,
+    sum payload_packets_server AS packets_with_tcp_payload_from_server,
+
+    -- RTT
+    sum rtt_count_client AS _rtt_count_client,
+    sum rtt_sum_client / 1e6 AS _rtt_sum_client,
+    IF _rtt_count_client = 0 THEN NULL ELSE
+      _rtt_sum_client / _rtt_count_client AS avg_rtt_from_client,
+    -- Also try to retain an idea of what the max had been:
+    max (COALESCE(_rtt_sum_client/_rtt_count_client, 0)) AS _max_rtt_client,
+    IF _max_rtt_client = 0 THEN NULL ELSE _max_rtt_client
+      AS max_avg_rtt_from_client,
+
+    sum rtt_count_server AS _rtt_count_server,
+    sum rtt_sum_server / 1e6 AS _rtt_sum_server,
+    IF _rtt_count_server = 0 THEN NULL ELSE
+      _rtt_sum_server / _rtt_count_server AS avg_rtt_from_server,
+    -- Also try to retain an idea of what the max had been:
+    max (COALESCE(_rtt_sum_server/_rtt_count_server, 0)) AS _max_rtt_server,
+    IF _max_rtt_server = 0 THEN NULL ELSE _max_rtt_server
+      AS max_avg_rtt_from_server,
+
+    -- RR: percentage of retransmitted packets over packets with payload
+    sum packets_with_tcp_payload_from_client AS _sum_pld_clt,
+    IF _sum_pld_clt = 0 THEN NULL ELSE
+      100 * sum COALESCE(rd_count_client, 0) / _sum_pld_clt
+        AS avg_rr_from_client,
+    -- Again, try to retain an idea of the max measured:
+    max (
+      IF packets_with_tcp_payload_from_client = 0 OR rd_count_client IS NULL
+      THEN 0
+      ELSE
+        100 * COALESCE(rd_count_client, 0) / packets_with_tcp_payload_from_client
+    ) AS _max_avg_rr_clt,
+    IF _max_avg_rr_clt = 0 THEN NULL ELSE _max_avg_rr_clt AS max_avg_rr_from_client,
+    -- RR: server -> client
+    sum packets_with_tcp_payload_from_server AS _sum_pld_srv,
+    IF _sum_pld_srv = 0 THEN NULL ELSE
+      100 * sum COALESCE(rd_count_server, 0) / _sum_pld_srv
+        AS avg_rr_from_server,
+    -- Again, try to retain an idea of the max measured:
+    max (
+      IF packets_with_tcp_payload_from_server = 0 OR rd_count_server IS NULL
+      THEN 0
+      ELSE
+        100 * COALESCE(rd_count_server, 0) / packets_with_tcp_payload_from_server
+    ) AS _max_avg_rr_srv,
+    IF _max_avg_rr_srv = 0 THEN NULL ELSE _max_avg_rr_srv AS max_avg_rr_from_server
+
+  COMMIT AFTER in.start > out.start + aggr_duration + 20s
+  EVENT STARTS AT start WITH DURATION aggr_duration
+  FACTORS vlan, port, protocol;
