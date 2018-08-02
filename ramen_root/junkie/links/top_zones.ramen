@@ -1,16 +1,9 @@
 -- vim: ft=sql expandtab
--- Simple program that will track the top links of the cartesian product of
--- zones, and aggregate interesting metrics every minutes.
--- The "top" links are, for now, the ones with the most distinct individual
--- host-host pairings (approximate).
-
--- Innovation: we use a parameter to build function names
+-- Track the top links of the cartesian product of zones, and aggregate
+-- interesting metrics every minutes.  The "top" links are, for now, the
+-- ones with the most distinct individual host-host pairings (approximate).
 
 PARAMETERS
-  -- We actually do not need this since there will be only one instance, but
-  -- it's for shortening the program name:
-  uniq_name DEFAULTS TO "",
-  base_name DEFAULTS TO "",
   top_size DEFAULT TO 100,
   top_duration DEFAULT TO 3600,
   aggr_duration DEFAULT TO 60;
@@ -21,7 +14,7 @@ PARAMETERS
 -- service. We blanks these metrics for other sources below:
 
 -- Shouldn't we be able to cram at least an RTT in here, from the many UDP
--- protocols we support?
+-- protocols that are supported?
 DEFINE extended_udp AS
   FROM ../../base/udp
   SELECT *,
@@ -159,7 +152,7 @@ DEFINE link_s2c AS
 -- rotating bloom filter.
 DEFINE degraded AS
   FROM
-    'link_c2s', 'link_s2c'
+    link_c2s, link_s2c
   MERGE ON start TIMEOUT AFTER 2 SECONDS
   SELECT
     *,
@@ -218,7 +211,7 @@ DEFINE top AS
     max (COALESCE(rtt_sum_2 / rtt_count_2, 0) / 1e6) AS _max_avg_rtt_2,
     IF _max_avg_rtt_2 = 0 THEN NULL ELSE _max_avg_rtt_2 AS max_avg_rtt_2,
 
-    -- RD: percentage of retransmitted packets over packets with payload
+    -- RR: percentage of retransmitted packets over packets with payload
     sum packets_with_payload_1 AS _sum_packets_with_payload_1,
     IF _sum_packets_with_payload_1 = 0 THEN NULL ELSE
       (sum COALESCE(rd_count_1, 0) / _sum_packets_with_payload_1) * 100
@@ -229,7 +222,7 @@ DEFINE top AS
         (COALESCE(rd_count_1, 0) / packets_with_payload_1) * 100
     ) AS _max_avg_rr_1,
     IF _max_avg_rr_1 = 0 THEN NULL ELSE _max_avg_rr_1 AS max_avg_rr_1,
-    -- RD 2 -> 1
+    -- RR 2 -> 1
     sum packets_with_payload_2 AS _sum_packets_with_payload_2,
     IF _sum_packets_with_payload_2 = 0 THEN NULL ELSE
       (sum COALESCE(rd_count_2, 0) / _sum_packets_with_payload_2) * 100
@@ -249,6 +242,6 @@ DEFINE top AS
     -- parents) ; meanwhile we could also do it using converting nodes but
     -- that will be verbose and less efficient.
 
-  EVENT STARTS AT start WITH DURATION aggr_duration
   COMMIT AFTER in.start > out.start + aggr_duration + 20s
+  EVENT STARTS AT start WITH DURATION aggr_duration
   FACTORS zone_1, zone_2;

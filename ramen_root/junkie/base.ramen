@@ -58,7 +58,7 @@ DEFINE 'tcp' AS
      dupack_count_server u32?,          -- 50
      zero_window_count_client u32?,
      zero_window_count_server u32?,
-     -- Some counts can be null althgouh the sums cannot ...
+     -- Some counts can be null although the sums cannot ...
      ct_count u32?,
      ct_sum u64,
      ct_square_sum u128,
