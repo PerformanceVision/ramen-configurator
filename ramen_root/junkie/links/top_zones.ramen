@@ -198,41 +198,29 @@ DEFINE top AS
     sum payload_2 / aggr_duration AS payload_bytes_per_secs_2,
 
     -- RTT 1 -> 2 (in seconds)
-    sum COALESCE(rtt_count_1, 0) AS _sum_rtt_count_1,
-    IF _sum_rtt_count_1 = 0 THEN NULL ELSE
-      (sum rtt_sum_1 / _sum_rtt_count_1) / 1e6 AS avg_rtt_1,
+    sum (rtt_sum_1 / 1e6) / sum rtt_count_1 AS avg_rtt_1,
     -- Also try to retain an idea of what the measured max avg had been:
-    max (COALESCE(rtt_sum_1 / rtt_count_1, 0) / 1e6) AS _max_avg_rtt_1,
-    IF _max_avg_rtt_1 = 0 THEN NULL ELSE _max_avg_rtt_1 AS max_avg_rtt_1,
+    (rtt_sum_1 / 1e6) / rtt_count_1 AS _avg_rtt_1,
+    min _avg_rtt_1,
+    max _avg_rtt_1,
     -- RTT 2 -> 1
-    sum COALESCE(rtt_count_2, 0) AS _sum_rtt_count_2,
-    IF _sum_rtt_count_2 = 0 THEN NULL ELSE
-      (sum rtt_sum_2 / _sum_rtt_count_2) / 1e6 AS avg_rtt_2,
-    max (COALESCE(rtt_sum_2 / rtt_count_2, 0) / 1e6) AS _max_avg_rtt_2,
-    IF _max_avg_rtt_2 = 0 THEN NULL ELSE _max_avg_rtt_2 AS max_avg_rtt_2,
+    sum (rtt_sum_2 / 1e6) / sum rtt_count_2 AS avg_rtt_2,
+    (rtt_sum_2 / 1e6) / rtt_count_2 AS _avg_rtt_2,
+    min _avg_rtt_2,
+    max _avg_rtt_2,
 
     -- RR: percentage of retransmitted packets over packets with payload
-    sum packets_with_payload_1 AS _sum_packets_with_payload_1,
-    IF _sum_packets_with_payload_1 = 0 THEN NULL ELSE
-      (sum COALESCE(rd_count_1, 0) / _sum_packets_with_payload_1) * 100
-        AS avg_rr_1,
+    100 * sum rd_count_1 / sum packets_with_payload_1 AS avg_rr_1,
     -- Again, try to retain an idea of the max measured:
-    max (
-      IF packets_with_payload_1 = 0 OR rd_count_1 IS NULL THEN 0 ELSE
-        (COALESCE(rd_count_1, 0) / packets_with_payload_1) * 100
-    ) AS _max_avg_rr_1,
-    IF _max_avg_rr_1 = 0 THEN NULL ELSE _max_avg_rr_1 AS max_avg_rr_1,
+    100 * rd_count_1 / packets_with_payload_1 AS _avg_rr_1,
+    min _avg_rr_1,
+    max _avg_rr_1,
     -- RR 2 -> 1
-    sum packets_with_payload_2 AS _sum_packets_with_payload_2,
-    IF _sum_packets_with_payload_2 = 0 THEN NULL ELSE
-      (sum COALESCE(rd_count_2, 0) / _sum_packets_with_payload_2) * 100
-        AS avg_rr_2,
+    100 * sum rd_count_2 / sum packets_with_payload_2 AS avg_rr_2,
     -- Again, try to retain an idea of the max measured:
-    max (
-      IF packets_with_payload_2 = 0 OR rd_count_2 IS NULL THEN 0 ELSE
-        (COALESCE(rd_count_2, 0) / packets_with_payload_2) * 100
-    ) AS _max_avg_rr_2,
-    IF _max_avg_rr_2 = 0 THEN NULL ELSE _max_avg_rr_2 AS max_avg_rr_2,
+    100 * rd_count_2 / packets_with_payload_2 AS _avg_rr_2,
+    min _avg_rr_2,
+    max _avg_rr_2,
 
     -- Everything we can aggregate by zone:
     max mtu_1, max mtu_2
