@@ -221,23 +221,23 @@ DEFINE top AS
     -- RD: percentage of retransmitted packets over packets with payload
     sum packets_with_payload_1 AS _sum_packets_with_payload_1,
     IF _sum_packets_with_payload_1 = 0 THEN NULL ELSE
-      (sum COALESCE(rd_count_1, 0) / _sum_packets_with_payload_1) / 100
+      (sum COALESCE(rd_count_1, 0) / _sum_packets_with_payload_1) * 100
         AS avg_rr_1,
     -- Again, try to retain an idea of the max measured:
     max (
       IF packets_with_payload_1 = 0 OR rd_count_1 IS NULL THEN 0 ELSE
-        (COALESCE(rd_count_1, 0) / packets_with_payload_1) / 100
+        (COALESCE(rd_count_1, 0) / packets_with_payload_1) * 100
     ) AS _max_avg_rr_1,
     IF _max_avg_rr_1 = 0 THEN NULL ELSE _max_avg_rr_1 AS max_avg_rr_1,
     -- RD 2 -> 1
     sum packets_with_payload_2 AS _sum_packets_with_payload_2,
     IF _sum_packets_with_payload_2 = 0 THEN NULL ELSE
-      (sum COALESCE(rd_count_2, 0) / _sum_packets_with_payload_2) / 100
+      (sum COALESCE(rd_count_2, 0) / _sum_packets_with_payload_2) * 100
         AS avg_rr_2,
     -- Again, try to retain an idea of the max measured:
     max (
       IF packets_with_payload_2 = 0 OR rd_count_2 IS NULL THEN 0 ELSE
-        (COALESCE(rd_count_2, 0) / packets_with_payload_2) / 100
+        (COALESCE(rd_count_2, 0) / packets_with_payload_2) * 100
     ) AS _max_avg_rr_2,
     IF _max_avg_rr_2 = 0 THEN NULL ELSE _max_avg_rr_2 AS max_avg_rr_2,
 
