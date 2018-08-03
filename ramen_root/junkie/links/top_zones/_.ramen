@@ -82,7 +82,7 @@ DEFINE extended_non_ip AS
 -- We must then go back to the tcp/udp/icmp and other-ip tables, and
 -- takes either client or server columns depending on whether zone_client
 -- or ip_client is smaller.
-DEFINE link_c2s AS
+DEFINE c2s AS
   FROM
     ../../../base/tcp,
     extended_udp,
@@ -114,7 +114,7 @@ DEFINE link_c2s AS
   EVENT STARTS AT start AND ENDS AT stop;
 
 -- In the other way around for the other tuples:
-DEFINE link_s2c AS
+DEFINE s2c AS
   FROM
     ../../../base/tcp,
     extended_udp,
@@ -152,7 +152,7 @@ DEFINE link_s2c AS
 -- rotating bloom filter.
 DEFINE degraded AS
   FROM
-    link_c2s, link_s2c
+    c2s, s2c
   MERGE ON start TIMEOUT AFTER 2 SECONDS
   SELECT
     *,
