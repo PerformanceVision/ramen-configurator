@@ -3,7 +3,8 @@ PARAMETERS
   csv_compressed DEFAULTS TO false;
 
 DEFINE 'tcp' AS
-  READ FILES csv_prefix || "tcp_v29.*csv" || (IF csv_compressed THEN ".lz4" ELSE "")
+  READ AND DELETE
+       FILES csv_prefix || "tcp_v29.*csv" || (IF csv_compressed THEN ".lz4" ELSE "")
        PREPROCESS WITH (IF csv_compressed THEN "lz4 -d -c" ELSE "")
        SEPARATOR "\t" NULL "<NULL>"
     (poller string,                     -- 1
@@ -171,7 +172,8 @@ DEFINE 's2c tcp' AS
 
 
 DEFINE 'udp' AS
-  READ FILES csv_prefix || "udp_v29.*csv" || (IF csv_compressed THEN ".lz4" ELSE "")
+  READ AND DELETE
+       FILES csv_prefix || "udp_v29.*csv" || (IF csv_compressed THEN ".lz4" ELSE "")
        PREPROCESS WITH (IF csv_compressed THEN "lz4 -d -c" ELSE "")
        SEPARATOR "\t" NULL "<NULL>"
     (poller string,                     -- 1
@@ -256,7 +258,8 @@ DEFINE 's2c udp' AS
   WHERE traffic_packets_server > 0;
 
 DEFINE 'icmp' AS
-  READ FILES csv_prefix || "icmp_v29.*csv" || (IF csv_compressed THEN ".lz4" ELSE "")
+  READ AND DELETE
+       FILES csv_prefix || "icmp_v29.*csv" || (IF csv_compressed THEN ".lz4" ELSE "")
        PREPROCESS WITH (IF csv_compressed THEN "lz4 -d -c" ELSE "")
        SEPARATOR "\t" NULL "<NULL>"
     (poller string,                     -- 1
@@ -341,7 +344,8 @@ DEFINE 's2c icmp' AS
   WHERE traffic_packets_server > 0;
 
 DEFINE 'other-ip' AS
-  READ FILES csv_prefix || "other_ip_v29.*csv" || (IF csv_compressed THEN ".lz4" ELSE "")
+  READ AND DELETE
+       FILES csv_prefix || "other_ip_v29.*csv" || (IF csv_compressed THEN ".lz4" ELSE "")
        PREPROCESS WITH (IF csv_compressed THEN "lz4 -d -c" ELSE "")
        SEPARATOR "\t" NULL "<NULL>"
     (poller string,                     -- 1
@@ -412,7 +416,8 @@ DEFINE 's2c other-ip' AS
   WHERE traffic_packets_server > 0;
 
 DEFINE 'non-ip' AS
-  READ FILES csv_prefix || "non_ip_v29.*csv" || (IF csv_compressed THEN ".lz4" ELSE "")
+  READ AND DELETE
+       FILES csv_prefix || "non_ip_v29.*csv" || (IF csv_compressed THEN ".lz4" ELSE "")
        PREPROCESS WITH (IF csv_compressed THEN "lz4 -d -c" ELSE "")
        SEPARATOR "\t" NULL "<NULL>"
     (poller string,                     -- 1
@@ -471,7 +476,8 @@ DEFINE 's2c non-ip' AS
   WHERE traffic_packets_server > 0;
 
 DEFINE 'dns' AS
-  READ FILES csv_prefix || "dns_v29.*csv" || (IF csv_compressed THEN ".lz4" ELSE "")
+  READ AND DELETE
+       FILES csv_prefix || "dns_v29.*csv" || (IF csv_compressed THEN ".lz4" ELSE "")
        PREPROCESS WITH (IF csv_compressed THEN "lz4 -d -c" ELSE "")
        SEPARATOR "\t" NULL "<NULL>"
     (poller string,                     -- 1
@@ -509,7 +515,8 @@ DEFINE 'dns' AS
     AND STOPPING AT capture_end * 1e-6;
 
 DEFINE 'http' AS
-  READ FILES csv_prefix || "http_v29.*csv" || (IF csv_compressed THEN ".lz4" ELSE "")
+  READ AND DELETE
+       FILES csv_prefix || "http_v29.*csv" || (IF csv_compressed THEN ".lz4" ELSE "")
        PREPROCESS WITH (IF csv_compressed THEN "lz4 -d -c" ELSE "")
        SEPARATOR "\t" NULL "<NULL>"
     (poller string,                     -- 1
@@ -588,7 +595,8 @@ DEFINE 'http' AS
     AND STOPPING AT capture_end * 1e-6;
 
 DEFINE 'citrix' AS
-  READ FILES csv_prefix || "citrix_v29.*csv" || (IF csv_compressed THEN ".lz4" ELSE "")
+  READ AND DELETE
+       FILES csv_prefix || "citrix_v29.*csv" || (IF csv_compressed THEN ".lz4" ELSE "")
        PREPROCESS WITH (IF csv_compressed THEN "lz4 -d -c" ELSE "")
        SEPARATOR "\t" NULL "<NULL>"
     (poller string,                     -- 1
@@ -635,7 +643,8 @@ DEFINE 'citrix' AS
     AND STOPPING AT capture_end * 1e-6;
 
 DEFINE 'citrix_chanless' AS
-  READ FILES csv_prefix || "citrix_chanless_v29.*csv" || (IF csv_compressed THEN ".lz4" ELSE "")
+  READ AND DELETE
+       FILES csv_prefix || "citrix_chanless_v29.*csv" || (IF csv_compressed THEN ".lz4" ELSE "")
        PREPROCESS WITH (IF csv_compressed THEN "lz4 -d -c" ELSE "")
        SEPARATOR "\t" NULL "<NULL>"
     (poller string,                     -- 1
@@ -692,7 +701,8 @@ DEFINE 'citrix_chanless' AS
     AND STOPPING AT capture_end * 1e-6;
 
 DEFINE 'smb' AS
-  READ FILES csv_prefix || "smb_v29.*csv" || (IF csv_compressed THEN ".lz4" ELSE "")
+  READ AND DELETE
+       FILES csv_prefix || "smb_v29.*csv" || (IF csv_compressed THEN ".lz4" ELSE "")
        PREPROCESS WITH (IF csv_compressed THEN "lz4 -d -c" ELSE "")
        SEPARATOR "\t" NULL "<NULL>"
     (poller string,                     -- 1
@@ -755,7 +765,8 @@ DEFINE 'smb' AS
     AND STOPPING AT capture_end * 1e-6;
 
 DEFINE 'sql' AS
-  READ FILES csv_prefix || "sql_v29.*csv" || (IF csv_compressed THEN ".lz4" ELSE "")
+  READ AND DELETE
+       FILES csv_prefix || "sql_v29.*csv" || (IF csv_compressed THEN ".lz4" ELSE "")
        PREPROCESS WITH (IF csv_compressed THEN "lz4 -d -c" ELSE "")
        SEPARATOR "\t" NULL "<NULL>"
     (poller string,                     -- 1
@@ -809,7 +820,8 @@ DEFINE 'sql' AS
     AND STOPPING AT capture_end * 1e-6;
 
 DEFINE 'voip' AS
-  READ FILES csv_prefix || "voip_v29.*csv" || (IF csv_compressed THEN ".lz4" ELSE "")
+  READ AND DELETE
+       FILES csv_prefix || "voip_v29.*csv" || (IF csv_compressed THEN ".lz4" ELSE "")
        PREPROCESS WITH (IF csv_compressed THEN "lz4 -d -c" ELSE "")
        SEPARATOR "\t" NULL "<NULL>"
     (poller string,                     -- 1
