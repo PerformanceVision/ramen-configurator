@@ -63,14 +63,13 @@ let compile_file ramen_cmd root_dir bundle_dir persist_dir no_ext params =
 let get_config_from_db db =
   Conf_of_sqlite.get_config db
 
-let no_params = Hashtbl.create 0
-
 let start debug monitor ramen_cmd root_dir bundle_dir persist_dir db_name
           uncompress csv_prefix
           with_bcns with_bcas =
   logger := make_logger debug ;
   let open Conf_of_sqlite in
   let db = get_db db_name in
+  let no_params = Hashtbl.create 0 in
   let comp = compile_file ramen_cmd root_dir bundle_dir persist_dir in
   let update () =
     comp "internal/monitoring/meta" no_params ;
@@ -81,8 +80,12 @@ let start debug monitor ramen_cmd root_dir bundle_dir persist_dir db_name
           "csv_compressed", string_of_bool uncompress ] ;
       h in
     comp "junkie/base" params ;
-    comp "junkie/links/top_zones" no_params ;
-    comp "junkie/apps/top_servers" no_params ;
+    let aggr_times =
+      Hashtbl.of_list [ "1min",  [ "aggr_duration", "60" ] ;
+                        "10min", [ "aggr_duration", "600" ] ;
+                        "1hour", [ "aggr_duration", "3600" ] ] in
+    comp "junkie/links/top_zones/_" aggr_times ;
+    comp "junkie/apps/top_servers/_" aggr_times ;
     let bcns, bcas = get_config_from_db db in
     let bcns = List.take with_bcns bcns
     and bcas = List.take with_bcas bcas in

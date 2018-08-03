@@ -11,7 +11,7 @@ PARAMETERS
 -- We need to make all CSV similar before merging them:
 
 DEFINE tcp_services AS
-  FROM ../../base/tcp
+  FROM ../../../base/tcp
   SELECT
     capture_begin / 1e6 AS start,
     capture_end / 1e6 AS stop,
@@ -28,7 +28,7 @@ DEFINE tcp_services AS
   EVENT STARTS AT start AND ENDS AT stop;
 
 DEFINE udp_services AS
-  FROM ../../base/udp
+  FROM ../../../base/udp
   SELECT
     capture_begin / 1e6 AS start,
     capture_end / 1e6 AS stop,

@@ -16,7 +16,7 @@ PARAMETERS
 -- Shouldn't we be able to cram at least an RTT in here, from the many UDP
 -- protocols that are supported?
 DEFINE extended_udp AS
-  FROM ../../base/udp
+  FROM ../../../base/udp
   SELECT *,
     0u32 AS payload_packets_client,
     0u32 AS payload_packets_server,
@@ -30,7 +30,7 @@ DEFINE extended_udp AS
 -- Same here regarding RTT: isn't a ping response time essentially the
 -- canonical way to measure RTT?
 DEFINE extended_icmp AS
-  FROM ../../base/icmp
+  FROM ../../../base/icmp
   SELECT *,
     0u32 AS payload_packets_client,
     0u32 AS payload_packets_server,
@@ -45,7 +45,7 @@ DEFINE extended_icmp AS
 
 -- These, on the other hand, are more legit dark matter:
 DEFINE extended_other_ip AS
-  FROM '../../base/other-ip'
+  FROM '../../../base/other-ip'
   SELECT *,
     0u32 AS payload_packets_client,
     0u32 AS payload_packets_server,
@@ -59,7 +59,7 @@ DEFINE extended_other_ip AS
     0u32n AS rd_count_server;
 
 DEFINE extended_non_ip AS
-  FROM '../../base/non-ip'
+  FROM '../../../base/non-ip'
   SELECT *,
     0u32 AS payload_packets_client,
     0u32 AS payload_packets_server,
@@ -84,7 +84,7 @@ DEFINE extended_non_ip AS
 -- or ip_client is smaller.
 DEFINE link_c2s AS
   FROM
-    ../../base/tcp,
+    ../../../base/tcp,
     extended_udp,
     extended_icmp,
     extended_other_ip,
@@ -116,7 +116,7 @@ DEFINE link_c2s AS
 -- In the other way around for the other tuples:
 DEFINE link_s2c AS
   FROM
-    ../../base/tcp,
+    ../../../base/tcp,
     extended_udp,
     extended_icmp,
     extended_other_ip,
