@@ -93,8 +93,9 @@ tarball: ramen_configurator.$(VERSION).tgz
 ramen_configurator.$(VERSION).deb: $(INSTALLED) debian.control
 	@echo "Building debian package $@"
 	@sudo rm -rf debtmp
-	@install -d debtmp/usr/bin
+	@install -d debtmp/usr/bin debtmp/ramen
 	@install $(INSTALLED_BIN) debtmp/usr/bin
+	@cp -r ramen_root debtmp/ramen
 	@mkdir -p debtmp/DEBIAN
 	@cp debian.control debtmp/DEBIAN/control
 	@chmod a+x -R debtmp/usr
