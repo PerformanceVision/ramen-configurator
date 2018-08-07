@@ -130,7 +130,10 @@ docker-push:
 
 # Cleaning
 
-clean:
+clean-comp:
+	@find ramen_root/ -\( -name '*.x' -o -name '*.ml' -o -name '*.cmx' -o -name '*.annot' -o -name '*.s' -o -name '*.cmi' -o -name '*.o' -\) -delete
+
+clean: clean-comp
 	@echo "Cleaning all build files"
 	@$(RM) src/*.cmo src/*.s src/*.annot src/*.o
 	@$(RM) src/*.cma src/*.cmx src/*.cmxa src/*.cmxs src/*.cmi
