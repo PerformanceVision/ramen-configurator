@@ -142,10 +142,17 @@ DEFINE 'percentiles' AS
   SELECT
     min start, max start,
     srtt_avg, crtt_avg, srt_avg, cdtt_avg, sdtt_avg,
+    srtt_avg + crtt_avg + srt_avg + cdtt_avg + sdtt_avg AS _eurt_avg,
     perc percentile (
-      srtt_avg + crtt_avg + srt_avg + cdtt_avg + sdtt_avg) AS eurt
-  COMMIT AND SLIDE 1 AFTER
-    group.#count >= i32(obs_window / avg_window) OR
+      last u32(obs_window / avg_window) globally _eurt_avg
+    ) AS _eurt,
+    -- Given the last above is not an immediate value then the last
+    -- is nullable, therefore the _eurt is nullable too. But we cannot
+    -- allow firing (below) to be nullable, so we assume any null eurt
+    -- is uncertainly bad:
+    COALESCE(_eurt, max_eurt) AS eurt
+  COMMIT AFTER
+    sum 1 >= u32(obs_window / avg_window) OR
     in.start > out.max_start + 5
   EVENT STARTING AT max_start WITH DURATION obs_window;
 

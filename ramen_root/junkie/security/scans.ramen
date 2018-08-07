@@ -21,7 +21,8 @@ DEFINE 'top_port_scans' AS
     sum 1 as port_count
   GROUP BY coalesce (ip4_client, ip6_client, 0),
            coalesce (ip4_server, ip6_server, 0)
-  COMMIT BEFORE end - start > 3600
+  --COMMIT BEFORE end - start > 3600;
+  COMMIT AFTER in.capture_begin / 1e6 >= end + 3600
   EVENT STARTS AT start AND ENDS AT end;
 
 DEFINE 'port_scan_alert' AS
@@ -55,7 +56,8 @@ DEFINE 'top_ip_scans' AS
     coalesce (ip4_client, ip6_client, 0) as client,
     sum 1 as ip_count
   GROUP BY coalesce (ip4_client, ip6_client, 0)
-  COMMIT BEFORE end - start > 3600
+  --COMMIT BEFORE end - start > 3600;
+  COMMIT AFTER in.capture_begin / 1e6 >= end + 3600
   EVENT STARTS AT start AND ENDS AT end;
 
 DEFINE 'ip_scan_alert' AS

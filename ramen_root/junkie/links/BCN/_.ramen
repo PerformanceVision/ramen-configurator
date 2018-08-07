@@ -59,12 +59,18 @@ DEFINE percentiles AS
     min start, max start,
     min min_capture_begin AS min_capture_begin,
     max max_capture_end AS max_capture_end,
-    perc percentile bytes_per_secs AS bytes_per_secs,
-    perc percentile avg_rtt AS rtt,
-    perc percentile avg_rr AS rr,
+    perc percentile (
+      last u32(obs_window / avg_window) globally bytes_per_secs
+    ) AS bytes_per_secs,
+    perc percentile (
+      last u32(obs_window / avg_window) globally avg_rtt
+    ) AS rtt,
+    perc percentile (
+      last u32(obs_window / avg_window) globally avg_rr
+    ) AS rr,
     zone_src, zone_dst
-  COMMIT AND SLIDE 1 AFTER
-    group.#count >= round (obs_window / avg_window) OR
+  COMMIT AFTER
+    sum 1 >= round (obs_window / avg_window) OR
     in.start > out.max_start + 5
   EVENT STARTING AT max_capture_end * 1e-6
    WITH DURATION avg_window;
@@ -73,6 +79,9 @@ DEFINE 'traffic too low' AS
   FROM percentiles
   SELECT
     max_start,
+    -- Turn NULLs into 0-certainty alert
+    COALESCE (bytes_per_secs, min_bps, 0) AS bytes_per_secs,
+    -- Other case of NULL: no min_bps
     COALESCE (
       hysteresis (bytes_per_secs, min_bps*1.1, min_bps),
       false) AS firing
@@ -110,7 +119,10 @@ DEFINE 'traffic too high' AS
 DEFINE 'round-trip time' AS
   FROM percentiles
   SELECT
-    max_start, rtt,
+    max_start,
+    -- Turn NULLs into 0-certainty alert
+    COALESCE (rtt, max_rtt, 0) AS rtt,
+    -- Other case of NULL: no max_rtt
     COALESCE (
       hysteresis (rtt, max_rtt*0.9, max_rtt),
       false) AS firing
@@ -129,7 +141,10 @@ DEFINE 'round-trip time' AS
 DEFINE retransmissions AS
   FROM percentiles
   SELECT
-    max_start, rr,
+    max_start,
+    -- Turn NULLs into 0-certainty alert
+    COALESCE (rr, max_rr, 0) AS rr,
+    -- Other case of NULL: no max_rr
     COALESCE (
       hysteresis (rr, max_rr*0.9, max_rr),
       false) AS firing

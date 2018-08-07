@@ -103,9 +103,9 @@ DEFINE top AS
     min _avg_response_time,
     max _avg_response_time,
     -- Also some percentiles (of the avgs!):
-    90th PERCENTILE _avg_response_time,
-    95th PERCENTILE _avg_response_time,
-    99th PERCENTILE _avg_response_time,
+    90th percentile (group _avg_response_time) as avg_response_time_90th,
+    95th percentile (group _avg_response_time) as avg_response_time_95th,
+    99th percentile (group _avg_response_time) as avg_response_time_99th,
 
     -- RTT from client
     sum (rtt_sum_client / 1e6) / sum rtt_count_client
