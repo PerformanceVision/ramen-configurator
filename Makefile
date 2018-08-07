@@ -102,12 +102,13 @@ ramen_configurator.$(VERSION).deb: $(INSTALLED) debian.control
 	@dpkg --build debtmp
 	@mv debtmp.deb $@
 
-ramen_configurator.$(VERSION).tgz: $(INSTALLED)
+ramen_configurator.$(VERSION).tgz: $(INSTALLED) clean-comp
 	@echo 'Building tarball $@'
 	@$(RM) -r tmp/ramen
 	@install -d tmp/ramen
 	@install $(INSTALLED) tmp/ramen/
 	@for f in $(INSTALLED_BIN) ; do chmod a+x tmp/ramen/$$(basename $$f) ; done
+	@cp -r ramen_root tmp/ramen/ramen_root
 	@tar c -C tmp ramen | gzip > $@
 
 # Docker images
