@@ -14,26 +14,44 @@ override OCAMLFLAGS    += -I src $(WARNS) -g -annot
 PACKAGES = \
 	batteries cmdliner stdint sqlite3 unix uri
 
+RAMEN_SOURCES = \
+	ramen_root/internal/monitoring/meta.ramen \
+	ramen_root/junkie/base.ramen \
+	ramen_root/junkie/security/scans.ramen \
+	ramen_root/junkie/security/DDoS.ramen \
+	ramen_root/junkie/links/top_zones/_.ramen \
+	ramen_root/junkie/links/BCN/_.ramen \
+	ramen_root/junkie/apps/BCA/_.ramen \
+	ramen_root/junkie/apps/top_servers/_.ramen
+
 INSTALLED_BIN = src/ramen_configurator
-INSTALLED = $(INSTALLED_BIN) alert_sqlite.conf
+INSTALLED_WORKERS = $(RAMEN_SOURCES:.ramen=.x)
+INSTALLED_CONF = alert_sqlite.conf
+INSTALLED = $(INSTALLED_BIN) $(INSTALLED_WORKERS) $(INSTALLED_CONF)
 
 bin_dir ?= /usr/bin/
+lib_dir ?= /var/lib/
+conf_dir ?= /etc/ramen/
 
 all: $(INSTALLED)
 
 # Generic rules
 
-.SUFFIXES: .ml .mli .cmi .cmx .cmxs .annot .html .adoc
+.SUFFIXES: .ml .mli .cmi .cmx .cmxs .annot .html .adoc .ramen .x
 .PHONY: clean all dep install uninstall reinstall doc deb tarball \
         docker-latest docker-push
 
 %.cmx %.annot: %.ml
-	@echo "Compiling $@ (native code)"
+	@echo 'Compiling $@ (native code)'
 	@$(OCAMLOPT) $(OCAMLOPTFLAGS) -package "$(PACKAGES)" -c $<
 
 %.html: %.adoc
-	@echo "Building documentation $@"
+	@echo 'Building documentation $@'
 	@asciidoc -a data-uri -a icons -a toc -a max-width=55em --theme volnitsky -o $@ $<
+
+%.x: %.ramen
+	@echo 'Compiling ramen program $@'
+	@ramen compile --root=ramen_root $<
 
 # Dependencies
 
@@ -45,6 +63,13 @@ CONFIGURATOR_SOURCES = \
 INSERT_ALERT_SOURCES = \
 	src/RamenLog.ml src/RamenHelpers.ml
 
+ramen_root/junkie/security/scans.x: ramen_root/junkie/base.x
+ramen_root/junkie/security/DDoS.x: ramen_root/junkie/base.x
+ramen_root/junkie/links/BCN/_.x: ramen_root/junkie/base.x
+ramen_root/junkie/links/top_zones/_.x: ramen_root/junkie/base.x
+ramen_root/junkie/apps/BCA/_.x: ramen_root/junkie/base.x
+ramen_root/junkie/apps/top_servers/_.x: ramen_root/junkie/base.x
+
 SOURCES = $(CONFIGURATOR_SOURCES) $(INSERT_ALERT_SOURCES)
 
 dep:
@@ -52,7 +77,7 @@ dep:
 	@$(MAKE) .depend
 
 .depend: $(SOURCES)
-	@echo "Generating dependencies"
+	@echo 'Generating dependencies'
 	@$(OCAMLDEP) -I src -package "$(PACKAGES)" $(filter %.ml, $(SOURCES)) $(filter %.mli, $(SOURCES)) > $@
 
 include .depend
@@ -60,27 +85,48 @@ include .depend
 # Compiling
 
 src/SqliteHelpers.cmx: src/SqliteHelpers.ml
-	@echo "Compiling $@ (native code)"
+	@echo 'Compiling $@ (native code)'
 	@$(OCAMLOPT) $(OCAMLOPTFLAGS) -package "$(PACKAGES)" -c $<
 
 src/Conf_of_sqlite.cmx: src/Conf_of_sqlite.ml
-	@echo "Compiling $@ (native code)"
+	@echo 'Compiling $@ (native code)'
 	@$(OCAMLOPT) $(OCAMLOPTFLAGS) -package "$(PACKAGES)" -c $<
 
 src/ramen_configurator: $(CONFIGURATOR_SOURCES:.ml=.cmx)
-	@echo "Linking $@"
+	@echo 'Linking $@'
 	@$(OCAMLOPT) $(OCAMLOPTFLAGS) -linkpkg -package "$(PACKAGES)" $(filter %.cmx, $^) -o $@
 
 # Installation
 
-install: $(INSTALLED)
-	@echo "Installing binaries into $(prefix)$(bin_dir)"
-	@install -d $(prefix)$(bin_dir)
-	@install $(INSTALLED_BIN) $(prefix)$(bin_dir)/
+install-bin: $(INSTALLED_BIN)
+	@echo 'Installing binaries into $(prefix)$(bin_dir)'
+	@install -d '$(prefix)$(bin_dir)'
+	@install $(INSTALLED_BIN) '$(prefix)$(bin_dir)'/
+
+install-workers: $(INSTALLED_WORKERS)
+	@echo 'Installing workers into $(prefix)$(lib_dir)'
+	@install -d '$(prefix)$(lib_dir)'
+	@for f in $(INSTALLED_WORKERS) ; do \
+		install -d "$(prefix)$(lib_dir)/$$(dirname $$f)" ; \
+	  install "$$f" "$(prefix)$(lib_dir)/$$f" ; \
+	done
+
+install-conf: $(INSTALLED_CONF)
+	@echo 'Installing configuration files $(INSTALLED_CONF) into $(prefix)$(conf_dir)'
+	@install -d '$(prefix)$(conf_dir)'
+	@install $(INSTALLED_CONF) '$(prefix)$(conf_dir)'
+
+install: install-bin install-workers install-conf
 
 uninstall:
-	@echo "Uninstalling binaries"
-	@$(RM) $(prefix)$(bin_dir)/ramen_configurator
+	@echo Uninstalling
+	@for f in $(INSTALLED_BIN); do \
+	  $(RM) "$(prefix)$(bin_dir)/$$f" ;\
+	done
+	@for f in $(INSTALLED_CONF); do \
+		$(RM) "$(prefix)$(conf_dir)/$$f" ;\
+	done
+	@$(RM) -r $(prefix)$(lib_dir)/ramen_root
 
 reinstall: uninstall install
 
@@ -90,26 +136,20 @@ deb: ramen_configurator.$(VERSION).deb
 
 tarball: ramen_configurator.$(VERSION).tgz
 
-ramen_configurator.$(VERSION).deb: $(INSTALLED) debian.control
-	@echo "Building debian package $@"
-	@sudo rm -rf debtmp
-	@install -d debtmp/usr/bin debtmp/ramen
-	@install $(INSTALLED_BIN) debtmp/usr/bin
-	@cp -r ramen_root debtmp/ramen
+ramen_configurator.$(VERSION).deb: debian.control
+	@echo 'Building debian package $@'
+	@sudo $(RM) -r debtmp
+	@$(MAKE) prefix=debtmp/ install
 	@mkdir -p debtmp/DEBIAN
 	@cp debian.control debtmp/DEBIAN/control
-	@chmod a+x -R debtmp/usr
 	@sudo chown root: -R debtmp/usr
 	@dpkg --build debtmp
 	@mv debtmp.deb $@
 
-ramen_configurator.$(VERSION).tgz: $(INSTALLED) clean-comp
+ramen_configurator.$(VERSION).tgz:
 	@echo 'Building tarball $@'
-	@$(RM) -r tmp/ramen
-	@install -d tmp/ramen
-	@install $(INSTALLED) tmp/ramen/
-	@for f in $(INSTALLED_BIN) ; do chmod a+x tmp/ramen/$$(basename $$f) ; done
-	@cp -r ramen_root tmp/ramen/ramen_root
+	@$(RM) -r tmp
+	@$(MAKE) prefix=tmp/ bin_dir=ramen lib_dir=ramen conf_dir=ramen install
 	@tar c -C tmp ramen | gzip > $@
 
 # Docker images
@@ -136,7 +176,7 @@ clean-comp:
 	@find ramen_root/ -\( -name '*.x' -o -name '*.ml' -o -name '*.cmx' -o -name '*.annot' -o -name '*.s' -o -name '*.cmi' -o -name '*.o' -\) -delete
 
 clean: clean-comp
-	@echo "Cleaning all build files"
+	@echo 'Cleaning all build files'
 	@$(RM) src/*.cmo src/*.s src/*.annot src/*.o
 	@$(RM) src/*.cma src/*.cmx src/*.cmxa src/*.cmxs src/*.cmi
 	@$(RM) *.opt src/all_tests.* perf.data* gmon.out
