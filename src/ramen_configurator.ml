@@ -90,7 +90,8 @@ let kill ramen_cmd persist_dir prog =
 
 let start debug monitor ramen_cmd root_dir persist_dir db_name
           uncompress csv_prefix
-          with_bcns with_bcas dry_run_ =
+          with_bcns with_bcas dry_run_
+          _1 _2 _3 _4 _5 _6 =
   logger := make_logger debug ;
   dry_run := dry_run_ ;
   let open Conf_of_sqlite in
@@ -242,6 +243,20 @@ let dry_run =
                    [ "dry-run" ] in
   Arg.(value (flag i))
 
+(* These options should work be ignore for backward compatibility *)
+
+let ignored_flag n =
+  Arg.(value (flag (Arg.info [n])))
+let ignored_opt n =
+  Arg.(value (opt string "popo" (Arg.info [n])))
+
+let ign_delete = ignored_flag "delete"
+let ign_name = ignored_opt "name"
+let ign_base = ignored_flag "base"
+let ign_security = ignored_flag "security"
+let ign_bundle_dir = ignored_opt "bundle-dir"
+let ign_with_extra = ignored_opt "with-extra"
+
 let start_cmd =
   Term.(
     (const start
@@ -255,7 +270,13 @@ let start_cmd =
       $ csv_prefix
       $ with_bcns
       $ with_bcas
-      $ dry_run),
+      $ dry_run
+      $ ign_delete
+      $ ign_name
+      $ ign_base
+      $ ign_security
+      $ ign_bundle_dir
+      $ ign_with_extra),
     info "ramen_configurator")
 
 let () =
