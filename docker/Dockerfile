@@ -19,7 +19,7 @@ RUN apt-get --yes update && \
         coreutils
 
 # Rebuild a new image from here
-RUN echo "version 1.4.2~0"
+RUN echo "version 1.4.3~0"
 
 # Install ramen and configurator
 COPY *.deb /tmp/
@@ -35,6 +35,10 @@ ENV RAMEN_PERSIST_DIR=/ramen
 # which debian-slim does not provide:
 COPY protocols services /etc/
 COPY start /
+
+# PV run configurator with --root=/ramen/dynconf
+RUN mkdir -p /ramen
+RUN ln -s /var/lib/ramen_conf /ramen
 
 # Command to be run:
 WORKDIR /ramen
