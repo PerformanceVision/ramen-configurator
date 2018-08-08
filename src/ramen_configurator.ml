@@ -2,20 +2,31 @@ open Batteries
 open RamenLog
 open RamenHelpers
 
+let dry_run = ref false
+
+let run_cmd cmd =
+  !logger.debug "Running: %s" cmd ;
+  let cmd' = cmd ^" 2>&1" in
+  let status, output = Unix.run_and_read cmd' in
+  if status <> Unix.WEXITED 0 then (
+    Printf.printf "%s" output ;
+    Printf.sprintf "Bad exit code from %S: %s"
+      cmd (string_of_process_status status) |>
+    failwith
+  ) else output
+
 let run_program ramen_cmd root_dir persist_dir ?as_ fname params =
-  let cmd =
+  !logger.info "Running program %s%s"
+    fname (Option.map_default (fun as_ -> " (as: "^ as_ ^")") "" as_) ;
+  if !dry_run then !logger.info "nope" else
     Printf.sprintf2 "%s run --replace --persist-dir %s%s %a %s"
-      ramen_cmd
+      (shell_quote ramen_cmd)
       (shell_quote persist_dir)
       (Option.map_default (fun as_ -> " -o "^ shell_quote as_) "" as_)
       (List.print ~first:"" ~last:"" ~sep:" " (fun oc (n, v) ->
         Printf.fprintf oc "-p %s" (shell_quote (n ^"="^ v)))) params
-      (shell_quote fname) in
-  !logger.info "Running: %s" cmd ;
-  if 0 = Sys.command cmd then
-    !logger.debug "Run %s" fname
-  else
-    !logger.error "Failed to run program %s with %S" fname cmd
+      (shell_quote fname) |>
+    run_cmd |> ignore
 
 let chop_placeholder s =
   let dirname, placeholder = String.rsplit ~by:"/" s in
@@ -24,36 +35,73 @@ let chop_placeholder s =
     failwith ;
   dirname
 
-let compile_file ramen_cmd root_dir persist_dir no_ext params =
+(* Run that file and return the names it's running under: *)
+let run_file ramen_cmd root_dir persist_dir no_ext params =
   let fname = root_dir ^"/"^ no_ext ^".x" in
   let as_ = no_ext in
   if Hashtbl.is_empty params then (
     !logger.debug "Running program %s as %s"
       fname as_ ;
-    run_program ramen_cmd root_dir persist_dir ~as_ fname []
+    run_program ramen_cmd root_dir persist_dir ~as_ fname [] ;
+    Set.String.singleton as_
   ) else (
-    Hashtbl.iter (fun uniq_name params ->
+    Hashtbl.fold (fun uniq_name params rs ->
       let as_ =
         if uniq_name = "" then as_ else
           chop_placeholder as_ ^"/"^ uniq_name in
       !logger.debug "Running program %s as %s with parameters %a"
         fname as_
         (List.print (Tuple2.print String.print String.print)) params ;
-      run_program ramen_cmd root_dir persist_dir ~as_ fname params
-    ) params)
+      run_program ramen_cmd root_dir persist_dir ~as_ fname params ;
+      Set.String.add as_ rs
+    ) params Set.String.empty)
 
 let get_config_from_db db =
   Conf_of_sqlite.get_config db
 
+(* Return the list of everything under junkie/.
+ * TODO: configurator should have its own namespace ("configurator/"?) that's
+ * non editable (by convention) to the user (or API), so that we can freely
+ * kill programs in there. *)
+let get_running ramen_cmd persist_dir path =
+  Printf.sprintf2 "%s ps -p --persist-dir %s %s"
+    (shell_quote ramen_cmd)
+    (shell_quote persist_dir)
+    (shell_quote path) |>
+  run_cmd |>
+  String.nsplit ~by:"\n" |>
+  List.filter_map (fun l ->
+    if l = "" then None else
+    match String.split ~by:"\t" l with
+    | exception _ ->
+        !logger.error "Cannot find tab in %S" l ;
+        None
+    | x, _ -> Some x) |>
+  Set.String.of_list
+
+let kill ramen_cmd persist_dir prog =
+  !logger.info "Killing program %s" prog ;
+  if !dry_run then !logger.info "nope" else
+    Printf.sprintf "%s kill --persist-dir %s %s"
+      (shell_quote ramen_cmd)
+      (shell_quote persist_dir)
+      (shell_quote prog) |>
+    run_cmd |> ignore
+
 let start debug monitor ramen_cmd root_dir persist_dir db_name
           uncompress csv_prefix
-          with_bcns with_bcas =
+          with_bcns with_bcas dry_run_ =
   logger := make_logger debug ;
+  dry_run := dry_run_ ;
   let open Conf_of_sqlite in
   let db = get_db db_name in
   let no_params = Hashtbl.create 0 in
-  let comp = compile_file ramen_cmd root_dir persist_dir in
   let update () =
+    let old_running = get_running ramen_cmd persist_dir "junkie/*" in
+    let new_running = ref Set.String.empty in
+    let comp n p =
+      let rs = run_file ramen_cmd root_dir persist_dir n p in
+      new_running := Set.String.union rs !new_running in
     comp "internal/monitoring/meta" no_params ;
     let params =
       let h = Hashtbl.create 2 in
@@ -116,7 +164,12 @@ let start debug monitor ramen_cmd root_dir persist_dir db_name
     (* Several bad behavior detectors, regrouped in a "Security" namespace:
      *)
     comp "junkie/security/DDoS" no_params ;
-    comp "junkie/security/scans" no_params
+    comp "junkie/security/scans" no_params ;
+    !logger.debug "Old: %a" (Set.String.print String.print) old_running ;
+    !logger.debug "New: %a" (Set.String.print String.print) !new_running ;
+    let to_kill = Set.String.diff old_running !new_running in
+    !logger.info "To Kill: %a" (Set.String.print String.print) to_kill ;
+    Set.String.iter (kill ramen_cmd persist_dir) to_kill
   in
   update () ;
   if monitor then
@@ -184,6 +237,11 @@ let with_bcas =
                    [ "with-bcas" ; "with-bca" ; "bcas" ; "bca" ] in
   Arg.(value (opt ~vopt:10 int 0 i))
 
+let dry_run =
+  let i = Arg.info ~doc:"Just display what would be killed/run"
+                   [ "dry-run" ] in
+  Arg.(value (flag i))
+
 let start_cmd =
   Term.(
     (const start
@@ -196,7 +254,8 @@ let start_cmd =
       $ uncompress_opt
       $ csv_prefix
       $ with_bcns
-      $ with_bcas),
+      $ with_bcas
+      $ dry_run),
     info "ramen_configurator")
 
 let () =
