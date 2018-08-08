@@ -16,16 +16,16 @@ PARAMETERS
 
 DEFINE 'avg traffic' AS
   FROM
-    '../../../base/c2s tcp',
-    '../../../base/s2c tcp',
-    '../../../base/c2s udp',
-    '../../../base/s2c udp',
-    '../../../base/c2s icmp',
-    '../../../base/s2c icmp',
-    '../../../base/c2s other-ip',
-    '../../../base/s2c other-ip',
-    '../../../base/c2s non-ip',
-    '../../../base/s2c non-ip'
+    '../../../csv/c2s tcp',
+    '../../../csv/s2c tcp',
+    '../../../csv/c2s udp',
+    '../../../csv/s2c udp',
+    '../../../csv/c2s icmp',
+    '../../../csv/s2c icmp',
+    '../../../csv/c2s other-ip',
+    '../../../csv/s2c other-ip',
+    '../../../csv/c2s non-ip',
+    '../../../csv/s2c non-ip'
   MERGE ON capture_begin TIMEOUT AFTER 2 SECONDS
   SELECT
     ((capture_begin / 1e6) // u32(avg_window)) * u32(avg_window)
@@ -162,8 +162,8 @@ DEFINE retransmissions AS
 
 DEFINE 'TCP minutely' AS
   FROM
-    '../../../base/c2s tcp',
-    '../../../base/s2c tcp'
+    '../../../csv/c2s tcp',
+    '../../../csv/s2c tcp'
   SELECT
     (capture_begin // 60000000) * 60 AS start,
     min capture_begin, max capture_end,

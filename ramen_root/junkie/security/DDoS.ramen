@@ -3,10 +3,10 @@ PARAMETERS
 
 DEFINE 'new peers' AS
   FROM
-    ../../base/tcp,
-    ../../base/udp,
-    ../../base/icmp,
-    '../../base/other-ip'
+    ../../csv/tcp,
+    ../../csv/udp,
+    ../../csv/icmp,
+    '../../csv/other-ip'
   MERGE ON capture_begin TIMEOUT AFTER 2 SECONDS
   SELECT
     (capture_begin // (avg_win * 1e6)) * avg_win AS start,

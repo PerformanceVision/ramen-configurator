@@ -10,7 +10,7 @@ PARAMETERS
 	min_handshake_count DEFAULTS TO 0;
 
 DEFINE 'averages' AS
-  FROM ../../../base/tcp
+  FROM ../../../csv/tcp
   SELECT
     -- Key
     ((capture_begin / 1e6) // u32(avg_window)) * u32(avg_window)

@@ -1,7 +1,7 @@
 DEFINE 'top_port_scans' AS
   FROM
-    ../../base/tcp,
-    ../../base/udp
+    ../../csv/tcp,
+    ../../csv/udp
   MERGE ON capture_begin TIMEOUT AFTER 2 SECONDS
   WHEN
     NOT remember globally (
@@ -37,10 +37,10 @@ DEFINE 'port_scan_alert' AS
 
 DEFINE 'top_ip_scans' AS
   FROM
-    ../../base/tcp,
-    ../../base/udp,
-    ../../base/icmp,
-    '../../base/other-ip'
+    ../../csv/tcp,
+    ../../csv/udp,
+    ../../csv/icmp,
+    '../../csv/other-ip'
   MERGE ON capture_begin TIMEOUT AFTER 2 SECONDS
   WHEN
     NOT remember globally (

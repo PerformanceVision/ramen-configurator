@@ -16,7 +16,7 @@ PACKAGES = \
 
 RAMEN_SOURCES = \
 	ramen_root/internal/monitoring/meta.ramen \
-	ramen_root/junkie/base.ramen \
+	ramen_root/junkie/csv.ramen \
 	ramen_root/junkie/security/scans.ramen \
 	ramen_root/junkie/security/DDoS.ramen \
 	ramen_root/junkie/links/top_zones/_.ramen \
@@ -63,12 +63,12 @@ CONFIGURATOR_SOURCES = \
 INSERT_ALERT_SOURCES = \
 	src/RamenLog.ml src/RamenHelpers.ml
 
-ramen_root/junkie/security/scans.x: ramen_root/junkie/base.x
-ramen_root/junkie/security/DDoS.x: ramen_root/junkie/base.x
-ramen_root/junkie/links/BCN/_.x: ramen_root/junkie/base.x
-ramen_root/junkie/links/top_zones/_.x: ramen_root/junkie/base.x
-ramen_root/junkie/apps/BCA/_.x: ramen_root/junkie/base.x
-ramen_root/junkie/apps/top_servers/_.x: ramen_root/junkie/base.x
+ramen_root/junkie/security/scans.x: ramen_root/junkie/csv.x
+ramen_root/junkie/security/DDoS.x: ramen_root/junkie/csv.x
+ramen_root/junkie/links/BCN/_.x: ramen_root/junkie/csv.x
+ramen_root/junkie/links/top_zones/_.x: ramen_root/junkie/csv.x
+ramen_root/junkie/apps/BCA/_.x: ramen_root/junkie/csv.x
+ramen_root/junkie/apps/top_servers/_.x: ramen_root/junkie/csv.x
 
 SOURCES = $(CONFIGURATOR_SOURCES) $(INSERT_ALERT_SOURCES)
 
