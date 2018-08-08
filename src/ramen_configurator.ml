@@ -2,22 +2,6 @@ open Batteries
 open RamenLog
 open RamenHelpers
 
-let compile_program ramen_cmd root_dir bundle_dir ?as_ fname =
-  let cmd =
-    Printf.sprintf2 "%s compile --root=%S --bundle-dir=%S%s %s"
-      ramen_cmd root_dir bundle_dir
-      (Option.map_default (fun as_ -> " -o "^ shell_quote as_) "" as_)
-      (shell_quote fname)
-  in
-  if 0 = Sys.command cmd then (
-    !logger.debug "Compiled %s" fname ;
-    (* Now Ramen with autoreload should pick it up *)
-    true
-  ) else (
-    !logger.error "Failed to compile program %s with %S" fname cmd ;
-    false
-  )
-
 let run_program ramen_cmd root_dir persist_dir ?as_ fname params =
   let cmd =
     Printf.sprintf2 "%s run --replace --persist-dir %s%s %a %s"
@@ -40,37 +24,35 @@ let chop_placeholder s =
     failwith ;
   dirname
 
-let compile_file ramen_cmd root_dir bundle_dir persist_dir no_ext params =
-  let fname = root_dir ^"/"^ no_ext ^".ramen" in
-  if compile_program ramen_cmd root_dir bundle_dir fname then (
-    let bin_name = root_dir ^"/"^ no_ext ^".x" in
-    let as_ = no_ext in
-    if Hashtbl.is_empty params then (
-      !logger.debug "Running program %s as %s"
-        bin_name as_ ;
-      run_program ramen_cmd root_dir persist_dir ~as_ bin_name []
-    ) else (
-      Hashtbl.iter (fun uniq_name params ->
-        let as_ =
-          if uniq_name = "" then as_ else
-            chop_placeholder as_ ^"/"^ uniq_name in
-        !logger.debug "Running program %s as %s with parameters %a"
-          bin_name as_
-          (List.print (Tuple2.print String.print String.print)) params ;
-        run_program ramen_cmd root_dir persist_dir ~as_ bin_name params
-      ) params))
+let compile_file ramen_cmd root_dir persist_dir no_ext params =
+  let fname = root_dir ^"/"^ no_ext ^".x" in
+  let as_ = no_ext in
+  if Hashtbl.is_empty params then (
+    !logger.debug "Running program %s as %s"
+      fname as_ ;
+    run_program ramen_cmd root_dir persist_dir ~as_ fname []
+  ) else (
+    Hashtbl.iter (fun uniq_name params ->
+      let as_ =
+        if uniq_name = "" then as_ else
+          chop_placeholder as_ ^"/"^ uniq_name in
+      !logger.debug "Running program %s as %s with parameters %a"
+        fname as_
+        (List.print (Tuple2.print String.print String.print)) params ;
+      run_program ramen_cmd root_dir persist_dir ~as_ fname params
+    ) params)
 
 let get_config_from_db db =
   Conf_of_sqlite.get_config db
 
-let start debug monitor ramen_cmd root_dir bundle_dir persist_dir db_name
+let start debug monitor ramen_cmd root_dir persist_dir db_name
           uncompress csv_prefix
           with_bcns with_bcas =
   logger := make_logger debug ;
   let open Conf_of_sqlite in
   let db = get_db db_name in
   let no_params = Hashtbl.create 0 in
-  let comp = compile_file ramen_cmd root_dir bundle_dir persist_dir in
+  let comp = compile_file ramen_cmd root_dir persist_dir in
   let update () =
     comp "internal/monitoring/meta" no_params ;
     let params =
@@ -180,12 +162,6 @@ let root_dir =
                    ~env [ "root" ] in
   Arg.(value (opt string "." i))
 
-let bundle_dir =
-  let env = Term.env_info "RAMEN_BUNDLE_DIR" in
-  let i = Arg.info ~doc:"Path of ramen runtime libraries"
-                   ~env [ "bundle-dir" ] in
-  Arg.(value (opt string "." i))
-
 let persist_dir =
   let env = Term.env_info "RAMEN_PERSIST_DIR" in
   let i = Arg.info ~doc:"Path where ramen stores its state"
@@ -220,7 +196,6 @@ let start_cmd =
       $ monitor
       $ ramen_cmd
       $ root_dir
-      $ bundle_dir
       $ persist_dir
       $ db_name
       $ uncompress_opt
