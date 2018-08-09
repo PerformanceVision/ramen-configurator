@@ -38,7 +38,7 @@ COPY start /
 
 # PV run configurator with --root=/ramen/dynconf
 RUN mkdir -p /ramen
-RUN ln -s /var/lib/ramen_conf /ramen
+RUN ln -s /var/lib/ramen_root /ramen/dynconf
 
 # Command to be run:
 WORKDIR /ramen
