@@ -155,10 +155,10 @@ ramen_configurator.$(VERSION).tgz:
 # Docker images
 
 docker/alert.conf: alert_sqlite.conf
-	@ln $< $@
+	@ln -f $< $@
 
 docker/ramen_configurator.$(VERSION).deb: ramen_configurator.$(VERSION).deb
-	@ln $< $@
+	@ln -f $< $@
 
 docker-latest: docker/Dockerfile docker/alert.conf docker/protocols docker/services docker/start \
                docker/ramen_configurator.$(VERSION).deb docker/ramen.$(RAMEN_VERSION).deb
