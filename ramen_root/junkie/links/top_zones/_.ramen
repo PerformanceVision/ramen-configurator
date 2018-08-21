@@ -20,12 +20,12 @@ DEFINE extended_udp AS
   SELECT *,
     0u32 AS payload_packets_client,
     0u32 AS payload_packets_server,
-    0u32n AS rtt_count_client,
-    0u32n AS rtt_count_server,
+    u32?(0) AS rtt_count_client,
+    u32?(0) AS rtt_count_server,
     0u64 AS rtt_sum_client,
     0u64 AS rtt_sum_server,
-    0u32n AS rd_count_client,
-    0u32n AS rd_count_server;
+    u32?(0) AS rd_count_client,
+    u32?(0) AS rd_count_server;
 
 -- Same here regarding RTT: isn't a ping response time essentially the
 -- canonical way to measure RTT?
@@ -36,12 +36,12 @@ DEFINE extended_icmp AS
     0u32 AS payload_packets_server,
     0u64 AS payload_bytes_client,
     0u64 AS payload_bytes_server,
-    0u32n AS rtt_count_client,
-    0u32n AS rtt_count_server,
+    u32?(0) AS rtt_count_client,
+    u32?(0) AS rtt_count_server,
     0u64 AS rtt_sum_client,
     0u64 AS rtt_sum_server,
-    0u32n AS rd_count_client,
-    0u32n AS rd_count_server;
+    u32?(0) AS rd_count_client,
+    u32?(0) AS rd_count_server;
 
 -- These, on the other hand, are more legit dark matter:
 DEFINE extended_other_ip AS
@@ -51,12 +51,12 @@ DEFINE extended_other_ip AS
     0u32 AS payload_packets_server,
     0u64 AS payload_bytes_client,
     0u64 AS payload_bytes_server,
-    0u32n AS rtt_count_client,
-    0u32n AS rtt_count_server,
+    u32?(0) AS rtt_count_client,
+    u32?(0) AS rtt_count_server,
     0u64 AS rtt_sum_client,
     0u64 AS rtt_sum_server,
-    0u32n AS rd_count_client,
-    0u32n AS rd_count_server;
+    u32?(0) AS rd_count_client,
+    u32?(0) AS rd_count_server;
 
 DEFINE extended_non_ip AS
   FROM '../../../csv/non-ip'
@@ -65,12 +65,12 @@ DEFINE extended_non_ip AS
     0u32 AS payload_packets_server,
     0u64 AS payload_bytes_client,
     0u64 AS payload_bytes_server,
-    0u32n AS rtt_count_client,
-    0u32n AS rtt_count_server,
+    u32?(0) AS rtt_count_client,
+    u32?(0) AS rtt_count_server,
     0u64 AS rtt_sum_client,
     0u64 AS rtt_sum_server,
-    0u32n AS rd_count_client,
-    0u32n AS rd_count_server,
+    u32?(0) AS rd_count_client,
+    u32?(0) AS rd_count_server,
     u32(NULL) AS ip4_client,
     i128(NULL) AS ip6_client,
     u32(NULL) AS ip4_server,
