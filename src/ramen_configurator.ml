@@ -248,6 +248,8 @@ let dry_run =
   Arg.(value (flag i))
 
 let start_cmd =
+  let doc = "Configurator for Ramen in PV"
+  and version = "1.4.0" in
   Term.(
     (const start
       $ debug
@@ -261,7 +263,7 @@ let start_cmd =
       $ with_bcns
       $ with_bcas
       $ dry_run),
-    info "ramen_configurator")
+    info "ramen_configurator" ~version ~doc)
 
 let () =
   Term.eval start_cmd |> Term.exit
