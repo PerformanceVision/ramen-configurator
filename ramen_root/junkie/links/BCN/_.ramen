@@ -48,7 +48,7 @@ DEFINE 'avg traffic' AS
     (dest_name = "any" OR in.zone_dst IN dest)
   GROUP BY (capture_begin / 1e6) // u32(avg_window)
   COMMIT AFTER
-    in.capture_begin / 1e6 > out.min_capture_begin + 2 * u64(avg_window)
+    in.capture_begin / 1e6 > out.min_capture_begin / 1e6 + 2 * u64(avg_window)
   EVENT STARTING AT start WITH DURATION avg_window;
 
 DEFINE percentiles AS
@@ -219,7 +219,7 @@ DEFINE 'TCP minutely' AS
     dtt_count_src IS NOT NULL
   GROUP BY capture_begin // 60000000
   COMMIT AFTER
-    in.capture_begin / 1e6 > out.min_capture_begin + 2 * u64(60)
+    in.capture_begin / 1e6 > out.min_capture_begin / 1e6 + 2 * u64(60)
   EVENT STARTING AT start WITH DURATION 60s;
 
 DEFINE 'TCP minutely: volume predictions' AS
