@@ -9,7 +9,7 @@ PARAMETERS
 	perc DEFAULTS TO 90.0,
 	min_handshake_count DEFAULTS TO 0;
 
-DEFINE 'averages' AS
+DEFINE averages AS
   FROM ../../../csv/tcp
   SELECT
     -- Key
@@ -137,7 +137,7 @@ DEFINE 'averages' AS
     in.capture_begin / 1e6 > out.start + 2 * avg_window
   EVENT STARTING AT start WITH DURATION avg_window;
 
-DEFINE 'percentiles' AS
+DEFINE percentiles AS
   FROM averages
   SELECT
     min start, max start,
@@ -277,7 +277,7 @@ DEFINE 'averages: retransmissions anomalies' AS
   EVENT STARTING AT start;
 
 DEFINE 'averages: retransmissions predictions' AS
-  FROM 'averages'
+  FROM averages
   SELECT
     start,
     -- retrans_bytes
@@ -358,7 +358,7 @@ DEFINE 'averages: connections anomalies' AS
   EVENT STARTING AT start;
 
 DEFINE 'averages: connections predictions' AS
-  FROM 'averages'
+  FROM averages
   SELECT
     start,
     -- syns_per_secs
@@ -438,7 +438,7 @@ DEFINE 'averages: 0-windows anomalies' AS
   EVENT STARTING AT start;
 
 DEFINE 'averages: 0-windows predictions' AS
-  FROM 'averages'
+  FROM averages
   SELECT
     start,
     -- 0wins_per_secs
