@@ -151,8 +151,7 @@ DEFINE s2c AS
 -- The number of distinct pairs of hosts is approximated using a single large
 -- rotating bloom filter.
 DEFINE degraded AS
-  FROM
-    c2s, s2c
+  FROM c2s, s2c
   MERGE ON start TIMEOUT AFTER 2 SECONDS
   SELECT
     *,
@@ -175,55 +174,69 @@ DEFINE degraded AS
 
 -- Now that we have reduced that dimension, we can aggregate on
 -- zone_1*zone_2
-DEFINE top AS
+DEFINE top
+  "Statistics about the most important links in between zones (per number of active hosts)."
+AS
   FROM degraded
   GROUP BY zone_1, zone_2
   SELECT
     -- Zone info
     zone_1,
     zone_2,
-    sum u32(is_new_hosts_pair) AS host_pairs,
+    sum u32(is_new_hosts_pair) AS host_pairs
+      "Approximate number of active hosts using that link.",
 
     -- Time info
     min start AS _min_start,
     (_min_start // aggr_duration) * aggr_duration AS start,
 
     -- Volumetry 1 -> 2
-    sum packets_1 / aggr_duration AS packets_per_secs_1,
-    sum bytes_1 / aggr_duration AS bytes_per_secs_1,
-    sum payload_1 / aggr_duration AS payload_bytes_per_secs_1,
+    sum packets_1 / aggr_duration AS packets_per_secs_1
+      "Packets per seconds (uplink).",
+    sum bytes_1 / aggr_duration AS bytes_per_secs_1
+      "Bytes per seconds (uplink).",
+    sum payload_1 / aggr_duration AS payload_bytes_per_secs_1
+      "Payload per seconds (uplink).",
     -- Volumetry 2 -> 1
-    sum packets_2 / aggr_duration AS packets_per_secs_2,
-    sum bytes_2 / aggr_duration AS bytes_per_secs_2,
-    sum payload_2 / aggr_duration AS payload_bytes_per_secs_2,
+    sum packets_2 / aggr_duration AS packets_per_secs_2
+      "Packets per seconds (downlink).",
+    sum bytes_2 / aggr_duration AS bytes_per_secs_2
+      "Bytes per seconds (downlink).",
+    sum payload_2 / aggr_duration AS payload_bytes_per_secs_2
+      "Payload per seconds (downlink).",
 
     -- RTT 1 -> 2 (in seconds)
-    sum (rtt_sum_1 / 1e6) / sum rtt_count_1 AS avg_rtt_1,
+    sum (rtt_sum_1 / 1e6) / sum rtt_count_1 AS avg_rtt_1
+      "Average round-trip time (up then down).",
     -- Also try to retain an idea of what the measured max avg had been:
     (rtt_sum_1 / 1e6) / rtt_count_1 AS _avg_rtt_1,
     min _avg_rtt_1,
     max _avg_rtt_1,
     -- RTT 2 -> 1
-    sum (rtt_sum_2 / 1e6) / sum rtt_count_2 AS avg_rtt_2,
+    sum (rtt_sum_2 / 1e6) / sum rtt_count_2 AS avg_rtt_2
+      "Average round-trip time (down then up).",
     (rtt_sum_2 / 1e6) / rtt_count_2 AS _avg_rtt_2,
     min _avg_rtt_2,
     max _avg_rtt_2,
 
     -- RR: percentage of retransmitted packets over packets with payload
-    100 * sum rd_count_1 / sum packets_with_payload_1 AS avg_rr_1,
+    100 * sum rd_count_1 / sum packets_with_payload_1 AS avg_rr_1
+      "Percentage of retransmitted packets over packets with payload (uplink).",
     -- Again, try to retain an idea of the max measured:
     100 * rd_count_1 / packets_with_payload_1 AS _avg_rr_1,
     min _avg_rr_1,
     max _avg_rr_1,
     -- RR 2 -> 1
-    100 * sum rd_count_2 / sum packets_with_payload_2 AS avg_rr_2,
+    100 * sum rd_count_2 / sum packets_with_payload_2 AS avg_rr_2
+      "Percentage of retransmitted packets over packets with payload (downlink).",
     -- Again, try to retain an idea of the max measured:
     100 * rd_count_2 / packets_with_payload_2 AS _avg_rr_2,
     min _avg_rr_2,
     max _avg_rr_2,
 
     -- Everything we can aggregate by zone:
-    max mtu_1, max mtu_2
+    max mtu_1 DOC "Maximum observed MTU (uplink).",
+    max mtu_2 DOC "Maximum observed MTU (downlink)"
 
     -- TODO: other metrics, but need to be able to select fields present only
     -- in one parent (will be forced nullable and written as NULL by other

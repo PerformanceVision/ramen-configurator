@@ -2,7 +2,9 @@ PARAMETERS
   csv_prefix DEFAULTS TO "/srv/nova/ramen/*.*.",
   csv_compressed DEFAULTS TO false;
 
-DEFINE 'tcp' AS
+DEFINE tcp
+  "TCP measurements from the traffic sniffer."
+AS
   READ AND DELETE
        FILES csv_prefix || "tcp_v29.*csv" || (IF csv_compressed THEN ".lz4" ELSE "")
        PREPROCESS WITH (IF csv_compressed THEN "lz4 -d -c" ELSE "")
@@ -89,7 +91,7 @@ DEFINE 'tcp' AS
     AND STOPPING AT capture_end * 1e-6;
 
 DEFINE 'c2s tcp' AS
-  FROM 'tcp' SELECT
+  FROM tcp SELECT
     poller, capture_begin, capture_end,
     device_client AS device_src,
     vlan_client AS vlan_src,
@@ -130,7 +132,7 @@ DEFINE 'c2s tcp' AS
   WHERE traffic_packets_client > 0;
 
 DEFINE 's2c tcp' AS
-  FROM 'tcp' SELECT
+  FROM tcp SELECT
     poller, capture_begin, capture_end,
     device_server AS device_src,
     vlan_server AS vlan_src,
@@ -171,7 +173,9 @@ DEFINE 's2c tcp' AS
   WHERE traffic_packets_server > 0;
 
 
-DEFINE 'udp' AS
+DEFINE udp
+  "UDP measurements from the traffic sniffer."
+AS
   READ AND DELETE
        FILES csv_prefix || "udp_v29.*csv" || (IF csv_compressed THEN ".lz4" ELSE "")
        PREPROCESS WITH (IF csv_compressed THEN "lz4 -d -c" ELSE "")
@@ -212,7 +216,7 @@ DEFINE 'udp' AS
     AND STOPPING AT capture_end * 1e-6;
 
 DEFINE 'c2s udp' AS
-  FROM 'udp' SELECT
+  FROM udp SELECT
     poller, capture_begin, capture_end,
     device_client AS device_src,
     vlan_client AS vlan_src,
@@ -235,7 +239,7 @@ DEFINE 'c2s udp' AS
   WHERE traffic_packets_client > 0;
 
 DEFINE 's2c udp' AS
-  FROM 'udp' SELECT
+  FROM udp SELECT
     poller, capture_begin, capture_end,
     device_server AS device_src,
     vlan_server AS vlan_src,
@@ -257,7 +261,9 @@ DEFINE 's2c udp' AS
     dcerpc_uuid
   WHERE traffic_packets_server > 0;
 
-DEFINE 'icmp' AS
+DEFINE icmp
+  "ICMP measurements from the traffic sniffer."
+AS
   READ AND DELETE
        FILES csv_prefix || "icmp_v29.*csv" || (IF csv_compressed THEN ".lz4" ELSE "")
        PREPROCESS WITH (IF csv_compressed THEN "lz4 -d -c" ELSE "")
@@ -304,7 +310,7 @@ DEFINE 'icmp' AS
     AND STOPPING AT capture_end * 1e-6;
 
 DEFINE 'c2s icmp' AS
-  FROM 'icmp' SELECT
+  FROM icmp SELECT
     poller, capture_begin, capture_end,
     device_client AS device_src,
     vlan_client AS vlan_src,
@@ -324,7 +330,7 @@ DEFINE 'c2s icmp' AS
   WHERE traffic_packets_client > 0;
 
 DEFINE 's2c icmp' AS
-  FROM 'icmp' SELECT
+  FROM icmp SELECT
     poller, capture_begin, capture_end,
     device_server AS device_src,
     vlan_server AS vlan_src,
@@ -343,7 +349,9 @@ DEFINE 's2c icmp' AS
     application, protostack
   WHERE traffic_packets_server > 0;
 
-DEFINE 'other-ip' AS
+DEFINE 'other-ip'
+  "IP measurements other than TCP,UDP and ICMP from the traffic sniffer."
+AS
   READ AND DELETE
        FILES csv_prefix || "other_ip_v29.*csv" || (IF csv_compressed THEN ".lz4" ELSE "")
        PREPROCESS WITH (IF csv_compressed THEN "lz4 -d -c" ELSE "")
@@ -415,7 +423,9 @@ DEFINE 's2c other-ip' AS
     application, protostack
   WHERE traffic_packets_server > 0;
 
-DEFINE 'non-ip' AS
+DEFINE 'non-ip'
+  "Non IP measurements from the traffic sniffer."
+AS
   READ AND DELETE
        FILES csv_prefix || "non_ip_v29.*csv" || (IF csv_compressed THEN ".lz4" ELSE "")
        PREPROCESS WITH (IF csv_compressed THEN "lz4 -d -c" ELSE "")
@@ -475,7 +485,9 @@ DEFINE 's2c non-ip' AS
     application, protostack
   WHERE traffic_packets_server > 0;
 
-DEFINE 'dns' AS
+DEFINE dns
+  "DNS measurements from the traffic sniffer."
+AS
   READ AND DELETE
        FILES csv_prefix || "dns_v29.*csv" || (IF csv_compressed THEN ".lz4" ELSE "")
        PREPROCESS WITH (IF csv_compressed THEN "lz4 -d -c" ELSE "")
@@ -514,7 +526,9 @@ DEFINE 'dns' AS
   EVENT STARTING AT capture_begin * 1e-6
     AND STOPPING AT capture_end * 1e-6;
 
-DEFINE 'http' AS
+DEFINE http
+  "HTTP measurements from the traffic sniffer."
+AS
   READ AND DELETE
        FILES csv_prefix || "http_v29.*csv" || (IF csv_compressed THEN ".lz4" ELSE "")
        PREPROCESS WITH (IF csv_compressed THEN "lz4 -d -c" ELSE "")
@@ -594,7 +608,9 @@ DEFINE 'http' AS
   EVENT STARTING AT capture_begin * 1e-6
     AND STOPPING AT capture_end * 1e-6;
 
-DEFINE 'citrix' AS
+DEFINE citrix
+  "Citrix measurements from the traffic sniffer."
+AS
   READ AND DELETE
        FILES csv_prefix || "citrix_v29.*csv" || (IF csv_compressed THEN ".lz4" ELSE "")
        PREPROCESS WITH (IF csv_compressed THEN "lz4 -d -c" ELSE "")
@@ -642,7 +658,9 @@ DEFINE 'citrix' AS
   EVENT STARTING AT capture_begin * 1e-6
     AND STOPPING AT capture_end * 1e-6;
 
-DEFINE 'citrix_chanless' AS
+DEFINE 'citrix_chanless'
+  "Citrix (chanless) measurements from the traffic sniffer."
+AS
   READ AND DELETE
        FILES csv_prefix || "citrix_chanless_v29.*csv" || (IF csv_compressed THEN ".lz4" ELSE "")
        PREPROCESS WITH (IF csv_compressed THEN "lz4 -d -c" ELSE "")
@@ -700,7 +718,9 @@ DEFINE 'citrix_chanless' AS
   EVENT STARTING AT capture_begin * 1e-6
     AND STOPPING AT capture_end * 1e-6;
 
-DEFINE 'smb' AS
+DEFINE smb
+  "SMB measurements from the traffic sniffer."
+AS
   READ AND DELETE
        FILES csv_prefix || "smb_v29.*csv" || (IF csv_compressed THEN ".lz4" ELSE "")
        PREPROCESS WITH (IF csv_compressed THEN "lz4 -d -c" ELSE "")
@@ -764,7 +784,9 @@ DEFINE 'smb' AS
   EVENT STARTING AT capture_begin * 1e-6
     AND STOPPING AT capture_end * 1e-6;
 
-DEFINE 'sql' AS
+DEFINE sql
+  "SQL measurements from the traffic sniffer."
+AS
   READ AND DELETE
        FILES csv_prefix || "sql_v29.*csv" || (IF csv_compressed THEN ".lz4" ELSE "")
        PREPROCESS WITH (IF csv_compressed THEN "lz4 -d -c" ELSE "")
@@ -819,7 +841,9 @@ DEFINE 'sql' AS
   EVENT STARTING AT capture_begin * 1e-6
     AND STOPPING AT capture_end * 1e-6;
 
-DEFINE 'voip' AS
+DEFINE voip
+  "VoIP measurements from the traffic sniffer."
+AS
   READ AND DELETE
        FILES csv_prefix || "voip_v29.*csv" || (IF csv_compressed THEN ".lz4" ELSE "")
        PREPROCESS WITH (IF csv_compressed THEN "lz4 -d -c" ELSE "")

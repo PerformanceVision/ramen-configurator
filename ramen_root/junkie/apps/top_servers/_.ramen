@@ -77,12 +77,17 @@ DEFINE degraded AS
     IF _important THEN protocol ELSE string(NULL) AS protocol;
 
 -- Aggregate on service, per minute:
-DEFINE top AS
+DEFINE top
+  "Per minute statistics about the most important services (per number of clients)."
+AS
   FROM degraded
   GROUP BY vlan, ip, port, protocol
   SELECT
-    vlan, ip, port, protocol,
-    sum u32(is_new_client) AS clients,
+    vlan, ip, port,
+    protocol DOC "IP protocol.",
+
+    sum u32(is_new_client) AS clients
+      "Approximate number of distinct clients for this service.",
 
     -- Time info
     min start AS _min_start,
@@ -103,9 +108,12 @@ DEFINE top AS
     min _avg_response_time,
     max _avg_response_time,
     -- Also some percentiles (of the avgs!):
-    90th percentile (group _avg_response_time) as avg_response_time_90th,
-    95th percentile (group _avg_response_time) as avg_response_time_95th,
-    99th percentile (group _avg_response_time) as avg_response_time_99th,
+    90th percentile (group _avg_response_time) as avg_response_time_90th
+      "90th percentile of response times (based on captured averages).",
+    95th percentile (group _avg_response_time) as avg_response_time_95th
+      "95th percentile of response times (based on captured averages).",
+    99th percentile (group _avg_response_time) as avg_response_time_99th
+      "99th percentile of response times (based on captured averages).",
 
     -- RTT from client
     sum (rtt_sum_client / 1e6) / sum rtt_count_client

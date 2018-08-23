@@ -6,7 +6,9 @@ DEFINE stats AS
 
 -- Checks the global number of output tuples and running/active programs
 -- per minute
-DEFINE per_minute AS
+DEFINE per_minute
+  "Per minute statistics about every worker."
+AS
   FROM stats
   WHERE not (worker starts with "monitoring/meta/")
   SELECT
@@ -18,66 +20,76 @@ DEFINE per_minute AS
     max tuples_in AS tuples_in,
     IF _dt > 0 THEN
       (out.tuples_in - min tuples_in) / _dt
-    ELSE 0 AS in_per_secs,
+    ELSE 0 AS in_per_secs
+      "Number of received tuples per seconds.",
 
     max tuples_selected AS tuples_selected,
     IF _dt > 0 THEN
       (out.tuples_selected - min tuples_selected) / _dt
-    ELSE 0 AS selected_per_secs,
+    ELSE 0 AS selected_per_secs
+      "Number of received tuples passing the WHERE filter per seconds.",
 
     max tuples_out AS tuples_out,
     IF _dt > 0 THEN
       (out.tuples_out - min tuples_out) / _dt
-    ELSE 0 AS out_per_secs,
+    ELSE 0 AS out_per_secs
+      "Number of produced tuples per seconds.",
 
-    max groups AS groups,
-    IF _dt > 0 THEN
-      (out.groups - min groups) / _dt
-    ELSE 0 AS groups_per_secs,
+    max groups AS groups
+      "Peak number of active groups.",
 
     max cpu AS cpu,
     IF _dt > 0 THEN
       (out.cpu - min cpu) / _dt
-    ELSE 0 AS cpu_per_secs,
-
-    max ram AS ram,
+    ELSE 0 AS cpu_per_secs
+      "Average number of CPU seconds consummed per seconds.",
+    max ram AS ram "Peak number of bytes allocated on the heap.",
 
     max wait_in AS wait_in,
     IF _dt > 0 THEN
       (out.wait_in - min wait_in) / _dt
-    ELSE 0 AS wait_in_per_secs,
+    ELSE 0 AS wait_in_per_secs
+      "Average time spent waiting for parent.",
 
     max wait_out AS wait_out,
     IF _dt > 0 THEN
       (out.wait_out - min wait_out) / _dt
-    ELSE 0 AS wait_out_per_secs,
+    ELSE 0 AS wait_out_per_secs
+      "Average time spent waiting for children.",
 
     max bytes_in AS bytes_in,
     IF _dt > 0 THEN
       (out.bytes_in - min bytes_in) / _dt
-    ELSE 0 AS bytes_in_per_secs,
+    ELSE 0 AS bytes_in_per_secs
+      "Average amount of bytes read.",
 
     max bytes_out AS bytes_out,
     IF _dt > 0 THEN
       (out.bytes_out - min bytes_out) / _dt
-    ELSE 0 AS bytes_out_per_secs,
+    ELSE 0 AS bytes_out_per_secs
+      "Average number of bytes written.",
 
-    min age last_out AS last_out_age
+    min age last_out AS last_out_age "Time elapsed since last production."
+
   GROUP BY worker, time // 60
   COMMIT AFTER in.time - out.time > 90
   EVENT STARTING AT time WITH DURATION 60s
   FACTOR worker;
 
-DEFINE tot_per_minute AS
+DEFINE tot_per_minute
+  "Global statistics about total work done."
+AS
   FROM per_minute
   SELECT
     (time // 60) * 60 as time,
-    sum 1 AS running,
+    sum 1 AS running "Total number of running worker.",
     -- Given data arrive only every minute in the test lab (and some datasets
     -- are frequently missed), let's call "active" any operation that had
     -- output anything for the last *3* minutes:
-    sum u32(COALESCE(last_out_age <= 180, false)) AS active,
+    sum u32(COALESCE(last_out_age <= 180, false)) AS active
+      "Number of workers that have produced at least a tuple in the last 3 minutes.",
     sum COALESCE(out_per_secs, 0) AS tot_out_per_secs
+      "Number of produced tuples by all workers so far."
   GROUP BY time // 60
   COMMIT AFTER in.time >= out.time + 60 + 30
   EVENT STARTING AT time WITH DURATION 60s;

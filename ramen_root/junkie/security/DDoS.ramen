@@ -1,7 +1,10 @@
 PARAMETERS
   avg_win DEFAULTS TO 120s;
+  -- TODO: also remember durations?
 
-DEFINE 'new peers' AS
+DEFINE 'new peers'
+  "Approximation of the number of new unique clients and socket pairs."
+AS
   FROM
     ../../csv/tcp,
     ../../csv/udp,
@@ -20,7 +23,8 @@ DEFINE 'new peers' AS
            coalesce (ip4_client, ip6_client, 0),
            coalesce (ip4_server, ip6_server, 0)))) /
       100
-        AS nb_new_cnxs_per_secs,
+        AS nb_new_cnxs_per_secs
+        "Approximate number of newly communicating hosts (as in: hosts that were not communicating for at least one hour)",
     -- Clients we haven't seen in the last 3600 secs.
     sum (1.1 * float(not remember (
            0.1,
@@ -28,6 +32,7 @@ DEFINE 'new peers' AS
            coalesce (ip4_client, ip6_client, 0)))) /
        100
          AS nb_new_clients_per_secs
+        "Approximate number of new clients (as in: hosts that were not clients of anything for at least one hour)"
   GROUP BY capture_begin // (avg_win * 1e6)
   COMMIT AFTER
     in.capture_begin / 1e6 > out.min_capture_begin / 1e6 + 2 * u64(avg_win)
