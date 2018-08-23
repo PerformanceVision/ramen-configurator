@@ -108,12 +108,12 @@ AS
     min _avg_response_time,
     max _avg_response_time,
     -- Also some percentiles (of the avgs!):
-    90th percentile (group _avg_response_time) as avg_response_time_90th
-      "90th percentile of response times (based on captured averages).",
-    95th percentile (group _avg_response_time) as avg_response_time_95th
-      "95th percentile of response times (based on captured averages).",
-    99th percentile (group _avg_response_time) as avg_response_time_99th
-      "99th percentile of response times (based on captured averages).",
+    90th percentile (sample(1000, _avg_response_time)) as avg_response_time_90th
+      "Approximate 90th percentile of response times.",
+    95th percentile (sample(1000, _avg_response_time)) as avg_response_time_95th
+      "Approximate 95th percentile of response times.",
+    99th percentile (sample(1000, _avg_response_time)) as avg_response_time_99th
+      "Approximate 99th percentile of response times.",
 
     -- RTT from client
     sum (rtt_sum_client / 1e6) / sum rtt_count_client
