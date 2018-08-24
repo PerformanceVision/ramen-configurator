@@ -1,13 +1,13 @@
 PARAMETERS
   uniq_name DEFAULTS TO "",
   id DEFAULTS TO 0,
-  min_bps U32? DEFAULTS TO NULL,
-  max_bps U32? DEFAULTS TO NULL,
-  max_rtt FLOAT? DEFAULTS TO NULL,
-  max_rr FLOAT? DEFAULTS TO NULL,
+  min_bps U32? {bytes*seconds^-1} DEFAULTS TO NULL,
+  max_bps U32? {bytes*seconds^-1} DEFAULTS TO NULL,
+  max_rtt FLOAT? {seconds} DEFAULTS TO NULL,
+  max_rr FLOAT? {} DEFAULTS TO NULL,
   min_for_relevance DEFAULTS TO 10, -- TODO
-  avg_window DEFAULTS TO 360.0,
-  obs_window DEFAULTS TO 600.0,
+  avg_window {seconds} DEFAULTS TO 360.0,
+  obs_window {seconds} DEFAULTS TO 600.0,
   perc DEFAULTS TO 90.0,
   source U32[] DEFAULTS TO [0],
   source_name DEFAULTS TO "any",
@@ -28,8 +28,7 @@ DEFINE 'avg traffic' AS
     '../../../csv/s2c non-ip'
   MERGE ON capture_begin TIMEOUT AFTER 2 SECONDS
   SELECT
-    ((capture_begin / 1e6) // u32(avg_window)) * u32(avg_window)
-      AS start,
+    (capture_begin // u32(avg_window)) * u32(avg_window) AS start,
     min capture_begin, max capture_end,
     -- Traffic
     sum packets_src / avg_window AS packets_per_secs,
@@ -37,7 +36,7 @@ DEFINE 'avg traffic' AS
     -- RTT (in seconds)
     sum COALESCE(rtt_count_src, 0) AS _sum_rtt_count_src,
     IF _sum_rtt_count_src = 0 THEN 0 ELSE
-      (sum rtt_sum_src / _sum_rtt_count_src) / 1e6 AS avg_rtt,
+      sum rtt_sum_src / _sum_rtt_count_src AS avg_rtt,
     -- RD: percentage of retransmitted packets over packets with payload
     sum packets_with_payload_src AS _sum_packets_with_payload_src,
     IF _sum_packets_with_payload_src = 0 THEN 0 ELSE
@@ -46,9 +45,9 @@ DEFINE 'avg traffic' AS
   WHERE
     (source_name = "any" OR in.zone_src IN source) AND
     (dest_name = "any" OR in.zone_dst IN dest)
-  GROUP BY (capture_begin / 1e6) // u32(avg_window)
+  GROUP BY capture_begin // u32(avg_window)
   COMMIT AFTER
-    in.capture_begin / 1e6 > out.min_capture_begin / 1e6 + 2 * u64(avg_window)
+    in.capture_begin > out.min_capture_begin + 2 * u64(avg_window)
   EVENT STARTING AT start WITH DURATION avg_window;
 
 DEFINE percentiles AS
@@ -72,7 +71,7 @@ DEFINE percentiles AS
   COMMIT AFTER
     sum 1 >= round (obs_window / avg_window) OR
     in.start > out.max_start + 5
-  EVENT STARTING AT max_capture_end * 1e-6
+  EVENT STARTING AT max_capture_end
    WITH DURATION avg_window;
 
 DEFINE 'traffic too low' AS
@@ -165,7 +164,7 @@ DEFINE 'TCP minutely' AS
     '../../../csv/c2s tcp',
     '../../../csv/s2c tcp'
   SELECT
-    (capture_begin // 60000000) * 60 AS start,
+    (capture_begin // 60) * 60 AS start,
     min capture_begin, max capture_end,
     sum packets_src / 60 AS packets_per_secs,
     sum bytes_src / 60 AS bytes_per_secs,
@@ -184,23 +183,23 @@ DEFINE 'TCP minutely' AS
     sum COALESCE(zero_windows_src, 0) / 60 AS zero_windows_per_secs,
     sum COALESCE(rtt_count_src, 0) AS sum_rtt_count_src,
     sum rtt_sum_src AS _sum_rtt_sum_src,
-    (_sum_rtt_sum_src / sum_rtt_count_src) / 1e6 AS rtt_avg,
-    ((float(sum rtt_sum2_src) - float(_sum_rtt_sum_src)^2 / sum_rtt_count_src) /
-        sum_rtt_count_src) / 1e12 AS rtt_var,
+    _sum_rtt_sum_src / sum_rtt_count_src AS rtt_avg,
+    (sum rtt_sum2_src - _sum_rtt_sum_src^2 / sum_rtt_count_src) /
+        sum_rtt_count_src AS rtt_var,
     sum COALESCE(rd_count_src, 0) AS sum_rd_count_src,
     sum rd_sum_src AS _sum_rd_sum_src,
-    (_sum_rd_sum_src / sum_rd_count_src) / 1e6 AS rd_avg,
-    ((float(sum rd_sum2_src) - float(_sum_rd_sum_src)^2 / sum_rd_count_src) /
-        sum_rd_count_src) / 1e12 AS rd_var,
+    _sum_rd_sum_src / sum_rd_count_src AS rd_avg,
+    (sum rd_sum2_src - _sum_rd_sum_src^2 / sum_rd_count_src) /
+        sum_rd_count_src AS rd_var,
     sum COALESCE(dtt_count_src, 0) AS sum_dtt_count_src,
     sum dtt_sum_src AS _sum_dtt_sum_src,
-    (_sum_dtt_sum_src / sum_dtt_count_src) / 1e6 AS dtt_avg,
-    ((float(sum dtt_sum2_src) - float(_sum_dtt_sum_src)^2 / sum_dtt_count_src) /
-        sum_dtt_count_src) / 1e12 AS dtt_var,
+    _sum_dtt_sum_src / sum_dtt_count_src AS dtt_avg,
+    (sum dtt_sum2_src - _sum_dtt_sum_src^2 / sum_dtt_count_src) /
+        sum_dtt_count_src AS dtt_var,
     sum connections_time AS _sum_connections_time,
-    (_sum_connections_time / _sum_connections) / 1e6 AS connection_time_avg,
-    ((float(sum connections_time2) - float(_sum_connections_time)^2 / _sum_connections) /
-        _sum_connections) / 1e12 AS connection_time_var
+    _sum_connections_time / _sum_connections AS connection_time_avg,
+    (sum connections_time2 - _sum_connections_time^2 / _sum_connections) /
+        _sum_connections AS connection_time_var
   WHERE
     (source_name = "any" OR in.zone_src IN source) AND
     (dest_name = "any" OR in.zone_dst IN dest) AND
@@ -217,9 +216,9 @@ DEFINE 'TCP minutely' AS
     rtt_count_src IS NOT NULL AND
     rd_count_src IS NOT NULL AND
     dtt_count_src IS NOT NULL
-  GROUP BY capture_begin // 60000000
+  GROUP BY capture_begin // 60
   COMMIT AFTER
-    in.capture_begin / 1e6 > out.min_capture_begin / 1e6 + 2 * u64(60)
+    in.capture_begin > out.min_capture_begin + 2 * 60s
   EVENT STARTING AT start WITH DURATION 60s;
 
 DEFINE 'TCP minutely: volume predictions' AS

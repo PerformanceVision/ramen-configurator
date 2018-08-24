@@ -7,34 +7,30 @@ AS
   MERGE ON capture_begin TIMEOUT AFTER 2 SECONDS
   WHEN
     NOT remember globally (
-      0.1, capture_begin / 1e6, 3600,
+      0.1, capture_begin, 3600,
       -- We do not take into account IP proto, so a ping on a TCP port
       -- grants you a free ping on the same UDP port.
-      coalesce (ip4_client, ip6_client, 0),
-      coalesce (ip4_server, ip6_server, 0),
-      port_server) AND
-    IS coalesce (ip4_client, ip6_client, 0),
-       coalesce (ip4_server, ip6_server, 0) IN TOP 100
+      ip_client, ip_server, port_server) AND
+    IS ip_client, ip_server IN TOP 100
   SELECT
-    min (capture_begin / 1e6) AS start,
-    max (capture_end / 1e6) AS end,
-    coalesce (ip4_client, ip6_client, 0) as client,
-    coalesce (ip4_server, ip6_server, 0) as server,
+    min capture_begin AS start,
+    max capture_end AS end,
+    ip_client,
+    ip_server,
     sum 1 as port_count
       "Approximate number of ports probed by the client to this server"
-  GROUP BY coalesce (ip4_client, ip6_client, 0),
-           coalesce (ip4_server, ip6_server, 0)
+  GROUP BY ip_client, ip_server
   --COMMIT BEFORE end - start > 3600;
-  COMMIT AFTER in.capture_begin / 1e6 >= end + 3600
+  COMMIT AFTER in.capture_begin >= end + 3600
   EVENT STARTS AT start AND ENDS AT end;
 
 DEFINE 'port scan alert' AS
   FROM 'top port scans'
   WHEN port_count > 30
-  NOTIFY "Port-Scan from ${client} to ${server}" WITH
+  NOTIFY "Port-Scan from ${ip_client} to ${ip_server}" WITH
     reldiff(port_count, 30) AS certainty,
-    "${client} has probed at least ${port_count} ports of ${server} from ${start} to ${end}'" AS desc,
-    "${client},${server}" AS ips,
+    "${ip_client} has probed at least ${port_count} ports of ${ip_server} from ${start} to ${end}'" AS desc,
+    "${ip_client},${ip_server}" AS ips,
     "${port_count}" AS values,
     "30" AS thresholds;
 
@@ -49,28 +45,27 @@ AS
   MERGE ON capture_begin TIMEOUT AFTER 2 SECONDS
   WHEN
     NOT remember globally (
-      0.1, capture_begin / 1e6, 3600,
+      0.1, capture_begin, 3600,
       -- An IP scanner could use varying proto/port to detect host
       -- presence so we just care about src and dst here:
-      coalesce (ip4_client, ip6_client, 0),
-      coalesce (ip4_server, ip6_server, 0)) AND
-    IS coalesce (ip4_client, ip6_client, 0) IN TOP 100
+      ip_client, ip_server) AND
+    IS ip_client IN TOP 100
   SELECT
-    min (capture_begin / 1e6) AS start,
-    max (capture_end / 1e6) AS end,
-    coalesce (ip4_client, ip6_client, 0) as client,
+    min capture_begin AS start,
+    max capture_end AS end,
+    ip_client,
     sum 1 as ip_count
       "Approximate number of hosts probed by this client."
-  GROUP BY coalesce (ip4_client, ip6_client, 0)
+  GROUP BY ip_client
   --COMMIT BEFORE end - start > 3600;
-  COMMIT AFTER in.capture_begin / 1e6 >= end + 3600
+  COMMIT AFTER in.capture_begin >= end + 3600
   EVENT STARTS AT start AND ENDS AT end;
 
 DEFINE 'ip_scan_alert' AS
   FROM 'top ip scans'
   WHEN ip_count > 100
-  NOTIFY "IP-Scan from ${client}" WITH
+  NOTIFY "IP-Scan from ${ip_client}" WITH
     reldiff(ip_count, 100) AS certainty,
-    "${client}" AS ips,
+    "${ip_client}" AS ips,
     "${ip_count}" AS values,
     "100" AS thresholds;

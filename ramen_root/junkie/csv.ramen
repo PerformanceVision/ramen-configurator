@@ -2,9 +2,7 @@ PARAMETERS
   csv_prefix DEFAULTS TO "/srv/nova/ramen/*.*.",
   csv_compressed DEFAULTS TO false;
 
-DEFINE tcp
-  "TCP measurements from the traffic sniffer."
-AS
+DEFINE tcp_raw AS
   READ AND DELETE
        FILES csv_prefix || "tcp_v29.*csv" || (IF csv_compressed THEN ".lz4" ELSE "")
        PREPROCESS WITH (IF csv_compressed THEN "lz4 -d -c" ELSE "")
@@ -32,63 +30,103 @@ AS
      diffserv_server u8,
      os_client u8?,
      os_server u8?,
-     mtu_client u32?,
-     mtu_server u32?,
+     mtu_client u32? {bytes},
+     mtu_server u32? {bytes},
      captured_pcap string?,
      application u32,
      protostack string?,
      uuid string?,
-     traffic_bytes_client u64,          -- 30
-     traffic_bytes_server u64,
-     traffic_packets_client u32,
-     traffic_packets_server u32,
-     payload_bytes_client u64,
-     payload_bytes_server u64,
-     payload_packets_client u32,
-     payload_packets_server u32,
-     retrans_traffic_bytes_client u64?,
-     retrans_traffic_bytes_server u64?,
-     retrans_payload_bytes_client u64?, -- 40
-     retrans_payload_bytes_server u64?,
-     syn_count_client u32?,
-     fin_count_client u32?,
-     fin_count_server u32?,
-     rst_count_client u32?,
-     rst_count_server u32?,
-     timeout_count u32,
-     close_count u32?,
-     dupack_count_client u32?,
-     dupack_count_server u32?,          -- 50
-     zero_window_count_client u32?,
-     zero_window_count_server u32?,
+     traffic_bytes_client u64 {bytes},  -- 30
+     traffic_bytes_server u64 {bytes},
+     traffic_packets_client u32 {packets},
+     traffic_packets_server u32 {packets},
+     payload_bytes_client u64 {bytes},
+     payload_bytes_server u64 {bytes},
+     payload_packets_client u32 {packets},
+     payload_packets_server u32 {packets},
+     retrans_traffic_bytes_client u64? {bytes},
+     retrans_traffic_bytes_server u64? {bytes},
+     retrans_payload_bytes_client u64? {bytes}, -- 40
+     retrans_payload_bytes_server u64? {bytes},
+     syn_count_client u32? {packets},
+     fin_count_client u32? {packets},
+     fin_count_server u32? {packets},
+     rst_count_client u32? {packets},
+     rst_count_server u32? {packets},
+     timeout_count u32 {packets},
+     close_count u32? {packets},
+     dupack_count_client u32? {packets},
+     dupack_count_server u32? {packets},-- 50
+     zero_window_count_client u32? {packets},
+     zero_window_count_server u32? {packets},
      -- Some counts can be null although the sums cannot ...
-     ct_count u32?,
-     ct_sum u64,
-     ct_square_sum u128,
-     rt_count_server u32?,
+     ct_count u32? {connections},
+     ct_sum u64 {microseconds},
+     ct_square_sum u128 {microseconds^2},
+     rt_count_server u32? {packets},
      rt_sum_server u64,
      rt_square_sum_server u128,
-     rtt_count_client u32?,
+     rtt_count_client u32? {packets},
      rtt_sum_client u64,                -- 60
      rtt_square_sum_client u128,
-     rtt_count_server u32?,
+     rtt_count_server u32? {packets},
      rtt_sum_server u64,
      rtt_square_sum_server u128,
-     rd_count_client u32?,
+     rd_count_client u32? {packets},
      rd_sum_client u64,
      rd_square_sum_client u128,
-     rd_count_server u32?,
+     rd_count_server u32? {packets},
      rd_sum_server u64,
      rd_square_sum_server u128,         -- 70
-     dtt_count_client u32?,
+     dtt_count_client u32? {packets},
      dtt_sum_client u64,
      dtt_square_sum_client u128,
-     dtt_count_server u32?,
+     dtt_count_server u32? {packets},
      dtt_sum_server u64,
      dtt_square_sum_server u128,
      dcerpc_uuid string?)
   EVENT STARTING AT capture_begin * 1e-6
     AND STOPPING AT capture_end * 1e-6;
+
+-- CSV come with all kind of types and field discrepencies.
+-- First, we want to cast all those types into proper ramen types.
+-- Then, we are going to sum tcp, udp, and all other metrics that
+-- together form the whole traffic, so that we can compute the volumetry
+-- and assess the overall quality of services.
+-- Unfortunately, only TCP comes with any metric that bear any relation to
+-- quality of service. We blanks these metrics for other sources below:
+
+DEFINE tcp
+  "TCP measurements from the traffic sniffer."
+AS
+  FROM tcp_raw
+  SELECT
+    (capture_begin / 1e6) {seconds} AS capture_begin,
+    (capture_end / 1e6) {seconds} AS capture_end,
+    COALESCE(ip(ip4_client), ip(u128(ip6_client)), 0.0.0.0) AS ip_client,
+    COALESCE(ip(ip4_server), ip(u128(ip6_server)), 0.0.0.0) AS ip_server,
+    COALESCE(ip(ip4_external), ip(u128(ip6_external)), 0.0.0.0) AS ip_external,
+    eth(mac_client) AS mac_client,
+    eth(mac_server) AS mac_server,
+    (ct_sum / 1e6) {seconds} AS ct_sum,
+    (ct_square_sum / 1e12) {seconds^2} AS ct_square_sum,
+    (rt_sum_server / 1e6) {seconds} AS rt_sum_server,
+    (rt_square_sum_server / 1e12) {seconds^2} AS rt_square_sum_server,
+    (rtt_sum_client / 1e6) {seconds} AS rtt_sum_client,
+    (rtt_square_sum_client / 1e12) {seconds^2} AS rtt_square_sum_client,
+    (rtt_sum_server / 1e6) {seconds} AS rtt_sum_server,
+    (rtt_square_sum_server / 1e12) {seconds^2} AS rtt_square_sum_server,
+    (rd_sum_client / 1e6) {seconds} AS rd_sum_client,
+    (rd_square_sum_client / 1e12) {seconds^2} AS rd_square_sum_client,
+    (rd_sum_server / 1e6) {seconds} AS rd_sum_server,
+    (rd_square_sum_server / 1e12) {seconds^2} AS rd_square_sum_server,
+    (dtt_sum_client / 1e6) {seconds} AS dtt_sum_client,
+    (dtt_square_sum_client / 1e12) {seconds^2} AS dtt_square_sum_client,
+    (dtt_sum_server / 1e6) {seconds} AS dtt_sum_server,
+    (dtt_square_sum_server / 1e12) {seconds^2} AS dtt_square_sum_server,
+    * -- -ip4_client -ip6_client etc
+  EVENT STARTING AT capture_begin
+    AND STOPPING AT capture_end;
 
 DEFINE 'c2s tcp' AS
   FROM tcp SELECT
@@ -97,8 +135,7 @@ DEFINE 'c2s tcp' AS
     vlan_client AS vlan_src,
     mac_client AS mac_src,
     zone_client AS zone_src,
-    ip4_client AS ip4_src,
-    ip6_client AS ip6_src,
+    ip_client AS ip_src,
     port_client AS port_src,
     diffserv_client AS diffserv_src,
     os_client AS os_src,
@@ -123,7 +160,7 @@ DEFINE 'c2s tcp' AS
     dtt_sum_client AS dtt_sum_src,
     dtt_square_sum_client AS dtt_sum2_src,
     zone_server AS zone_dst,
-    ip4_external, ip6_external,
+    ip_external,
     captured_pcap, application, protostack, uuid,
     timeout_count AS timeouts, close_count AS closes,
     ct_count AS connections, ct_sum AS connections_time,
@@ -138,8 +175,7 @@ DEFINE 's2c tcp' AS
     vlan_server AS vlan_src,
     mac_server AS mac_src,
     zone_server AS zone_src,
-    ip4_server AS ip4_src,
-    ip6_server AS ip6_src,
+    ip_server AS ip_src,
     port_server AS port_src,
     diffserv_server AS diffserv_src,
     os_server AS os_src,
@@ -164,7 +200,7 @@ DEFINE 's2c tcp' AS
     dtt_sum_server AS dtt_sum_src,
     dtt_square_sum_server AS dtt_sum2_src,
     zone_client AS zone_dst,
-    ip4_external, ip6_external,
+    ip_external,
     captured_pcap, application, protostack, uuid,
     timeout_count AS timeouts, close_count AS closes,
     ct_count AS connections, ct_sum AS connections_time,
@@ -173,9 +209,7 @@ DEFINE 's2c tcp' AS
   WHERE traffic_packets_server > 0;
 
 
-DEFINE udp
-  "UDP measurements from the traffic sniffer."
-AS
+DEFINE udp_raw AS
   READ AND DELETE
        FILES csv_prefix || "udp_v29.*csv" || (IF csv_compressed THEN ".lz4" ELSE "")
        PREPROCESS WITH (IF csv_compressed THEN "lz4 -d -c" ELSE "")
@@ -201,19 +235,46 @@ AS
      port_server u16,
      diffserv_client u8,                -- 20
      diffserv_server u8,
-     mtu_client u32?,
-     mtu_server u32?,
+     mtu_client u32? {bytes},
+     mtu_server u32? {bytes},
      application u32,
      protostack string?,
-     traffic_bytes_client u64,
-     traffic_bytes_server u64,
-     traffic_packets_client u32,
-     traffic_packets_server u32,
-     payload_bytes_client u64,          -- 30
-     payload_bytes_server u64,
+     traffic_bytes_client u64 {bytes},
+     traffic_bytes_server u64 {bytes},
+     traffic_packets_client u32 {packets},
+     traffic_packets_server u32 {packets},
+     payload_bytes_client u64 {bytes},   -- 30
+     payload_bytes_server u64 {bytes},
      dcerpc_uuid string?)
   EVENT STARTING AT capture_begin * 1e-6
     AND STOPPING AT capture_end * 1e-6;
+
+DEFINE udp
+  "UDP measurements from the traffic sniffer."
+AS
+  FROM udp_raw
+  SELECT
+    (capture_begin / 1e6) {seconds} AS capture_begin,
+    (capture_end / 1e6) {seconds} AS capture_end,
+    COALESCE(ip(ip4_client), ip(u128(ip6_client)), 0.0.0.0) AS ip_client,
+    COALESCE(ip(ip4_server), ip(u128(ip6_server)), 0.0.0.0) AS ip_server,
+    COALESCE(ip(ip4_external), ip(u128(ip6_external)), 0.0.0.0) AS ip_external,
+    eth(mac_client) AS mac_client,
+    eth(mac_server) AS mac_server,
+    -- Also extend it to have some of the same measures as in TCP:
+    -- (Note: Shouldn't we be able to cram at least an RTT in here, from
+    -- the many UDP protocols that are supported?)
+    traffic_packets_client AS payload_packets_client,
+    traffic_packets_server AS payload_packets_server,
+    u32?(0) {packets} AS rtt_count_client,
+    0. {seconds} AS rtt_sum_client,
+    u32?(0) {packets} AS rtt_count_server,
+    0. {seconds} AS rtt_sum_server,
+    u32?(0) {packets} AS rd_count_client,
+    u32?(0) {packets} AS rd_count_server,
+    *
+  EVENT STARTING AT capture_begin
+    AND STOPPING AT capture_end;
 
 DEFINE 'c2s udp' AS
   FROM udp SELECT
@@ -222,8 +283,7 @@ DEFINE 'c2s udp' AS
     vlan_client AS vlan_src,
     mac_client AS mac_src,
     zone_client AS zone_src,
-    ip4_client AS ip4_src,
-    ip6_client AS ip6_src,
+    ip_client AS ip_src,
     port_client AS port_src,
     diffserv_client AS diffserv_src,
     mtu_client AS mtu_src,
@@ -231,9 +291,11 @@ DEFINE 'c2s udp' AS
     traffic_bytes_client AS bytes_src,
     payload_bytes_client AS payload_src,
     zone_server AS zone_dst,
-    ip4_external, ip6_external,
-    u32?(0) AS rtt_count_src, 0u64 AS rtt_sum_src,
-    0u32 AS packets_with_payload_src, u32?(0) AS rd_count_src,
+    ip_external,
+    rtt_count_client AS rtt_count_src,
+    rtt_sum_client AS rtt_sum_src,
+    payload_packets_client AS packets_with_payload_src,-- TODO: do not rename
+    rd_count_client AS rd_count_src,
     application, protostack,
     dcerpc_uuid
   WHERE traffic_packets_client > 0;
@@ -245,8 +307,7 @@ DEFINE 's2c udp' AS
     vlan_server AS vlan_src,
     mac_server AS mac_src,
     zone_server AS zone_src,
-    ip4_server AS ip4_src,
-    ip6_server AS ip6_src,
+    ip_server AS ip_src,
     port_server AS port_src,
     diffserv_server AS diffserv_src,
     mtu_server AS mtu_src,
@@ -254,16 +315,16 @@ DEFINE 's2c udp' AS
     traffic_bytes_server AS bytes_src,
     payload_bytes_server AS payload_src,
     zone_client AS zone_dst,
-    ip4_external, ip6_external,
-    u32?(0) AS rtt_count_src, 0u64 AS rtt_sum_src,
-    0u32 AS packets_with_payload_src, u32?(0) AS rd_count_src,
+    ip_external,
+    rtt_count_server AS rtt_count_src,
+    rtt_sum_server AS rtt_sum_src,
+    payload_packets_server AS packets_with_payload_src,
+    rd_count_server AS rd_count_src,
     application, protostack,
     dcerpc_uuid
   WHERE traffic_packets_server > 0;
 
-DEFINE icmp
-  "ICMP measurements from the traffic sniffer."
-AS
+DEFINE icmp_raw AS
   READ AND DELETE
        FILES csv_prefix || "icmp_v29.*csv" || (IF csv_compressed THEN ".lz4" ELSE "")
        PREPROCESS WITH (IF csv_compressed THEN "lz4 -d -c" ELSE "")
@@ -287,14 +348,14 @@ AS
      ip6_external i128?,
      diffserv_client u8,
      diffserv_server u8,
-     mtu_client u32?,                   -- 20
-     mtu_server u32?,
+     mtu_client u32? {bytes},           -- 20
+     mtu_server u32? {bytes},
      application u32,
      protostack string?,
-     traffic_bytes_client u64,
-     traffic_bytes_server u64,
-     traffic_packets_client u32,
-     traffic_packets_server u32,
+     traffic_bytes_client u64 {bytes},
+     traffic_bytes_server u64 {bytes},
+     traffic_packets_client u32 {packets},
+     traffic_packets_server u32 {packets},
      icmp_type u8,
      icmp_code u8,
      error_ip4_client u32?,             -- 30
@@ -309,6 +370,35 @@ AS
   EVENT STARTING AT capture_begin * 1e-6
     AND STOPPING AT capture_end * 1e-6;
 
+DEFINE icmp
+  "ICMP measurements from the traffic sniffer."
+AS
+  FROM icmp_raw
+  SELECT
+    (capture_begin / 1e6) {seconds} AS capture_begin,
+    (capture_end / 1e6) {seconds} AS capture_end,
+    COALESCE(ip(ip4_client), ip(u128(ip6_client)), 0.0.0.0) AS ip_client,
+    COALESCE(ip(ip4_server), ip(u128(ip6_server)), 0.0.0.0) AS ip_server,
+    COALESCE(ip(ip4_external), ip(u128(ip6_external)), 0.0.0.0) AS ip_external,
+    eth(mac_client) AS mac_client,
+    eth(mac_server) AS mac_server,
+    COALESCE(ip(error_ip4_client), ip(u128(error_ip6_client)), 0.0.0.0) AS error_ip_client,
+    COALESCE(ip(error_ip4_server), ip(u128(error_ip6_server)), 0.0.0.0) AS error_ip_server,
+    -- Also extend with no data.
+    traffic_packets_client AS payload_packets_client,
+    traffic_packets_server AS payload_packets_server,
+    traffic_bytes_client AS payload_bytes_client,
+    traffic_bytes_client AS payload_bytes_server,
+    u32?(0) {packets} AS rtt_count_client,
+    0. {seconds} AS rtt_sum_client,
+    u32?(0) {packets} AS rtt_count_server,
+    0. {seconds} AS rtt_sum_server,
+    u32?(0) {packets} AS rd_count_client,
+    u32?(0) {packets} AS rd_count_server,
+    *
+  EVENT STARTING AT capture_begin
+    AND STOPPING AT capture_end;
+
 DEFINE 'c2s icmp' AS
   FROM icmp SELECT
     poller, capture_begin, capture_end,
@@ -316,16 +406,17 @@ DEFINE 'c2s icmp' AS
     vlan_client AS vlan_src,
     mac_client AS mac_src,
     zone_client AS zone_src,
-    ip4_client AS ip4_src,
-    ip6_client AS ip6_src,
+    ip_client AS ip_src,
     diffserv_client AS diffserv_src,
     mtu_client AS mtu_src,
     traffic_packets_client AS packets_src,
     traffic_bytes_client AS bytes_src,
     zone_server AS zone_dst,
-    ip4_external, ip6_external,
-    u32?(0) AS rtt_count_src, 0u64 AS rtt_sum_src,
-    0u32 AS packets_with_payload_src, u32?(0) AS rd_count_src,
+    ip_external,
+    rtt_count_client AS rtt_count_src,
+    rtt_sum_client AS rtt_sum_src,
+    payload_packets_client AS packets_with_payload_src,-- TODO: do not rename
+    rd_count_client AS rd_count_src,
     application, protostack
   WHERE traffic_packets_client > 0;
 
@@ -336,22 +427,21 @@ DEFINE 's2c icmp' AS
     vlan_server AS vlan_src,
     mac_server AS mac_src,
     zone_server AS zone_src,
-    ip4_server AS ip4_src,
-    ip6_server AS ip6_src,
+    ip_server AS ip_src,
     diffserv_server AS diffserv_src,
     mtu_server AS mtu_src,
     traffic_packets_server AS packets_src,
     traffic_bytes_server AS bytes_src,
     zone_client AS zone_dst,
-    ip4_external, ip6_external,
-    u32?(0) AS rtt_count_src, 0u64 AS rtt_sum_src,
-    0u32 AS packets_with_payload_src, u32?(0) AS rd_count_src,
+    ip_external,
+    rtt_count_server AS rtt_count_src,
+    rtt_sum_server AS rtt_sum_src,
+    payload_packets_server AS packets_with_payload_src,
+    rd_count_server AS rd_count_src,
     application, protostack
   WHERE traffic_packets_server > 0;
 
-DEFINE 'other-ip'
-  "IP measurements other than TCP,UDP and ICMP from the traffic sniffer."
-AS
+DEFINE 'other-ip_raw' AS
   READ AND DELETE
        FILES csv_prefix || "other_ip_v29.*csv" || (IF csv_compressed THEN ".lz4" ELSE "")
        PREPROCESS WITH (IF csv_compressed THEN "lz4 -d -c" ELSE "")
@@ -373,17 +463,42 @@ AS
      ip6_server i128?,
      diffserv_client u8,
      diffserv_server u8,
-     mtu_client u32?,
-     mtu_server u32?,
+     mtu_client u32? {bytes},
+     mtu_server u32? {bytes},
      ip_protocol u8,                    -- 20
      application u32,
      protostack string?,
-     traffic_bytes_client u64,
-     traffic_bytes_server u64,
-     traffic_packets_client u32,
-     traffic_packets_server u32)
+     traffic_bytes_client u64 {bytes},
+     traffic_bytes_server u64 {bytes},
+     traffic_packets_client u32 {packets},
+     traffic_packets_server u32 {packets})
   EVENT STARTING AT capture_begin * 1e-6
     AND STOPPING AT capture_end * 1e-6;
+
+DEFINE 'other-ip'
+  "IP measurements other than TCP,UDP and ICMP from the traffic sniffer."
+AS
+  FROM 'other-ip_raw'
+  SELECT
+    (capture_begin / 1e6) {seconds} AS capture_begin,
+    (capture_end / 1e6) {seconds} AS capture_end,
+    COALESCE(ip(ip4_client), ip(u128(ip6_client)), 0.0.0.0) AS ip_client,
+    COALESCE(ip(ip4_server), ip(u128(ip6_server)), 0.0.0.0) AS ip_server,
+    eth(mac_client) AS mac_client,
+    eth(mac_server) AS mac_server,
+    traffic_packets_client AS payload_packets_client,
+    traffic_packets_server AS payload_packets_server,
+    traffic_bytes_client AS payload_bytes_client,
+    traffic_bytes_server AS payload_bytes_server,
+    u32?(0) {packets} AS rtt_count_client,
+    0. {seconds} AS rtt_sum_client,
+    u32?(0) {packets} AS rtt_count_server,
+    0. {seconds} AS rtt_sum_server,
+    u32?(0) {packets} AS rd_count_client,
+    u32?(0) {packets} AS rd_count_server,
+    *
+  EVENT STARTING AT capture_begin
+    AND STOPPING AT capture_end;
 
 DEFINE 'c2s other-ip' AS
   FROM 'other-ip' SELECT
@@ -392,15 +507,16 @@ DEFINE 'c2s other-ip' AS
     vlan_client AS vlan_src,
     mac_client AS mac_src,
     zone_client AS zone_src,
-    ip4_client AS ip4_src,
-    ip6_client AS ip6_src,
+    ip_client AS ip_src,
     diffserv_client AS diffserv_src,
     mtu_client AS mtu_src,
     traffic_packets_client AS packets_src,
     traffic_bytes_client AS bytes_src,
     zone_server AS zone_dst,
-    u32?(0) AS rtt_count_src, 0u64 AS rtt_sum_src,
-    0u32 AS packets_with_payload_src, u32?(0) AS rd_count_src,
+    rtt_count_client AS rtt_count_src,
+    rtt_sum_client AS rtt_sum_src,
+    payload_packets_client AS packets_with_payload_src,-- TODO: do not rename
+    rd_count_client AS rd_count_src,
     application, protostack
   WHERE traffic_packets_client > 0;
 
@@ -411,21 +527,20 @@ DEFINE 's2c other-ip' AS
     vlan_server AS vlan_src,
     mac_server AS mac_src,
     zone_server AS zone_src,
-    ip4_server AS ip4_src,
-    ip6_server AS ip6_src,
+    ip_server AS ip_src,
     diffserv_server AS diffserv_src,
     mtu_server AS mtu_src,
     traffic_packets_server AS packets_src,
     traffic_bytes_server AS bytes_src,
     zone_client AS zone_dst,
-    u32?(0) AS rtt_count_src, 0u64 AS rtt_sum_src,
-    0u32 AS packets_with_payload_src, u32?(0) AS rd_count_src,
+    rtt_count_server AS rtt_count_src,
+    rtt_sum_server AS rtt_sum_src,
+    payload_packets_server AS packets_with_payload_src,
+    rd_count_server AS rd_count_src,
     application, protostack
   WHERE traffic_packets_server > 0;
 
-DEFINE 'non-ip'
-  "Non IP measurements from the traffic sniffer."
-AS
+DEFINE 'non-ip_raw' AS
   READ AND DELETE
        FILES csv_prefix || "non_ip_v29.*csv" || (IF csv_compressed THEN ".lz4" ELSE "")
        PREPROCESS WITH (IF csv_compressed THEN "lz4 -d -c" ELSE "")
@@ -441,17 +556,34 @@ AS
      mac_server u64?,
      zone_client u32,                   -- 10
      zone_server u32,
-     mtu_client u32?,
-     mtu_server u32?,
+     mtu_client u32? {bytes},
+     mtu_server u32? {bytes},
      eth_type u16,
      application u32,
      protostack string?,
-     traffic_bytes_client u64,
-     traffic_bytes_server u64,
-     traffic_packets_client u32,
-     traffic_packets_server u32)        -- 20
+     traffic_bytes_client u64 {bytes},
+     traffic_bytes_server u64 {bytes},
+     traffic_packets_client u32 {packets},
+     traffic_packets_server u32 {packets})-- 20
   EVENT STARTING AT capture_begin * 1e-6
     AND STOPPING AT capture_end * 1e-6;
+
+DEFINE 'non-ip'
+  "Non IP measurements from the traffic sniffer."
+AS
+  FROM 'non-ip_raw'
+  SELECT
+    (capture_begin / 1e6) {seconds} AS capture_begin,
+    (capture_end / 1e6) {seconds} AS capture_end,
+    eth(mac_client) AS mac_client,
+    eth(mac_server) AS mac_server,
+    traffic_packets_client AS payload_packets_client,
+    traffic_packets_server AS payload_packets_server,
+    traffic_bytes_client AS payload_bytes_client,
+    traffic_bytes_server AS payload_bytes_server,
+    *
+  EVENT STARTING AT capture_begin
+    AND STOPPING AT capture_end;
 
 DEFINE 'c2s non-ip' AS
   FROM 'non-ip' SELECT
@@ -464,8 +596,10 @@ DEFINE 'c2s non-ip' AS
     traffic_packets_client AS packets_src,
     traffic_bytes_client AS bytes_src,
     zone_server AS zone_dst,
-    u32?(0) AS rtt_count_src, 0u64 AS rtt_sum_src,
-    0u32 AS packets_with_payload_src, u32?(0) AS rd_count_src,
+    u32?(0) {packets} AS rtt_count_src,
+    0. {seconds} AS rtt_sum_src,
+    0u32 {packets} AS packets_with_payload_src,
+    u32?(0) {packets} AS rd_count_src,
     application, protostack
   WHERE traffic_packets_client > 0;
 
@@ -480,14 +614,14 @@ DEFINE 's2c non-ip' AS
     traffic_packets_server AS packets_src,
     traffic_bytes_server AS bytes_src,
     zone_client AS zone_dst,
-    u32?(0) AS rtt_count_src, 0u64 AS rtt_sum_src,
-    0u32 AS packets_with_payload_src, u32?(0) AS rd_count_src,
+    u32?(0) {packets} AS rtt_count_src,
+    0. {seconds} AS rtt_sum_src,
+    0u32 {packets} AS packets_with_payload_src,
+    u32?(0) {packets} AS rd_count_src,
     application, protostack
   WHERE traffic_packets_server > 0;
 
-DEFINE dns
-  "DNS measurements from the traffic sniffer."
-AS
+DEFINE dns_raw AS
   READ AND DELETE
        FILES csv_prefix || "dns_v29.*csv" || (IF csv_compressed THEN ".lz4" ELSE "")
        PREPROCESS WITH (IF csv_compressed THEN "lz4 -d -c" ELSE "")
@@ -516,19 +650,33 @@ AS
      answer_class u16,
      capture_file string?,
      connection_uuid string?,
-     traffic_bytes_client u64,
-     traffic_bytes_server u64,
-     traffic_packets_client u32,
-     traffic_packets_server u32,
-     rt_count_server u32,
-     rt_sum_server u64,                 -- 30
+     traffic_bytes_client u64 {bytes},
+     traffic_bytes_server u64 {bytes},
+     traffic_packets_client u32 {packets},
+     traffic_packets_server u32 {packets},
+     rt_count_server u32 {packets},
+     rt_sum_server u64,       -- 30
      rt_square_sum_server u128)
   EVENT STARTING AT capture_begin * 1e-6
     AND STOPPING AT capture_end * 1e-6;
 
-DEFINE http
-  "HTTP measurements from the traffic sniffer."
+DEFINE dns
+  "DNS measurements from the traffic sniffer."
 AS
+  FROM dns_raw
+  SELECT
+    (capture_begin / 1e6) {seconds} AS capture_begin,
+    (capture_end / 1e6) {seconds} AS capture_end,
+    COALESCE(ip(ip4_client), ip(u128(ip6_client)), 0.0.0.0) AS ip_client,
+    COALESCE(ip(ip4_server), ip(u128(ip6_server)), 0.0.0.0) AS ip_server,
+    eth(mac_client) AS mac_client,
+    eth(mac_server) AS mac_server,
+    (rt_sum_server / 1e6) {seconds} AS rt_sum_server,
+    (rt_square_sum_server / 1e12) {seconds^2} AS rt_square_sum_server
+  EVENT STARTING AT capture_begin
+    AND STOPPING AT capture_end;
+
+DEFINE http_raw AS
   READ AND DELETE
        FILES csv_prefix || "http_v29.*csv" || (IF csv_compressed THEN ".lz4" ELSE "")
        PREPROCESS WITH (IF csv_compressed THEN "lz4 -d -c" ELSE "")
@@ -566,30 +714,30 @@ AS
      ajax bool,
      ip4_orig_client u32?,
      ip6_orig_client i128?,
-     page_count u32,
-     hardcoded_one_facepalm bool,
+     page_count u32 {pages},
+     _hardcoded_one_facepalm bool,
      query_begin_ts u64,
      query_end_ts u64,
      query_method u8,
-     query_headers u32,
-     query_payload u32,                 -- 40
-     query_pkts u32,
+     query_headers u32 {bytes},
+     query_payload u32 {bytes},         -- 40
+     query_pkts u32 {packets},
      query_content string?,
-     query_content_length u32?,
-     query_content_length_count u32,
+     query_content_length u32? {bytes},
+     query_content_length_count u32 {bytes},
      query_mime_type string?,
      resp_begin_ts u64?,
      resp_end_ts u64?,
      resp_code u32?,
-     resp_headers u32,
-     resp_payload u32,                  -- 50
-     resp_pkts u32,
+     resp_headers u32 {bytes},
+     resp_payload u32 {bytes},           -- 50
+     resp_pkts u32 {packets},
      resp_content string?,
-     resp_content_length u32?,
-     resp_content_length_count u32,
+     resp_content_length u32? {bytes},
+     resp_content_length_count u32 {bytes},
      resp_mime_type string?,
-     tot_volume_query u32?,
-     tot_volume_response u32?,
+     tot_volume_query u32? {bytes},
+     tot_volume_response u32? {bytes},
      tot_count u32,
      tot_errors u16,
      tot_timeouts u16,                  -- 60
@@ -597,7 +745,7 @@ AS
      tot_end_ts u64,
      tot_load_time u64,
      tot_load_time_squared u128,
-     rt_count_server u32,
+     rt_count_server u32 {packets},
      rt_sum_server u64,
      rt_square_sum_server u128,
      dtt_sum_client u64,
@@ -608,9 +756,37 @@ AS
   EVENT STARTING AT capture_begin * 1e-6
     AND STOPPING AT capture_end * 1e-6;
 
-DEFINE citrix
-  "Citrix measurements from the traffic sniffer."
+DEFINE http
+  "HTTP measurements from the traffic sniffer."
 AS
+  FROM http_raw
+  SELECT
+    (capture_begin / 1e6) {seconds} AS capture_begin,
+    (capture_end / 1e6) {seconds} AS capture_end,
+    COALESCE(ip(ip4_client), ip(u128(ip6_client)), 0.0.0.0) AS ip_client,
+    COALESCE(ip(ip4_server), ip(u128(ip6_server)), 0.0.0.0) AS ip_server,
+    COALESCE(ip(ip4_orig_client), ip(u128(ip6_orig_client)), 0.0.0.0) AS ip_orig_client,
+    eth(mac_client) AS mac_client,
+    eth(mac_server) AS mac_server,
+    (query_begin_ts / 1e6) {seconds} AS query_begin,
+    (query_end_ts / 1e6) {seconds} AS query_end,
+    (resp_begin_ts / 1e6) {seconds} AS resp_begin,
+    (resp_end_ts / 1e6) {seconds} AS resp_end,
+    (tot_begin_ts / 1e6) {seconds} AS tot_begin,
+    (tot_end_ts / 1e6) {seconds} AS tot_end,
+    (tot_load_time / 1e6) {seconds} AS tot_load_time,
+    (tot_load_time_squared / 1e12) {seconds} AS tot_load_time_squared,
+    (rt_sum_server / 1e6) {seconds} AS rt_sum_server,
+    (rt_square_sum_server / 1e12) {seconds} AS rt_square_sum_server,
+    (dtt_sum_client / 1e6) {seconds} AS dtt_sum_client,
+    (dtt_square_sum_client / 1e12) {seconds^2} AS dtt_square_sum_client,
+    (dtt_sum_server / 1e6) {seconds} AS dtt_sum_server,
+    (dtt_square_sum_server / 1e12) {seconds^2} AS dtt_square_sum_server,
+    *
+  EVENT STARTING AT capture_begin
+    AND STOPPING AT capture_end;
+
+DEFINE citrix_raw AS
   READ AND DELETE
        FILES csv_prefix || "citrix_v29.*csv" || (IF csv_compressed THEN ".lz4" ELSE "")
        PREPROCESS WITH (IF csv_compressed THEN "lz4 -d -c" ELSE "")
@@ -641,15 +817,15 @@ AS
      pdus_server u32,
      nb_compressed_client u32,
      nb_compressed_server u32,
-     payloads_client u32,
-     payloads_server u32,
-     rt_count_server u32,
+     payloads_client u32 {bytes},
+     payloads_server u32 {bytes},
+     rt_count_server u32 {packets},
      rt_sum_server u64,                 -- 30
      rt_square_sum_server u128,
-     dtt_count_client u32,
+     dtt_count_client u32 {packets},
      dtt_sum_client u64,
      dtt_square_sum_client u128,
-     dtt_count_server u32,
+     dtt_count_server u32 {packets},
      dtt_sum_server u64,
      dtt_square_sum_server u128,
      username string?,
@@ -658,9 +834,28 @@ AS
   EVENT STARTING AT capture_begin * 1e-6
     AND STOPPING AT capture_end * 1e-6;
 
-DEFINE 'citrix_chanless'
-  "Citrix (chanless) measurements from the traffic sniffer."
+DEFINE citrix
+  "Citrix measurements from the traffic sniffer."
 AS
+  FROM citrix_raw
+  SELECT
+    (capture_begin / 1e6) {seconds} AS capture_begin,
+    (capture_end / 1e6) {seconds} AS capture_end,
+    COALESCE(ip(ip4_client), ip(u128(ip6_client)), 0.0.0.0) AS ip_client,
+    COALESCE(ip(ip4_server), ip(u128(ip6_server)), 0.0.0.0) AS ip_server,
+    eth(mac_client) AS mac_client,
+    eth(mac_server) AS mac_server,
+    (rt_sum_server / 1e6) {seconds} AS rt_sum_server,
+    (rt_square_sum_server / 1e12) {seconds^2} AS rt_square_sum_server,
+    (dtt_sum_client / 1e6) {seconds} AS dtt_sum_client,
+    (dtt_square_sum_client / 1e12) {seconds^2} AS dtt_square_sum_client,
+    (dtt_sum_server / 1e6) {seconds} AS dtt_sum_server,
+    (dtt_square_sum_server / 1e12) {seconds^2} AS dtt_square_sum_server,
+    *
+  EVENT STARTING AT capture_begin
+    AND STOPPING AT capture_end;
+
+DEFINE citrix_chanless_raw AS
   READ AND DELETE
        FILES csv_prefix || "citrix_chanless_v29.*csv" || (IF csv_compressed THEN ".lz4" ELSE "")
        PREPROCESS WITH (IF csv_compressed THEN "lz4 -d -c" ELSE "")
@@ -693,15 +888,15 @@ AS
      pdus_cgp_server u32,
      nb_keep_alives_client u32,
      nb_keep_alives_server u32,
-     payloads_client u32,
-     payloads_server u32,               -- 30
-     rt_count_server u32,
+     payloads_client u32 {bytes},
+     payloads_server u32 {bytes},       -- 30
+     rt_count_server u32 {packets},
      rt_sum_server u64,
      rt_square_sum_server u128,
-     dtt_count_client u32,
+     dtt_count_client u32 {packets},
      dtt_sum_client u64,
      dtt_square_sum_client u128,
-     dtt_count_server u32,
+     dtt_count_server u32 {packets},
      dtt_sum_server u64,
      dtt_square_sum_server u128,
      login_time_count u32,
@@ -718,9 +913,32 @@ AS
   EVENT STARTING AT capture_begin * 1e-6
     AND STOPPING AT capture_end * 1e-6;
 
-DEFINE smb
-  "SMB measurements from the traffic sniffer."
+DEFINE citrix_chanless
+  "Citrix (chanless) measurements from the traffic sniffer."
 AS
+  FROM citrix_chanless_raw
+  SELECT
+    (capture_begin / 1e6) {seconds} AS capture_begin,
+    (capture_end / 1e6) {seconds} AS capture_end,
+    COALESCE(ip(ip4_client), ip(u128(ip6_client)), 0.0.0.0) AS ip_client,
+    COALESCE(ip(ip4_server), ip(u128(ip6_server)), 0.0.0.0) AS ip_server,
+    eth(mac_client) AS mac_client,
+    eth(mac_server) AS mac_server,
+    (rt_sum_server / 1e6) {seconds} AS rt_sum_server,
+    (rt_square_sum_server / 1e12) {seconds^2} AS rt_square_sum_server,
+    (dtt_sum_client / 1e6) {seconds} AS dtt_sum_client,
+    (dtt_square_sum_client / 1e12) {seconds^2} AS dtt_square_sum_client,
+    (dtt_sum_server / 1e6) {seconds} AS dtt_sum_server,
+    (dtt_square_sum_server / 1e12) {seconds^2} AS dtt_square_sum_server,
+    (login_time_sum / 1e6) {seconds} AS login_time_sum,
+    (login_time_square_sum / 1e12) {seconds^2} AS login_time_square_sum,
+    (launch_time_sum / 1e6) {seconds} AS launch_time_sum,
+    (launch_time_square_sum / 1e12) {seconds^2} AS launch_time_square_sum,
+    *
+  EVENT STARTING AT capture_begin
+    AND STOPPING AT capture_end;
+
+DEFINE smb_raw AS
   READ AND DELETE
        FILES csv_prefix || "smb_v29.*csv" || (IF csv_compressed THEN ".lz4" ELSE "")
        PREPROCESS WITH (IF csv_compressed THEN "lz4 -d -c" ELSE "")
@@ -756,37 +974,60 @@ AS
      timeouted bool,
      is_error bool,                     -- 30
      is_warning bool,
-     hardcoded_one_facepalm bool,
+     _hardcoded_one_facepalm bool,
      connection_uuid string?,
      query_begin_ts u64,
      query_end_ts u64,
-     query_payload u32,
-     query_pkts u32,
+     query_payload u32 {bytes},
+     query_pkts u32 {packets},
      resp_begin_ts u64?,
      resp_end_ts u64?,
-     resp_payload u32,                  -- 40
-     resp_pkts u32,
-     meta_read_bytes u32,
-     meta_write_bytes u32,
-     query_write_bytes u32,
-     resp_read_bytes u32,
-     resp_write_bytes u32,
-     rt_count_server u32,
+     resp_payload u32 {bytes},          -- 40
+     resp_pkts u32 {packets},
+     meta_read_bytes u32 {bytes},
+     meta_write_bytes u32 {bytes},
+     query_write_bytes u32 {bytes},
+     resp_read_bytes u32 {bytes},
+     resp_write_bytes u32 {bytes},
+     rt_count_server u32 {packets},
      rt_sum_server u64,
      rt_square_sum_server u128,
-     dtt_count_client u32,              -- 50
+     dtt_count_client u32 {packets},    -- 50
      dtt_sum_client u64,
      dtt_square_sum_client u128,
-     dtt_count_server u32,
+     dtt_count_server u32 {packets},
      dtt_sum_server u64,
      dtt_square_sum_server u128,
      application u32)
   EVENT STARTING AT capture_begin * 1e-6
     AND STOPPING AT capture_end * 1e-6;
 
-DEFINE sql
-  "SQL measurements from the traffic sniffer."
+DEFINE smb
+  "SMB measurements from the traffic sniffer."
 AS
+  FROM smb_raw
+  SELECT
+    (capture_begin / 1e6) {seconds} AS capture_begin,
+    (capture_end / 1e6) {seconds} AS capture_end,
+    COALESCE(ip(ip4_client), ip(u128(ip6_client)), 0.0.0.0) AS ip_client,
+    COALESCE(ip(ip4_server), ip(u128(ip6_server)), 0.0.0.0) AS ip_server,
+    eth(mac_client) AS mac_client,
+    eth(mac_server) AS mac_server,
+    (query_begin_ts / 1e6) {seconds} AS query_begin,
+    (query_end_ts / 1e6) {seconds} AS query_end,
+    (resp_begin_ts / 1e6) {seconds} AS resp_begin,
+    (resp_end_ts / 1e6) {seconds} AS resp_end,
+    (rt_sum_server / 1e6) {seconds} AS rt_sum_server,
+    (rt_square_sum_server / 1e12) {seconds^2} AS rt_square_sum_server,
+    (dtt_sum_client / 1e6) {seconds} AS dtt_sum_client,
+    (dtt_square_sum_client / 1e12) {seconds^2} AS dtt_square_sum_client,
+    (dtt_sum_server / 1e6) {seconds} AS dtt_sum_server,
+    (dtt_square_sum_server / 1e12) {seconds^2} AS dtt_square_sum_server,
+    *
+  EVENT STARTING AT capture_begin
+    AND STOPPING AT capture_end;
+
+DEFINE sql_raw AS
   READ AND DELETE
        FILES csv_prefix || "sql_v29.*csv" || (IF csv_compressed THEN ".lz4" ELSE "")
        PREPROCESS WITH (IF csv_compressed THEN "lz4 -d -c" ELSE "")
@@ -817,33 +1058,56 @@ AS
      error_code string?,
      error_msg string?,
      is_error bool,
-     hardcoded_one_facepalm bool,
+     _hardcoded_one_facepalm bool,
      command u32?,
      connection_uuid string?,
      query_begin_ts u64,                -- 30
      query_end_ts u64,
-     query_payload u32,
-     query_pkts u32,
+     query_payload u32 {bytes},
+     query_pkts u32 {packets},
      resp_begin_ts u64?,
      resp_end_ts u64?,
-     resp_payload u32,
-     resp_pkts u32,
-     rt_count_server u32,
+     resp_payload u32 {bytes},
+     resp_pkts u32 {packets},
+     rt_count_server u32 {packets},
      rt_sum_server u64,
      rt_square_sum_server u128,         -- 40
-     dtt_count_client u32,
+     dtt_count_client u32 {packets},
      dtt_sum_client u64,
      dtt_square_sum_client u128,
-     dtt_count_server u32,
+     dtt_count_server u32 {packets},
      dtt_sum_server u64,
      dtt_square_sum_server u128,
      application u32)
   EVENT STARTING AT capture_begin * 1e-6
     AND STOPPING AT capture_end * 1e-6;
 
-DEFINE voip
-  "VoIP measurements from the traffic sniffer."
+DEFINE sql
+  "SQL measurements from the traffic sniffer."
 AS
+  FROM sql_raw
+  SELECT
+    (capture_begin / 1e6) {seconds} AS capture_begin,
+    (capture_end / 1e6) {seconds} AS capture_end,
+    COALESCE(ip(ip4_client), ip(u128(ip6_client)), 0.0.0.0) AS ip_client,
+    COALESCE(ip(ip4_server), ip(u128(ip6_server)), 0.0.0.0) AS ip_server,
+    eth(mac_client) AS mac_client,
+    eth(mac_server) AS mac_server,
+    (query_begin_ts / 1e6) {seconds} AS query_begin,
+    (query_end_ts / 1e6) {seconds} AS query_end_,
+    (resp_begin_ts / 1e6) {seconds} AS resp_begin,
+    (resp_end_ts / 1e6) {seconds} AS resp_end,
+    (rt_sum_server / 1e6) {seconds} AS rt_sum_server,
+    (rt_square_sum_server / 1e12) {seconds^2} AS rt_square_sum_server,
+    (dtt_sum_client / 1e6) {seconds} AS dtt_sum_client,
+    (dtt_square_sum_client / 1e12) {seconds^2} AS dtt_square_sum_client,
+    (dtt_sum_server / 1e6) {seconds} AS dtt_sum_server,
+    (dtt_square_sum_server / 1e12) {seconds^2} AS dtt_square_sum_server,
+    *
+  EVENT STARTING AT capture_begin
+    AND STOPPING AT capture_end;
+
+DEFINE voip_raw AS
   READ AND DELETE
        FILES csv_prefix || "voip_v29.*csv" || (IF csv_compressed THEN ".lz4" ELSE "")
        PREPROCESS WITH (IF csv_compressed THEN "lz4 -d -c" ELSE "")
@@ -875,7 +1139,7 @@ AS
      last_call_state u8,
      is_starting bool,
      is_finished bool,
-     hardcoded_0 bool,
+     _hardcoded_0 bool,
      last_error u32,
      call_id string,                    -- 30
      rtp_duration u64?,
@@ -891,46 +1155,83 @@ AS
      ip6_callee i128?,
      zone_callee u32,
      callee_codec string?,
-     sign_bytes_client u32,
-     sign_bytes_server u32,
-     sign_count_client u32,
-     sign_count_server u32,
-     sign_payload_client u32,
-     sign_payload_server u32,
-     rtp_rtcp_bytes_client u32,         -- 50
-     rtp_rtcp_bytes_server u32,
-     rtp_rtcp_count_client u32,
-     rtp_rtcp_count_server u32,
-     rtp_rtcp_payload_client u32,
-     rtp_rtcp_payload_server u32,
-     rt_count_server u32,
+     sign_bytes_client u32 {bytes},
+     sign_bytes_server u32 {bytes},
+     sign_count_client u32 {packets},
+     sign_count_server u32 {packets},
+     sign_payload_client u32 {bytes},
+     sign_payload_server u32 {bytes},
+     rtp_rtcp_bytes_client u32 {bytes}, -- 50
+     rtp_rtcp_bytes_server u32 {bytes},
+     rtp_rtcp_count_client u32 {packets},
+     rtp_rtcp_count_server u32 {packets},
+     rtp_rtcp_payload_client u32 {bytes},
+     rtp_rtcp_payload_server u32 {bytes},
+     rt_count_server u32 {packets},
      rt_sum_server u64,
      rt_square_sum_server u128,
-     jitter_count_caller u32,
+     jitter_count_caller u32 {packets},
      jitter_sum_caller u64,             -- 60
      jitter_square_sum_caller u128,
-     jitter_count_callee u32,
+     jitter_count_callee u32 {packets},
      jitter_sum_callee u64,
      jitter_square_sum_callee u128,
-     rtt_count_caller u32,
+     rtt_count_caller u32 {packets},
      rtt_sum_caller u64,
      rtt_square_sum_caller u128,
-     rtt_count_callee u32,
+     rtt_count_callee u32 {packets},
      rtt_sum_callee u64,
      rtt_square_sum_callee u128,        -- 70
      loss_callee2caller_alt_count u32,
      loss_caller2callee_alt_count u32,
-     sign_rtt_count_client u32,
+     sign_rtt_count_client u32 {packets},
      sign_rtt_sum_client u64,
      sign_rtt_square_sum_client u128,
-     sign_rtt_count_server u32,
+     sign_rtt_count_server u32 {packets},
      sign_rtt_sum_server u64,
      sign_rtt_square_sum_server u128,
-     sign_rd_count_client u32,
+     sign_rd_count_client u32 {packets},
      sign_rd_sum_client u64,            -- 80
      sign_rd_square_sum_client u128,
-     sign_rd_count_server u32,
+     sign_rd_count_server u32 {packets},
      sign_rd_sum_server u64,
      sign_rd_square_sum_server u128)
   EVENT STARTING AT capture_begin * 1e-6
     AND STOPPING AT capture_end * 1e-6;
+
+DEFINE voip
+  "VoIP measurements from the traffic sniffer."
+AS
+  FROM voip_raw
+  SELECT
+    (capture_begin / 1e6) {seconds} AS capture_begin,
+    (capture_end / 1e6) {seconds} AS capture_end,
+    COALESCE(ip(ip4_client), ip(u128(ip6_client)), 0.0.0.0) AS ip_client,
+    COALESCE(ip(ip4_server), ip(u128(ip6_server)), 0.0.0.0) AS ip_server,
+    eth(mac_client) AS mac_client,
+    eth(mac_server) AS mac_server,
+    COALESCE(ip(ip4_caller), ip(u128(ip6_caller)), 0.0.0.0) AS ip_caller,
+    eth(caller_mac) AS mac_caller,
+    COALESCE(ip(ip4_callee), ip(u128(ip6_callee)), 0.0.0.0) AS ip_callee,
+    eth(callee_mac) AS mac_callee,
+    (rt_sum_server / 1e6) {seconds} AS rt_sum_server,
+    (rt_square_sum_server / 1e12) {seconds^2} AS rt_square_sum_server,
+    (jitter_sum_caller / 1e6) {seconds} AS jitter_sum_caller,
+    (jitter_square_sum_caller / 1e12) {seconds^2} AS jitter_square_sum_caller,
+    (jitter_sum_callee / 1e6) {seconds} AS jitter_sum_callee,
+    (jitter_square_sum_callee / 1e12) {seconds^2} AS jitter_square_sum_callee,
+    (rtt_sum_caller / 1e6) {seconds} AS rtt_sum_caller,
+    (rtt_square_sum_caller / 1e12) {seconds^2} AS rtt_square_sum_caller,
+    (rtt_sum_callee / 1e6) {seconds} AS rtt_sum_callee,
+    (rtt_square_sum_callee / 1e12) {seconds^2} AS rtt_square_sum_callee,
+    (sign_rtt_sum_client / 1e6) {seconds} AS sign_rtt_sum_client,
+    (sign_rtt_square_sum_client / 1e12) {seconds^2} AS sign_rtt_square_sum_client,
+    (sign_rtt_sum_server / 1e6) {seconds} AS sign_rtt_sum_server,
+    (sign_rtt_square_sum_server / 1e12) {seconds^2} AS sign_rtt_square_sum_server,
+    (sign_rd_sum_client / 1e6) {seconds} AS sign_rd_sum_client,
+    (sign_rd_square_sum_client / 1e12) {seconds^2} AS sign_rd_square_sum_client,
+    (sign_rd_sum_server / 1e6) {seconds} AS sign_rd_sum_server,
+    (sign_rd_square_sum_server / 1e12) {seconds^2} AS sign_rd_square_sum_server,
+    *
+  EVENT STARTING AT capture_begin
+    AND STOPPING AT capture_end;

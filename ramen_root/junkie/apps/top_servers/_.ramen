@@ -13,10 +13,10 @@ PARAMETERS
 DEFINE tcp_services AS
   FROM ../../../csv/tcp
   SELECT
-    capture_begin / 1e6 AS start,
-    capture_end / 1e6 AS stop,
+    capture_begin,
+    capture_end,
     COALESCE(vlan_server, vlan_client, 0) AS vlan,
-    ip4_client, ip6_client, ip4_server, ip6_server, port_server,
+    ip_client, ip_server, port_server,
     "TCP" as protocol,
     traffic_packets_client, traffic_packets_server,
     traffic_bytes_client, traffic_bytes_server,
@@ -25,54 +25,50 @@ DEFINE tcp_services AS
     rtt_sum_client, rtt_sum_server,
     rd_count_client, rd_count_server,
     rt_count_server, rt_sum_server
-  EVENT STARTS AT start AND ENDS AT stop;
+  EVENT STARTS AT capture_begin AND ENDS AT capture_end;
 
 DEFINE udp_services AS
   FROM ../../../csv/udp
   SELECT
-    capture_begin / 1e6 AS start,
-    capture_end / 1e6 AS stop,
+    capture_begin,
+    capture_end,
     COALESCE(vlan_server, vlan_client, 0) AS vlan,
-    ip4_client, ip6_client, ip4_server, ip6_server, port_server,
+    ip_client, ip_server, port_server,
     "UDP" as protocol,
     traffic_packets_client, traffic_packets_server,
     traffic_bytes_client, traffic_bytes_server,
-    0u32 AS payload_packets_client, 0u32 AS payload_packets_server,
-    u32(NULL) AS rtt_count_client, u32(NULL) AS rtt_count_server,
-    0u64 AS rtt_sum_client, 0u64 AS rtt_sum_server,
-    u32(NULL) AS rd_count_client, u32(NULL) AS rd_count_server,
-    u32(NULL) AS rt_count_server, 0u64 AS rt_sum_server
-  EVENT STARTS AT start AND ENDS AT stop;
+    payload_packets_client, payload_packets_server,
+    rtt_count_client, rtt_count_server,
+    rtt_sum_client, rtt_sum_server,
+    rd_count_client, rd_count_server,
+    u32(NULL) {packets} AS rt_count_server,
+    0. {seconds} AS rt_sum_server
+  EVENT STARTS AT capture_begin AND ENDS AT capture_end;
 
 -- Merge all possible CSV together
 DEFINE degraded AS
   FROM
     tcp_services, udp_services
-  MERGE ON start TIMEOUT AFTER 2 SECONDS
+  MERGE ON capture_begin TIMEOUT AFTER 2 SECONDS
   SELECT
     *,
-    IF ip4_server IS NOT NULL THEN ip(COALESCE(ip4_server,0))
-    -- For some reason, the CSV files use a signed 128bits int for
-    -- IPv6 rather than unsigned:
-    ELSE ip(u128(COALESCE(ip6_server,0))) AS _ip,
     REMEMBER globally (
       0.03, -- false positive rate
-      start, -- time
+      capture_begin, -- time
       3600, -- memory duration
       -- What to remember:
-      vlan, _ip, port_server, protocol,
-      COALESCE(ip4_client, ip6_client, 0)
+      vlan, ip_server, port_server, protocol, ip_client
     ) AS is_new_client,
     -- nullifies the service identity if not important:
-    IS vlan, _ip, port_server, protocol IN TOP top_size BY u32(is_new_client)
-      IN THE LAST top_duration AT TIME start AS _important,
+    IS vlan, ip_server, port_server, protocol IN TOP top_size BY u32(is_new_client)
+      IN THE LAST top_duration AT TIME capture_begin AS _important,
     -- Note: This would fail to typecheck with the internal typechecker
     -- without the casts around the NULLs because of a bug in CASE/NULL:
     -- NULL is not constrained and will eventually be assigned the bool type.
     -- Whereas with the external typechecker the else clause is constrained
     -- to have the same type as the CASE.
     IF _important THEN vlan ELSE u32(NULL) AS vlan,
-    IF _important THEN _ip ELSE ip(NULL) AS ip,
+    IF _important THEN ip_server ELSE ip(NULL) AS ip,
     IF _important THEN port_server ELSE u16(NULL) AS port,
     IF _important THEN protocol ELSE string(NULL) AS protocol;
 
@@ -90,8 +86,8 @@ AS
       "Approximate number of distinct clients for this service.",
 
     -- Time info
-    min start AS _min_start,
-    (_min_start // aggr_duration) * aggr_duration AS start,
+    min capture_begin AS _min_start,
+    (_min_start // aggr_duration) * aggr_duration AS capture_begin,
 
     -- Volumetry
     sum traffic_packets_client AS packets_from_client,
@@ -102,9 +98,9 @@ AS
     sum payload_packets_server AS packets_with_tcp_payload_from_server,
 
     -- Response Times
-    sum (rt_sum_server / 1e6) / sum rt_count_server AS avg_response_time,
+    sum rt_sum_server / sum rt_count_server AS avg_response_time,
     -- Also try to retain an idea of what the min/max had been:
-    (rt_sum_server / 1e6) / rt_count_server AS _avg_response_time,
+    rt_sum_server / rt_count_server AS _avg_response_time,
     min _avg_response_time,
     max _avg_response_time,
     -- Also some percentiles (of the avgs!):
@@ -116,17 +112,17 @@ AS
       "Approximate 99th percentile of response times.",
 
     -- RTT from client
-    sum (rtt_sum_client / 1e6) / sum rtt_count_client
+    sum rtt_sum_client / sum rtt_count_client
       AS avg_rtt_from_client,
     -- Also try to retain an idea of what the min/max had been:
-    (rtt_sum_client / 1e6) / rtt_count_client AS _avg_rtt_from_client,
+    rtt_sum_client / rtt_count_client AS _avg_rtt_from_client,
     min _avg_rtt_from_client,
     max _avg_rtt_from_client,
     -- RTT from server
-    sum (rtt_sum_server / 1e6) / sum rtt_count_server
+    sum rtt_sum_server / sum rtt_count_server
       AS avg_rtt_from_server,
     -- Also try to retain an idea of what the min/max had been:
-    (rtt_sum_server / 1e6) / rtt_count_server AS _avg_rtt_from_server,
+    rtt_sum_server / rtt_count_server AS _avg_rtt_from_server,
     min _avg_rtt_from_server,
     max _avg_rtt_from_server,
 
@@ -147,6 +143,6 @@ AS
     min _avg_rr_from_server,
     max _avg_rr_from_server
 
-  COMMIT AFTER in.start > out.start + aggr_duration + 20s
-  EVENT STARTS AT start WITH DURATION aggr_duration
+  COMMIT AFTER in.capture_begin > out.capture_begin + aggr_duration + 20s
+  EVENT STARTS AT capture_begin WITH DURATION aggr_duration
   FACTORS vlan, port, protocol;
