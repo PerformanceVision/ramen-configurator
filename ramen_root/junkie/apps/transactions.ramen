@@ -1,0 +1,113 @@
+-- vim: ft=sql expandtab
+
+PARAMETERS
+  -- Duration for which histograms are grown:
+  obs_window DEFAULTS TO 350s,
+  -- width of the histograms:
+  nb_buckets DEFAULTS TO 20;
+
+-- TODO: add the query / response sizes
+
+DEFINE tcp_connections AS
+  FROM ../../csv/tcp
+  WHERE COALESCE(ct_count > 0, false)
+  SELECT
+    capture_begin AS start,  -- approximation
+    "TCP-Syn" AS protocol,
+    string(ip_server) AS query,
+    true AS success,
+    COALESCE(ct_count, 1) AS count,
+    ct_sum / count AS response_time;
+
+DEFINE tcp_generic AS
+  FROM ../../csv/tcp
+  WHERE COALESCE(rt_count_server > 0, false)
+  SELECT
+    capture_begin AS start,
+    "TCP-Gen" AS protocol,
+    string(ip_server) AS query,
+    true AS success,
+    COALESCE(rt_count_server, 1) AS count,
+    rt_sum_server / count AS response_time;
+
+DEFINE dns_resolutions AS
+  FROM ../../csv/dns WHERE
+    query_type = 1 -- A
+    OR query_type = 28 -- AAA
+  SELECT
+    capture_begin AS start,
+    "DNS" AS protocol,
+    query_name || (IF query_type <> 1 THEN " (AAA)" ELSE "") AS query,
+    error_count = 0 AS success,
+    rt_count_server AS count,
+    rt_sum_server / count AS response_time;
+
+DEFINE http_hits AS
+  FROM ../../csv/http
+  WHERE resp_begin_ts IS NOT NULL
+  SELECT
+    capture_begin AS start,
+    "HTTP" AS protocol,
+    host || url AS query,
+    NOT timeouted AND COALESCE(resp_code < 400, false) AS success,
+    1 AS count,
+    COALESCE(resp_begin_ts, 0) - query_end_ts AS response_time;
+
+DEFINE citrix_mix AS
+  FROM ../../csv/citrix,
+       ../../csv/citrix_chanless
+  WHERE rt_count_server > 0
+  SELECT
+    capture_begin AS start,
+    "Citrix" AS protocol,
+    COALESCE(username || "@", "") || domain ||
+      COALESCE("(" || citrix_application || ")", "") AS query,
+    true AS success,
+    rt_count_server AS count,
+    rt_sum_server / count AS response_time;
+
+DEFINE smb_mix AS
+  FROM ../../csv/smb
+  WHERE resp_begin_ts IS NOT NULL
+  SELECT
+    capture_begin AS start,
+    "SMB" AS protocol,
+    COALESCE(user || "@", "") || domain || COALESCE(":" || path, "") AS query,
+    COALESCE(status = 0, false) AS success, -- TODO
+    1 AS count,
+    COALESCE(resp_begin_ts, 0) - query_end_ts AS response_time;
+
+DEFINE sql_queries AS
+  FROM ../../csv/sql
+  WHERE resp_begin_ts IS NOT NULL
+  SELECT
+    capture_begin AS start,
+    "SQL" AS protocol,
+    COALESCE(dbname ||": ", "") || query AS query,
+    NOT is_error AS success,
+    1 AS count,
+    COALESCE(resp_begin_ts, 0) - query_end_ts AS response_time;
+
+DEFINE 'response times'
+  "Aggregation of all possible query/responses"
+AS
+  FROM
+    tcp_connections,
+    tcp_generic,
+    dns_resolutions,
+    http_hits,
+    sql_queries,
+    citrix_mix,
+    smb_mix
+  MERGE ON start TIMEOUT AFTER 30s
+  GROUP BY protocol, success, start // obs_window
+  SELECT
+    (start // obs_window) * obs_window AS start,
+    protocol, success,
+    SUM count AS count,
+    -- TODO: nb_buckets
+    HISTOGRAM(response_time, 0, 30, 20) AS response_times
+  -- Since we order the tuple according chronologically at input:
+  COMMIT AFTER in.start > out.start + obs_window
+  EVENT STARTS AT start WITH DURATION obs_window
+  FACTORS protocol, success;
