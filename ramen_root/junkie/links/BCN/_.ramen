@@ -6,7 +6,7 @@ PARAMETERS
   max_rtt FLOAT? {seconds} DEFAULTS TO NULL,
   max_rr FLOAT? {} DEFAULTS TO NULL,
   min_for_relevance DEFAULTS TO 10, -- TODO
-  avg_window {seconds} DEFAULTS TO 360.0,
+  avg_window {seconds} DEFAULTS TO 60.0,
   obs_window {seconds} DEFAULTS TO 600.0,
   perc DEFAULTS TO 90.0,
   source U32[] DEFAULTS TO [0],

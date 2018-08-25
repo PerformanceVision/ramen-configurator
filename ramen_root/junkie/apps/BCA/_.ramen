@@ -1,10 +1,12 @@
+-- vim: ft=sql expandtab
+
 PARAMETERS
   uniq_name DEFAULTS TO "",
 	id DEFAULTS TO 0,
 	service_id DEFAULTS TO 0,
 	name DEFAULTS TO "",
 	max_eurt {seconds} DEFAULTS TO 0.0,
-	avg_window {seconds} DEFAULTS TO 360.0,
+	avg_window {seconds} DEFAULTS TO 60.0,
 	obs_window {seconds} DEFAULTS TO 600.0,
 	perc DEFAULTS TO 90.0,
 	min_handshake_count DEFAULTS TO 0;
