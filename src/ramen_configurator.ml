@@ -109,7 +109,7 @@ let start debug monitor ramen_cmd root_dir persist_dir db_name
         [ "csv_prefix", dquote csv_prefix ;
           "csv_compressed", string_of_bool uncompress ] ;
       h in
-    comp "junkie/base" params ;
+    comp "junkie/csv" params ;
     let aggr_times =
       Hashtbl.of_list [ "1min",  [ "aggr_duration", "60" ] ;
                         "10min", [ "aggr_duration", "600" ] ;
