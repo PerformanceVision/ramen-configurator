@@ -60,7 +60,7 @@ DEFINE tcp_raw AS
      zero_window_count_client u32? {packets},
      zero_window_count_server u32? {packets},
      -- Some counts can be null although the sums cannot ...
-     ct_count u32? {connections},
+     ct_count u32? {packets},
      ct_sum u64 {microseconds},
      ct_square_sum u128 {microseconds^2},
      rt_count_server u32? {packets},
@@ -672,7 +672,8 @@ AS
     eth(mac_client) AS mac_client,
     eth(mac_server) AS mac_server,
     (rt_sum_server / 1e6) {seconds} AS rt_sum_server,
-    (rt_square_sum_server / 1e12) {seconds^2} AS rt_square_sum_server
+    (rt_square_sum_server / 1e12) {seconds^2} AS rt_square_sum_server,
+    *
   EVENT STARTING AT capture_begin
     AND STOPPING AT capture_end;
 
