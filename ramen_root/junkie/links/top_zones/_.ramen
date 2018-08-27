@@ -6,7 +6,7 @@
 PARAMETERS
   top_size DEFAULT TO 100,
   top_duration DEFAULT TO 3600,
-  aggr_duration DEFAULT TO 60;
+  obs_window DEFAULT TO 60;
 
 -- In c2s and s2c we have a unidirectional view of the IP traffic.
 -- Here, we'd like to build a view where all the data concerning all
@@ -112,21 +112,21 @@ AS
 
     -- Time info
     min capture_begin AS _min_start,
-    (_min_start // aggr_duration) * aggr_duration AS capture_begin,
+    (_min_start // obs_window) * obs_window AS capture_begin,
 
     -- Volumetry 1 -> 2
-    sum packets_1 / aggr_duration AS packets_per_secs_1
+    sum packets_1 / obs_window AS packets_per_secs_1
       "Packets per seconds (uplink).",
-    sum bytes_1 / aggr_duration AS bytes_per_secs_1
+    sum bytes_1 / obs_window AS bytes_per_secs_1
       "Bytes per seconds (uplink).",
-    sum payload_1 / aggr_duration AS payload_bytes_per_secs_1
+    sum payload_1 / obs_window AS payload_bytes_per_secs_1
       "Payload per seconds (uplink).",
     -- Volumetry 2 -> 1
-    sum packets_2 / aggr_duration AS packets_per_secs_2
+    sum packets_2 / obs_window AS packets_per_secs_2
       "Packets per seconds (downlink).",
-    sum bytes_2 / aggr_duration AS bytes_per_secs_2
+    sum bytes_2 / obs_window AS bytes_per_secs_2
       "Bytes per seconds (downlink).",
-    sum payload_2 / aggr_duration AS payload_bytes_per_secs_2
+    sum payload_2 / obs_window AS payload_bytes_per_secs_2
       "Payload per seconds (downlink).",
 
     -- RTT 1 -> 2 (in seconds)
@@ -167,6 +167,6 @@ AS
     -- parents) ; meanwhile we could also do it using converting nodes but
     -- that will be verbose and less efficient.
 
-  COMMIT AFTER in.capture_begin > out.capture_begin + aggr_duration + 20s
-  EVENT STARTS AT capture_begin WITH DURATION aggr_duration
+  COMMIT AFTER in.capture_begin > out.capture_begin + obs_window + 20s
+  EVENT STARTS AT capture_begin WITH DURATION obs_window
   FACTORS zone_1, zone_2;

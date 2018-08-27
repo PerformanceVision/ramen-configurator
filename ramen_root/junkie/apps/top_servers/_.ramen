@@ -6,7 +6,7 @@
 PARAMETERS
   top_size DEFAULT TO 100,
   top_duration DEFAULT TO 3600,
-  aggr_duration DEFAULT TO 60;
+  obs_window DEFAULT TO 60;
 
 -- We need to make all CSV similar before merging them:
 
@@ -87,7 +87,7 @@ AS
 
     -- Time info
     min capture_begin AS _min_start,
-    (_min_start // aggr_duration) * aggr_duration AS capture_begin,
+    (_min_start // obs_window) * obs_window AS capture_begin,
 
     -- Volumetry
     sum traffic_packets_client AS packets_from_client,
@@ -143,6 +143,6 @@ AS
     min _avg_rr_from_server,
     max _avg_rr_from_server
 
-  COMMIT AFTER in.capture_begin > out.capture_begin + aggr_duration + 20s
-  EVENT STARTS AT capture_begin WITH DURATION aggr_duration
+  COMMIT AFTER in.capture_begin > out.capture_begin + obs_window + 20s
+  EVENT STARTS AT capture_begin WITH DURATION obs_window
   FACTORS vlan, port, protocol;

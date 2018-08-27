@@ -111,11 +111,12 @@ let start debug monitor ramen_cmd root_dir persist_dir db_name
       h in
     comp "junkie/csv" params ;
     let aggr_times =
-      Hashtbl.of_list [ "1min",  [ "aggr_duration", "60" ] ;
-                        "10min", [ "aggr_duration", "600" ] ;
-                        "1hour", [ "aggr_duration", "3600" ] ] in
+      Hashtbl.of_list [ "1min",  [ "obs_window", "60" ] ;
+                        "10min", [ "obs_window", "600" ] ;
+                        "1hour", [ "obs_window", "3600" ] ] in
     comp "junkie/links/top_zones/_" aggr_times ;
     comp "junkie/apps/top_servers/_" aggr_times ;
+    comp "junkie/apps/transactions/_" aggr_times ;
     let bcns, bcas = get_config_from_db db in
     let bcns = List.take with_bcns bcns
     and bcas = List.take with_bcas bcas in

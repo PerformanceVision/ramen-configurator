@@ -9,7 +9,7 @@ PARAMETERS
 -- TODO: add the query / response sizes
 
 DEFINE tcp_connections AS
-  FROM ../../csv/tcp
+  FROM ../../../csv/tcp
   WHERE COALESCE(ct_count > 0, false)
   SELECT
     capture_begin AS start,  -- approximation
@@ -20,7 +20,7 @@ DEFINE tcp_connections AS
     ct_sum / count AS response_time;
 
 DEFINE tcp_generic AS
-  FROM ../../csv/tcp
+  FROM ../../../csv/tcp
   WHERE COALESCE(rt_count_server > 0, false)
   SELECT
     capture_begin AS start,
@@ -31,7 +31,7 @@ DEFINE tcp_generic AS
     rt_sum_server / count AS response_time;
 
 DEFINE dns_resolutions AS
-  FROM ../../csv/dns WHERE
+  FROM ../../../csv/dns WHERE
     query_type = 1 -- A
     OR query_type = 28 -- AAA
   SELECT
@@ -43,7 +43,7 @@ DEFINE dns_resolutions AS
     rt_sum_server / count AS response_time;
 
 DEFINE http_hits AS
-  FROM ../../csv/http
+  FROM ../../../csv/http
   WHERE resp_begin_ts IS NOT NULL
   SELECT
     capture_begin AS start,
@@ -54,8 +54,8 @@ DEFINE http_hits AS
     COALESCE(resp_begin_ts, 0) - query_end_ts AS response_time;
 
 DEFINE citrix_mix AS
-  FROM ../../csv/citrix,
-       ../../csv/citrix_chanless
+  FROM ../../../csv/citrix,
+       ../../../csv/citrix_chanless
   WHERE rt_count_server > 0
   SELECT
     capture_begin AS start,
@@ -67,7 +67,7 @@ DEFINE citrix_mix AS
     rt_sum_server / count AS response_time;
 
 DEFINE smb_mix AS
-  FROM ../../csv/smb
+  FROM ../../../csv/smb
   WHERE resp_begin_ts IS NOT NULL
   SELECT
     capture_begin AS start,
@@ -78,7 +78,7 @@ DEFINE smb_mix AS
     COALESCE(resp_begin_ts, 0) - query_end_ts AS response_time;
 
 DEFINE sql_queries AS
-  FROM ../../csv/sql
+  FROM ../../../csv/sql
   WHERE resp_begin_ts IS NOT NULL
   SELECT
     capture_begin AS start,
