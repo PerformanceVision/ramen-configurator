@@ -71,8 +71,8 @@ AS
 
     min age last_out AS last_out_age "Time elapsed since last production."
 
-  GROUP BY worker, time // 60
-  COMMIT AFTER in.time - out.time > 90
+  GROUP BY worker
+  COMMIT BEFORE _dt >= 60
   EVENT STARTING AT time WITH DURATION 60s
   FACTOR worker;
 
@@ -90,8 +90,8 @@ AS
       "Number of workers that have produced at least a tuple in the last 3 minutes.",
     sum COALESCE(out_per_secs, 0) AS tot_out_per_secs
       "Number of produced tuples by all workers so far."
-  GROUP BY time // 60
-  COMMIT AFTER in.time >= out.time + 60 + 30
+  GROUP BY true
+  COMMIT BEFORE out.time <> lag out.time
   EVENT STARTING AT time WITH DURATION 60s;
 
 -- Alerts: many of the above are supposed to stay mostly constant. Therefore,
