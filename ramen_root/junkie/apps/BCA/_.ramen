@@ -162,17 +162,16 @@ DEFINE 'EURT too high' AS
   SELECT
     max_start,
     hysteresis (eurt, max_eurt - max_eurt/10, max_eurt) AS firing
-  COMMIT,
-    NOTIFY "EURT to ${param.name} is too large" WITH
-      "${firing}" AS firing,
-      reldiff(eurt, max_eurt) AS certainty,
-      "The average end user response time to application ${param.name} has raised above the configured maximum of ${param.max_eurt}s for the last ${param.obs_window} seconds." AS desc,
-      "${param.id}" AS bca,
-      "${param.service_id}" AS service_id,
-      "${eurt}" AS values,
-      "${param.max_eurt}" AS thresholds
-    AND KEEP ALL
-    AFTER firing != COALESCE(previous.firing, false)
+  NOTIFY "EURT to ${param.name} is too large" WITH
+    "${firing}" AS firing,
+    reldiff(eurt, max_eurt) AS certainty,
+    "The average end user response time to application ${param.name} has raised above the configured maximum of ${param.max_eurt}s for the last ${param.obs_window} seconds." AS desc,
+    "${param.id}" AS bca,
+    "${param.service_id}" AS service_id,
+    "${eurt}" AS values,
+    "${param.max_eurt}" AS thresholds
+  AND KEEP ALL
+  AFTER firing != COALESCE(previous.firing, false)
   EVENT STARTING AT max_start;
 
 DEFINE 'averages: volume anomalies' AS
@@ -185,15 +184,14 @@ DEFINE 'averages: volume anomalies' AS
      abnormality_c2s_bytes_per_secs > 0.75) AS abnormality,
     5-ma float(abnormality) AS _recent_abnormality,
     hysteresis (_recent_abnormality, 3/5, 4/5) AS firing
-  COMMIT,
-    NOTIFY "averages volume looks abnormal" WITH
-      "${firing}" AS firing,
-      abs(_recent_abnormality - 3/5) AS certainty,
-      "volume" AS metric,
-      "anomaly detected" AS desc,
-      "${param.id}" AS bca
-    AND KEEP ALL
-    AFTER firing != COALESCE(previous.firing, false)
+  NOTIFY "averages volume looks abnormal" WITH
+    "${firing}" AS firing,
+    abs(_recent_abnormality - 3/5) AS certainty,
+    "volume" AS metric,
+    "anomaly detected" AS desc,
+    "${param.id}" AS bca
+  AND KEEP ALL
+  AFTER firing != COALESCE(previous.firing, false)
   EVENT STARTING AT start;
 
 DEFINE 'averages: volume predictions' AS
@@ -266,15 +264,14 @@ DEFINE 'averages: retransmissions anomalies' AS
      abnormality_c2s_retrans_bytes_per_secs > 0.75) AS abnormality,
     5-ma float(abnormality) AS _recent_abnormality,
     hysteresis (_recent_abnormality, 3/5, 4/5) AS firing
-  COMMIT,
-    NOTIFY "averages retransmissions looks abnormal" WITH
-      "${firing}" AS firing,
-      abs(_recent_abnormality - 3/5) AS certainty,
-      "retransmissions" AS metric,
-      "anomaly detected" AS desc,
-      "${param.id}" AS bca
-    AND KEEP ALL
-    AFTER firing != COALESCE(previous.firing, false)
+  NOTIFY "averages retransmissions looks abnormal" WITH
+    "${firing}" AS firing,
+    abs(_recent_abnormality - 3/5) AS certainty,
+    "retransmissions" AS metric,
+    "anomaly detected" AS desc,
+    "${param.id}" AS bca
+  AND KEEP ALL
+  AFTER firing != COALESCE(previous.firing, false)
   EVENT STARTING AT start;
 
 DEFINE 'averages: retransmissions predictions' AS
@@ -347,15 +344,14 @@ DEFINE 'averages: connections anomalies' AS
      abnormality_c2s_syns_per_secs > 0.75) AS abnormality,
     5-ma float(abnormality) AS _recent_abnormality,
     hysteresis (_recent_abnormality, 3/5, 4/5) AS firing
-  COMMIT,
-    NOTIFY "averages connections looks abnormal" WITH
-      "${firing}" AS firing,
-      abs(_recent_abnormality - 3/5) AS certainty,
-      "connections" AS metric,
-      "anomaly detected" AS desc,
-      "${param.id}" AS bca
-    AND KEEP ALL
-    AFTER firing != COALESCE(previous.firing, false)
+  NOTIFY "averages connections looks abnormal" WITH
+    "${firing}" AS firing,
+    abs(_recent_abnormality - 3/5) AS certainty,
+    "connections" AS metric,
+    "anomaly detected" AS desc,
+    "${param.id}" AS bca
+  AND KEEP ALL
+  AFTER firing != COALESCE(previous.firing, false)
   EVENT STARTING AT start;
 
 DEFINE 'averages: connections predictions' AS
@@ -427,15 +423,14 @@ DEFINE 'averages: 0-windows anomalies' AS
      abnormality_c2s_0wins_per_secs > 0.75) AS abnormality,
     5-ma float(abnormality) AS _recent_abnormality,
     hysteresis (_recent_abnormality, 3/5, 4/5) AS firing
-  COMMIT,
-    NOTIFY "averages 0-windows looks abnormal" WITH
-      "${firing}" AS firing,
-      abs(_recent_abnormality - 3/5) AS certainty,
-      "0-windows" AS metric,
-      "anomaly detected" AS desc,
-      "${param.id}" AS bca
-    AND KEEP ALL
-    AFTER firing != COALESCE(previous.firing, false)
+  NOTIFY "averages 0-windows looks abnormal" WITH
+    "${firing}" AS firing,
+    abs(_recent_abnormality - 3/5) AS certainty,
+    "0-windows" AS metric,
+    "anomaly detected" AS desc,
+    "${param.id}" AS bca
+  AND KEEP ALL
+  AFTER firing != COALESCE(previous.firing, false)
   EVENT STARTING AT start;
 
 DEFINE 'averages: 0-windows predictions' AS
@@ -478,15 +473,14 @@ DEFINE 'averages: SRT anomalies' AS
     (abnormality_srt_avg > 0.75) AS abnormality,
     5-ma float(abnormality) AS _recent_abnormality,
     hysteresis (_recent_abnormality, 3/5, 4/5) AS firing
-  COMMIT,
-    NOTIFY "averages SRT looks abnormal" WITH
-      "${firing}" AS firing,
-      abs(_recent_abnormality - 3/5) AS certainty,
-      "SRT" AS metric,
-      "anomaly detected" AS desc,
-      "${param.id}" AS bca
-    AND KEEP ALL
-    AFTER firing != COALESCE(previous.firing, false)
+  NOTIFY "averages SRT looks abnormal" WITH
+    "${firing}" AS firing,
+    abs(_recent_abnormality - 3/5) AS certainty,
+    "SRT" AS metric,
+    "anomaly detected" AS desc,
+    "${param.id}" AS bca
+  AND KEEP ALL
+  AFTER firing != COALESCE(previous.firing, false)
   EVENT STARTING AT start;
 
 DEFINE 'averages: SRT predictions' AS
@@ -516,15 +510,14 @@ DEFINE 'averages: RTT anomalies' AS
      abnormality_crtt_avg > 0.75) AS abnormality,
     5-ma float(abnormality) AS _recent_abnormality,
     hysteresis (_recent_abnormality, 3/5, 4/5) AS firing
-  COMMIT,
-    NOTIFY "averages RTT looks abnormal" WITH
-      "${firing}" AS firing,
-      abs(_recent_abnormality - 3/5) AS certainty,
-      "RTT" AS metric,
-      "anomaly detected" AS desc,
-      "${param.id}" AS bca
-    AND KEEP ALL
-    AFTER firing != COALESCE(previous.firing, false)
+  NOTIFY "averages RTT looks abnormal" WITH
+    "${firing}" AS firing,
+    abs(_recent_abnormality - 3/5) AS certainty,
+    "RTT" AS metric,
+    "anomaly detected" AS desc,
+    "${param.id}" AS bca
+  AND KEEP ALL
+  AFTER firing != COALESCE(previous.firing, false)
   EVENT STARTING AT start;
 
 DEFINE 'averages: RTT predictions' AS
@@ -568,15 +561,14 @@ DEFINE 'averages: RD anomalies' AS
      abnormality_crd_avg > 0.75) AS abnormality,
     5-ma float(abnormality) AS _recent_abnormality,
     hysteresis (_recent_abnormality, 3/5, 4/5) AS firing
-  COMMIT,
-    NOTIFY "averages RD looks abnormal" WITH
-      "${firing}" AS firing,
-      abs(_recent_abnormality - 3/5) AS certainty,
-      "RD" AS metric,
-      "anomaly detected" AS desc,
-      "${param.id}" AS bca
-    AND KEEP ALL
-    AFTER firing != COALESCE(previous.firing, false)
+  NOTIFY "averages RD looks abnormal" WITH
+    "${firing}" AS firing,
+    abs(_recent_abnormality - 3/5) AS certainty,
+    "RD" AS metric,
+    "anomaly detected" AS desc,
+    "${param.id}" AS bca
+  AND KEEP ALL
+  AFTER firing != COALESCE(previous.firing, false)
   EVENT STARTING AT start;
 
 DEFINE 'averages: RD predictions' AS
@@ -620,15 +612,14 @@ DEFINE 'averages: DTT anomalies' AS
      abnormality_cdtt_avg > 0.75) AS abnormality,
     5-ma float(abnormality) AS _recent_abnormality,
     hysteresis (_recent_abnormality, 3/5, 4/5) AS firing
-  COMMIT,
-    NOTIFY "averages DTT looks abnormal" WITH
-      "${firing}" AS firing,
-      abs(_recent_abnormality - 3/5) AS certainty,
-      "DTT" AS metric,
-      "anomaly detected" AS desc,
-      "${param.id}" AS bca
-    AND KEEP ALL
-    AFTER firing != COALESCE(previous.firing, false)
+  NOTIFY "averages DTT looks abnormal" WITH
+    "${firing}" AS firing,
+    abs(_recent_abnormality - 3/5) AS certainty,
+    "DTT" AS metric,
+    "anomaly detected" AS desc,
+    "${param.id}" AS bca
+  AND KEEP ALL
+  AFTER firing != COALESCE(previous.firing, false)
   EVENT STARTING AT start;
 
 DEFINE 'averages: DTT predictions' AS

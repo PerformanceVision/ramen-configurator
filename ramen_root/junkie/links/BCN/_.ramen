@@ -84,15 +84,14 @@ DEFINE 'traffic too low' AS
     COALESCE (
       hysteresis (bytes_per_secs, min_bps*1.1, min_bps),
       false) AS firing
-  COMMIT,
-    NOTIFY "Low traffic from ${param.source_name} to ${dest_name}" WITH
-      "${firing}" AS firing,
-      COALESCE(reldiff(bytes_per_secs, min_bps), 0) AS certainty,
-      "The traffic from zone ${param.source_name} to ${param.dest_name} has sunk below the configured minimum of ${param.min_bps} for the last ${obs_window} seconds." AS desc,
-      "${id}" AS bcn,
-      "${bytes_per_secs}" AS values,
-      "${min_bps}" AS thresholds
-    AND KEEP ALL
+  NOTIFY "Low traffic from ${param.source_name} to ${dest_name}" WITH
+    "${firing}" AS firing,
+    COALESCE(reldiff(bytes_per_secs, min_bps), 0) AS certainty,
+    "The traffic from zone ${param.source_name} to ${param.dest_name} has sunk below the configured minimum of ${param.min_bps} for the last ${obs_window} seconds." AS desc,
+    "${id}" AS bcn,
+    "${bytes_per_secs}" AS values,
+    "${min_bps}" AS thresholds
+  AND KEEP ALL
   AFTER firing != COALESCE(previous.firing, false)
   EVENT STARTING AT max_start;
 
@@ -103,15 +102,14 @@ DEFINE 'traffic too high' AS
       COALESCE (
         hysteresis (bytes_per_secs, max_bps*0.9, max_bps),
         false) AS firing
-  COMMIT,
-    NOTIFY "High traffic from ${param.source_name} to ${param.dest_name}" WITH
-      "${firing}" AS firing,
-      COALESCE(reldiff(bytes_per_secs, max_bps), 0) AS certainty,
-      "The traffic from zone ${source_name} to ${dest_name} has raised above the configured maximum of ${param.max_bps} for the last ${obs_window} seconds." AS desc,
-      "${id}" AS bcn,
-      "${bytes_per_secs}" AS values,
-      "${max_bps}" AS thresholds
-    AND KEEP ALL
+  NOTIFY "High traffic from ${param.source_name} to ${param.dest_name}" WITH
+    "${firing}" AS firing,
+    COALESCE(reldiff(bytes_per_secs, max_bps), 0) AS certainty,
+    "The traffic from zone ${source_name} to ${dest_name} has raised above the configured maximum of ${param.max_bps} for the last ${obs_window} seconds." AS desc,
+    "${id}" AS bcn,
+    "${bytes_per_secs}" AS values,
+    "${max_bps}" AS thresholds
+  AND KEEP ALL
   AFTER firing != COALESCE(previous.firing, false)
   EVENT STARTING AT max_start;
 
@@ -125,15 +123,14 @@ DEFINE 'round-trip time' AS
     COALESCE (
       hysteresis (rtt, max_rtt*0.9, max_rtt),
       false) AS firing
-  COMMIT,
-    NOTIFY "RTT too high from ${source_name} to ${dest_name}" WITH
-      "${firing}" AS firing,
-      COALESCE(reldiff(rtt, max_rtt), 0) AS certainty,
-      "Traffic from zone ${source_name} to zone ${dest_name} has an average RTT of ${rtt}, greater than the configured maximum of ${max_rtt}s, for the last ${obs_window} seconds." AS desc,
-      "${id}" AS bcn,
-      "${rtt}" AS values,
-      "${max_rtt}" AS thresholds
-    AND KEEP ALL
+  NOTIFY "RTT too high from ${source_name} to ${dest_name}" WITH
+    "${firing}" AS firing,
+    COALESCE(reldiff(rtt, max_rtt), 0) AS certainty,
+    "Traffic from zone ${source_name} to zone ${dest_name} has an average RTT of ${rtt}, greater than the configured maximum of ${max_rtt}s, for the last ${obs_window} seconds." AS desc,
+    "${id}" AS bcn,
+    "${rtt}" AS values,
+    "${max_rtt}" AS thresholds
+  AND KEEP ALL
   AFTER firing != COALESCE(previous.firing, false)
   EVENT STARTING AT max_start;
 
@@ -147,15 +144,14 @@ DEFINE retransmissions AS
     COALESCE (
       hysteresis (rr, max_rr*0.9, max_rr),
       false) AS firing
-  COMMIT,
-    NOTIFY "Too many retransmissions from ${source_name} to ${dest_name}" WITH
-      "${firing}" AS firing,
-      COALESCE(reldiff(rr, max_rr), 0) AS certainty,
-      "Traffic from zone ${source_name} to zone ${dest_name} has an average retransmission rate of ${rr}%%, greater than the configured maximum of ${max_rr}s, for the last ${obs_window} seconds." AS desc,
-      "${id}" AS bcn,
-      "${rr}" AS values,
-      "${max_rr}" AS thresholds
-    AND KEEP ALL
+  NOTIFY "Too many retransmissions from ${source_name} to ${dest_name}" WITH
+    "${firing}" AS firing,
+    COALESCE(reldiff(rr, max_rr), 0) AS certainty,
+    "Traffic from zone ${source_name} to zone ${dest_name} has an average retransmission rate of ${rr}%%, greater than the configured maximum of ${max_rr}s, for the last ${obs_window} seconds." AS desc,
+    "${id}" AS bcn,
+    "${rr}" AS values,
+    "${max_rr}" AS thresholds
+  AND KEEP ALL
   AFTER firing != COALESCE(previous.firing, false)
   EVENT STARTING AT max_start;
 
@@ -301,15 +297,14 @@ DEFINE 'TCP minutely: volume anomalies' AS
      abnormality_packets_per_secs > 0.75) AS abnormality,
     5-ma float(abnormality) AS _recent_abnormality,
     hysteresis (_recent_abnormality, 3/5, 4/5) AS firing
-  COMMIT,
-    NOTIFY "TCP minutely volume looks abnormal" WITH
-      "${firing}" AS firing,
-      abs(_recent_abnormality - 3/5) AS certainty,
-      "volume" AS metric,
-      "anomaly detected" AS desc,
-      "${param.id}" AS bcn
-    AND KEEP ALL
-    AFTER firing != COALESCE(previous.firing, false)
+  NOTIFY "TCP minutely volume looks abnormal" WITH
+    "${firing}" AS firing,
+    abs(_recent_abnormality - 3/5) AS certainty,
+    "volume" AS metric,
+    "anomaly detected" AS desc,
+    "${param.id}" AS bcn
+  AND KEEP ALL
+  AFTER firing != COALESCE(previous.firing, false)
   EVENT STARTING AT start;
 
 DEFINE 'TCP minutely: retransmissions predictions' AS
@@ -355,15 +350,14 @@ DEFINE 'TCP minutely: retransmissions anomalies' AS
      abnormality_retrans_bytes_per_secs > 0.75) AS abnormality,
     5-ma float(abnormality) AS _recent_abnormality,
     hysteresis (_recent_abnormality, 3/5, 4/5) AS firing
-  COMMIT,
-    NOTIFY "TCP minutely retransmissions looks abnormal" WITH
-      "${firing}" AS firing,
-      abs(_recent_abnormality - 3/5) AS certainty,
-      "retransmissions" AS metric,
-      "anomaly detected" AS desc,
-      "${param.id}" AS bcn
-    AND KEEP ALL
-    AFTER firing != COALESCE(previous.firing, false)
+  NOTIFY "TCP minutely retransmissions looks abnormal" WITH
+    "${firing}" AS firing,
+    abs(_recent_abnormality - 3/5) AS certainty,
+    "retransmissions" AS metric,
+    "anomaly detected" AS desc,
+    "${param.id}" AS bcn
+  AND KEEP ALL
+  AFTER firing != COALESCE(previous.firing, false)
   EVENT STARTING AT start;
 
 DEFINE 'TCP minutely: connections predictions' AS
@@ -457,15 +451,14 @@ DEFINE 'TCP minutely: connections anomalies' AS
      abnormality_fins_per_secs > 0.75) AS abnormality,
     5-ma float(abnormality) AS _recent_abnormality,
     hysteresis (_recent_abnormality, 3/5, 4/5) AS firing
-  COMMIT,
-    NOTIFY "TCP minutely connections looks abnormal" WITH
-      "${firing}" AS firing,
-      abs(_recent_abnormality - 3/5) AS certainty,
-      "connections" AS metric,
-      "anomaly detected" AS desc,
-      "${param.id}" AS bcn
-    AND KEEP ALL
-    AFTER firing != COALESCE(previous.firing, false)
+  NOTIFY "TCP minutely connections looks abnormal" WITH
+    "${firing}" AS firing,
+    abs(_recent_abnormality - 3/5) AS certainty,
+    "connections" AS metric,
+    "anomaly detected" AS desc,
+    "${param.id}" AS bcn
+  AND KEEP ALL
+  AFTER firing != COALESCE(previous.firing, false)
   EVENT STARTING AT start;
 
 DEFINE 'TCP minutely: 0-windows predictions' AS
@@ -494,15 +487,14 @@ DEFINE 'TCP minutely: 0-windows anomalies' AS
     (abnormality_zero_windows_per_secs > 0.75) AS abnormality,
     5-ma float(abnormality) AS _recent_abnormality,
     hysteresis (_recent_abnormality, 3/5, 4/5) AS firing
-  COMMIT,
-    NOTIFY "TCP minutely 0-windows looks abnormal" WITH
-      "${firing}" AS firing,
-      abs(_recent_abnormality - 3/5) AS certainty,
-      "0-windows" AS metric,
-      "anomaly detected" AS desc,
-      "${param.id}" AS bcn
-    AND KEEP ALL
-    AFTER firing != COALESCE(previous.firing, false)
+  NOTIFY "TCP minutely 0-windows looks abnormal" WITH
+    "${firing}" AS firing,
+    abs(_recent_abnormality - 3/5) AS certainty,
+    "0-windows" AS metric,
+    "anomaly detected" AS desc,
+    "${param.id}" AS bcn
+  AND KEEP ALL
+  AFTER firing != COALESCE(previous.firing, false)
   EVENT STARTING AT start;
 
 DEFINE 'TCP minutely: RTT predictions' AS
@@ -531,15 +523,14 @@ DEFINE 'TCP minutely: RTT anomalies' AS
     (abnormality_rtt_avg > 0.75) AS abnormality,
     5-ma float(abnormality) AS _recent_abnormality,
     hysteresis (_recent_abnormality, 3/5, 4/5) AS firing
-  COMMIT,
-    NOTIFY "TCP minutely RTT looks abnormal" WITH
-      "${firing}" AS firing,
-      abs(_recent_abnormality - 3/5) AS certainty,
-      "RTT" AS metric,
-      "anomaly detected" AS desc,
-      "${param.id}" AS bcn
-    AND KEEP ALL
-    AFTER firing != COALESCE(previous.firing, false)
+  NOTIFY "TCP minutely RTT looks abnormal" WITH
+    "${firing}" AS firing,
+    abs(_recent_abnormality - 3/5) AS certainty,
+    "RTT" AS metric,
+    "anomaly detected" AS desc,
+    "${param.id}" AS bcn
+  AND KEEP ALL
+  AFTER firing != COALESCE(previous.firing, false)
   EVENT STARTING AT start;
 
 DEFINE 'TCP minutely: RD predictions' AS
@@ -568,15 +559,14 @@ DEFINE 'TCP minutely: RD anomalies' AS
     (abnormality_rd_avg > 0.75) AS abnormality,
     5-ma float(abnormality) AS _recent_abnormality,
     hysteresis (_recent_abnormality, 3/5, 4/5) AS firing
-  COMMIT,
-    NOTIFY "TCP minutely RD looks abnormal" WITH
-      "${firing}" AS firing,
-      abs(_recent_abnormality - 3/5) AS certainty,
-      "RD" AS metric,
-      "anomaly detected" AS desc,
-      "${param.id}" AS bcn
-    AND KEEP ALL
-    AFTER firing != COALESCE(previous.firing, false)
+  NOTIFY "TCP minutely RD looks abnormal" WITH
+    "${firing}" AS firing,
+    abs(_recent_abnormality - 3/5) AS certainty,
+    "RD" AS metric,
+    "anomaly detected" AS desc,
+    "${param.id}" AS bcn
+  AND KEEP ALL
+  AFTER firing != COALESCE(previous.firing, false)
   EVENT STARTING AT start;
 
 DEFINE 'TCP minutely: DTT predictions' AS
@@ -605,13 +595,12 @@ DEFINE 'TCP minutely: DTT anomalies' AS
     (abnormality_dtt_avg > 0.75) AS abnormality,
     5-ma float(abnormality) AS _recent_abnormality,
     hysteresis (_recent_abnormality, 3/5, 4/5) AS firing
-  COMMIT,
-    NOTIFY "TCP minutely DTT looks abnormal" WITH
-      "${firing}" AS firing,
-      abs(_recent_abnormality - 3/5) AS certainty,
-      "DTT" AS metric,
-      "anomaly detected" AS desc,
-      "${param.id}" AS bcn
-    AND KEEP ALL
-    AFTER firing != COALESCE(previous.firing, false)
+  NOTIFY "TCP minutely DTT looks abnormal" WITH
+    "${firing}" AS firing,
+    abs(_recent_abnormality - 3/5) AS certainty,
+    "DTT" AS metric,
+    "anomaly detected" AS desc,
+    "${param.id}" AS bcn
+  AND KEEP ALL
+  AFTER firing != COALESCE(previous.firing, false)
   EVENT STARTING AT start;
