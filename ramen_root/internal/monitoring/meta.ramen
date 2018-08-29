@@ -71,8 +71,10 @@ AS
 
     min age last_out AS last_out_age "Time elapsed since last production."
 
-  GROUP BY worker
-  COMMIT BEFORE _dt >= 60
+  --GROUP BY worker
+  --COMMIT BEFORE _dt >= 60
+  GROUP BY worker, time // 60
+  COMMIT AFTER in.time - out.time > 90
   EVENT STARTING AT time WITH DURATION 60s
   FACTOR worker;
 
