@@ -1,5 +1,5 @@
 Package: ramen-configurator
-Version: 1.4.0
+Version: 2.0.0
 Architecture: amd64
 Maintainer: rixed-github@happyleptic.org
 Depends: libsqlite3-0
