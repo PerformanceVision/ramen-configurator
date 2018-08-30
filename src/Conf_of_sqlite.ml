@@ -10,6 +10,8 @@ type db =
     get_bcns : Sqlite3.stmt ;
     get_bcas : Sqlite3.stmt ;
     get_zones : Sqlite3.stmt ;
+    get_email_rcpts : Sqlite3.stmt ;
+    get_snmp_sink : Sqlite3.stmt ;
     mutable last_updated : float ;
     mutable new_mtime : float }
 
@@ -212,6 +214,16 @@ let last_mtime_query =
 let get_zones_query =
   "SELECT id, name FROM zone WHERE NOT is_deleted"
 
+let get_email_rcpts_query =
+  "SELECT value FROM setting WHERE key = 'alerts_emails'"
+
+let get_snmp_sink_query =
+  "SELECT \
+    (SELECT value FROM setting WHERE key = 'alerts_snmp_host') ||':'|| \
+    COALESCE((SELECT value FROM setting WHERE key = 'alerts_snmp_port' \
+                                          AND length(key) > 0), '162') \
+    AS value"
+
 let get_db_mtime stmt =
   let open Sqlite3 in
   match step stmt with
@@ -236,13 +248,15 @@ let get_db filename =
       get_bcns = prepare db flow_alert_params_query ;
       get_bcas = prepare db service_alert_params_query ;
       get_zones = prepare db get_zones_query ;
+      get_email_rcpts = prepare db get_email_rcpts_query ;
+      get_snmp_sink = prepare db get_snmp_sink_query ;
       last_updated = 0. ; new_mtime = get_db_mtime get_mtime }
   ) with exc -> (
     !logger.error "Exception: %s" (Printexc.to_string exc) ;
     exit 1
   )
 
-let check_config_changed db =
+let check_bc_config_changed db =
   try (
     let t = get_db_mtime db.get_mtime in
     if t > db.last_updated then (
@@ -250,7 +264,7 @@ let check_config_changed db =
       db.new_mtime <- t
     )
   ) with e ->
-    !logger.error "Cannot check_config_changed: %s, assuming no change.\n"
+    !logger.error "Cannot check_bc_config_changed: %s, assuming no change.\n"
       (Printexc.to_string e)
 
 let must_reload db =
@@ -258,8 +272,39 @@ let must_reload db =
   if ret then !logger.info "Configuration is not up to date with DB." ;
   ret
 
-let get_config db =
-  !logger.debug "Building configuration from DB..." ;
+let get_alerts_sink db =
+  !logger.debug "Getting alerts sink from DB..." ;
+  let open Sqlite3 in
+  let rcpts =
+    match step db.get_email_rcpts with
+    | Rc.ROW ->
+      let rcpts =
+        with_field db.get_email_rcpts 0 "value" (default "" % to_string) in
+      reset db.get_email_rcpts |> must_be_ok ;
+      rcpts
+    | Rc.DONE ->
+      reset db.get_email_rcpts |> must_be_ok ;
+      ""
+    | _ ->
+      reset db.get_email_rcpts |> ignore ;
+      failwith "No idea what to do from this get_email_rcpts result" in
+  let snmpsink =
+    match step db.get_snmp_sink with
+    | Rc.ROW ->
+      let rcpts =
+        with_field db.get_snmp_sink 0 "value" (default "" % to_string) in
+      reset db.get_snmp_sink |> must_be_ok ;
+      rcpts
+    | Rc.DONE ->
+      reset db.get_snmp_sink |> must_be_ok ;
+      ""
+    | _ ->
+      reset db.get_snmp_sink |> ignore ;
+      failwith "No idea what to do from this get_snmp_sink result" in
+  rcpts, snmpsink
+
+let get_bcs db =
+  !logger.debug "Getting BCAs/BCNs from DB..." ;
   let open Sqlite3 in
   (* First get the zone tree *)
   Hashtbl.clear zone_name_of_id ;
