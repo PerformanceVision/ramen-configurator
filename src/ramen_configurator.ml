@@ -266,7 +266,8 @@ let start debug monitor ramen_cmd root_dir persist_dir db_name
     sync_programs db ramen_cmd root_dir persist_dir uncompress csv_prefix
                   with_bcns with_bcas
   and update_notif_conf () =
-    sync_notif_conf db notif_conf_file
+    if notif_conf_file <> "" then
+      sync_notif_conf db notif_conf_file
   in
   update_notif_conf () ;
   update_bcs () ;
