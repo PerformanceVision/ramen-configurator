@@ -34,7 +34,7 @@ bin_dir ?= /usr/bin/
 lib_dir ?= /var/lib/
 conf_dir ?= /etc/ramen/
 
-all: $(INSTALLED)
+all: $(INSTALLED) src/findcsv
 
 # Generic rules
 
@@ -61,8 +61,8 @@ CONFIGURATOR_SOURCES = \
 	src/SqliteHelpers.ml src/Conf_of_sqlite.ml \
 	src/ramen_configurator.ml
 
-INSERT_ALERT_SOURCES = \
-	src/RamenLog.ml src/RamenHelpers.ml
+FINDCSV_SOURCES = \
+	src/RamenLog.ml src/RamenHelpers.ml src/findcsv.ml
 
 ramen_root/junkie/security/scans.x: ramen_root/junkie/csv.x
 ramen_root/junkie/security/DDoS.x: ramen_root/junkie/csv.x
@@ -72,7 +72,7 @@ ramen_root/junkie/apps/BCA/_.x: ramen_root/junkie/csv.x
 ramen_root/junkie/apps/top_servers/_.x: ramen_root/junkie/csv.x
 ramen_root/junkie/apps/transactions/_.x: ramen_root/junkie/csv.x
 
-SOURCES = $(CONFIGURATOR_SOURCES) $(INSERT_ALERT_SOURCES)
+SOURCES = $(CONFIGURATOR_SOURCES) $(FINDCSV_SOURCES)
 
 dep:
 	@$(RM) .depend
@@ -97,6 +97,10 @@ src/Conf_of_sqlite.cmx: src/Conf_of_sqlite.ml
 src/ramen_configurator: $(CONFIGURATOR_SOURCES:.ml=.cmx)
 	@echo 'Linking $@'
 	@$(OCAMLOPT) $(OCAMLOPTFLAGS) -linkpkg -package "$(PACKAGES)" $(filter %.cmx, $^) -o $@
+
+src/findcsv: $(FINDCSV_SOURCES:.ml=.cmx)
+	@echo 'Linking $@'
+	@$(OCAMLOPT) $(OCAMLOPTFLAGS) -linkpkg -package batteries $(filter %.cmx, $^) -o $@
 
 # Installation
 

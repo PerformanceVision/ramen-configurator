@@ -116,3 +116,9 @@ let string_of_process_status = function
   | Unix.WEXITED code -> Printf.sprintf "terminated with code %d" code
   | Unix.WSIGNALED sign -> Printf.sprintf "killed by signal %s" (name_of_signal sign)
   | Unix.WSTOPPED sign -> Printf.sprintf "stopped by signal %s" (name_of_signal sign)
+
+let ctime ts =
+  let tm = Unix.localtime ts in
+  Printf.sprintf "%04d-%02d-%02d %02dh%02dm%02d"
+    (tm.tm_year+1900) (tm.tm_mon+1) tm.tm_mday
+    tm.tm_hour tm.tm_min tm.tm_sec
