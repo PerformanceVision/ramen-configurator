@@ -15,13 +15,14 @@ let run_cmd cmd =
     failwith
   ) else output
 
-let run_program ramen_cmd root_dir persist_dir ?as_ fname params =
+let run_program debug ramen_cmd root_dir persist_dir ?as_ fname params =
   !logger.info "Running program %s%s with parameters %a"
     fname (Option.map_default (fun as_ -> " (as: "^ as_ ^")") "" as_)
     (List.print (Tuple2.print String.print String.print)) params ;
   if !dry_run then !logger.info "nope" else
-    Printf.sprintf2 "%s run --replace --persist-dir %s%s %a %s"
+    Printf.sprintf2 "%s run%s --replace --persist-dir %s%s %a %s"
       (shell_quote ramen_cmd)
+      (if debug then " --debug" else "")
       (shell_quote persist_dir)
       (Option.map_default (fun as_ -> " -o "^ shell_quote as_) "" as_)
       (List.print ~first:"" ~last:"" ~sep:" " (fun oc (n, v) ->
@@ -37,18 +38,18 @@ let chop_placeholder s =
   dirname
 
 (* Run that file and return the names it's running under: *)
-let run_file ramen_cmd root_dir persist_dir no_ext params =
+let run_file debug ramen_cmd root_dir persist_dir no_ext params =
   let fname = root_dir ^"/"^ no_ext ^".x" in
   let as_ = no_ext in
   if Hashtbl.is_empty params then (
-    run_program ramen_cmd root_dir persist_dir ~as_ fname [] ;
+    run_program debug ramen_cmd root_dir persist_dir ~as_ fname [] ;
     Set.String.singleton as_
   ) else (
     Hashtbl.fold (fun uniq_name params rs ->
       let as_ =
         if uniq_name = "" then as_ else
           chop_placeholder as_ ^"/"^ uniq_name in
-      run_program ramen_cmd root_dir persist_dir ~as_ fname params ;
+      run_program debug ramen_cmd root_dir persist_dir ~as_ fname params ;
       Set.String.add as_ rs
     ) params Set.String.empty)
 
@@ -81,13 +82,13 @@ let kill ramen_cmd persist_dir prog =
       (shell_quote prog) |>
     run_cmd |> ignore
 
-let sync_programs db ramen_cmd root_dir persist_dir uncompress csv_prefix
-                  with_bcns with_bcas =
+let sync_programs db debug ramen_cmd root_dir persist_dir uncompress
+                  csv_prefix with_bcns with_bcas =
   let no_params = Hashtbl.create 0 in
   let old_running = get_running ramen_cmd persist_dir "junkie/*" in
   let new_running = ref Set.String.empty in
   let comp n p =
-    let rs = run_file ramen_cmd root_dir persist_dir n p in
+    let rs = run_file debug ramen_cmd root_dir persist_dir n p in
     new_running := Set.String.union rs !new_running in
   comp "internal/monitoring/meta" no_params ;
   let params =
@@ -259,8 +260,8 @@ let start debug monitor ramen_cmd root_dir persist_dir db_name
   let open Conf_of_sqlite in
   let db = get_db db_name in
   let update_bcs () =
-    sync_programs db ramen_cmd root_dir persist_dir uncompress csv_prefix
-                  with_bcns with_bcas
+    sync_programs db debug ramen_cmd root_dir persist_dir uncompress
+                  csv_prefix with_bcns with_bcas
   and update_notif_conf () =
     if notif_conf_file <> "" then
       sync_notif_conf db notif_conf_file
