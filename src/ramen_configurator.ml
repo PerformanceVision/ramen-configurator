@@ -16,8 +16,9 @@ let run_cmd cmd =
   ) else output
 
 let run_program ramen_cmd root_dir persist_dir ?as_ fname params =
-  !logger.info "Running program %s%s"
-    fname (Option.map_default (fun as_ -> " (as: "^ as_ ^")") "" as_) ;
+  !logger.info "Running program %s%s with parameters %a"
+    fname (Option.map_default (fun as_ -> " (as: "^ as_ ^")") "" as_)
+    (List.print (Tuple2.print String.print String.print)) params ;
   if !dry_run then !logger.info "nope" else
     Printf.sprintf2 "%s run --replace --persist-dir %s%s %a %s"
       (shell_quote ramen_cmd)
@@ -40,8 +41,6 @@ let run_file ramen_cmd root_dir persist_dir no_ext params =
   let fname = root_dir ^"/"^ no_ext ^".x" in
   let as_ = no_ext in
   if Hashtbl.is_empty params then (
-    !logger.debug "Running program %s as %s"
-      fname as_ ;
     run_program ramen_cmd root_dir persist_dir ~as_ fname [] ;
     Set.String.singleton as_
   ) else (
@@ -49,9 +48,6 @@ let run_file ramen_cmd root_dir persist_dir no_ext params =
       let as_ =
         if uniq_name = "" then as_ else
           chop_placeholder as_ ^"/"^ uniq_name in
-      !logger.debug "Running program %s as %s with parameters %a"
-        fname as_
-        (List.print (Tuple2.print String.print String.print)) params ;
       run_program ramen_cmd root_dir persist_dir ~as_ fname params ;
       Set.String.add as_ rs
     ) params Set.String.empty)
