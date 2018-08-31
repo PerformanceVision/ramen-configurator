@@ -27,8 +27,7 @@ RAMEN_SOURCES = \
 
 INSTALLED_BIN = src/ramen_configurator
 INSTALLED_WORKERS = $(RAMEN_SOURCES:.ramen=.x)
-INSTALLED_CONF = alert_sqlite.conf
-INSTALLED = $(INSTALLED_BIN) $(INSTALLED_WORKERS) $(INSTALLED_CONF)
+INSTALLED = $(INSTALLED_BIN) $(INSTALLED_WORKERS)
 
 bin_dir ?= /usr/bin/
 lib_dir ?= /var/lib/
@@ -117,20 +116,12 @@ install-workers: $(INSTALLED_WORKERS)
 	  install "$$f" "$(prefix)$(lib_dir)/$$f" ; \
 	done
 
-install-conf: $(INSTALLED_CONF)
-	@echo 'Installing configuration files $(INSTALLED_CONF) into $(prefix)$(conf_dir)'
-	@install -d '$(prefix)$(conf_dir)'
-	@install $(INSTALLED_CONF) '$(prefix)$(conf_dir)'
-
-install: install-bin install-workers install-conf
+install: install-bin install-workers
 
 uninstall:
 	@echo Uninstalling
 	@for f in $(INSTALLED_BIN); do \
 	  $(RM) "$(prefix)$(bin_dir)/$$f" ;\
-	done
-	@for f in $(INSTALLED_CONF); do \
-		$(RM) "$(prefix)$(conf_dir)/$$f" ;\
 	done
 	@$(RM) -r $(prefix)$(lib_dir)/ramen_root
 
