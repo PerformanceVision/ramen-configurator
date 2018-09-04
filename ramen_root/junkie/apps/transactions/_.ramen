@@ -99,7 +99,7 @@ AS
     sql_queries,
     citrix_mix,
     smb_mix
-  MERGE ON start TIMEOUT AFTER 30s
+  MERGE ON start TIMEOUT AFTER 2s
   GROUP BY protocol, success, start // obs_window
   SELECT
     (start // obs_window) * obs_window AS start,
