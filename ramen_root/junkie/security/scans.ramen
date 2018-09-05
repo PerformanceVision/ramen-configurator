@@ -4,7 +4,6 @@ AS
   FROM
     ../../csv/tcp,
     ../../csv/udp
-  MERGE ON capture_begin TIMEOUT AFTER 2 SECONDS
   WHEN
     NOT remember globally (
       0.1, capture_begin, 3600,
@@ -19,8 +18,8 @@ AS
     ip_server,
     sum 1 as port_count
       "Approximate number of ports probed by the client to this server"
-  GROUP BY ip_client, ip_server
-  COMMIT BEFORE end - start > 3600
+  GROUP BY capture_begin // 3600, ip_client, ip_server
+  COMMIT AFTER in.capture_begin > out.start + 120s
   EVENT STARTS AT start AND ENDS AT end;
 
 DEFINE 'port scan alert' AS
@@ -41,7 +40,6 @@ AS
     ../../csv/udp,
     ../../csv/icmp,
     '../../csv/other-ip'
-  MERGE ON capture_begin TIMEOUT AFTER 2 SECONDS
   WHEN
     NOT remember globally (
       0.1, capture_begin, 3600,
@@ -55,8 +53,8 @@ AS
     ip_client,
     sum 1 as ip_count
       "Approximate number of hosts probed by this client."
-  GROUP BY ip_client
-  COMMIT BEFORE end - start > 3600
+  GROUP BY capture_begin // 3600, ip_client
+  COMMIT AFTER in.capture_begin > start + 120s
   EVENT STARTS AT start AND ENDS AT end;
 
 DEFINE 'ip_scan_alert' AS

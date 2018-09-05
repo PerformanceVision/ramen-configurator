@@ -10,7 +10,6 @@ AS
     ../../csv/udp,
     ../../csv/icmp,
     '../../csv/other-ip'
-  MERGE ON capture_begin TIMEOUT AFTER 2 SECONDS
   SELECT
     (capture_begin // avg_win) * avg_win AS start,
     min capture_begin, max capture_end,

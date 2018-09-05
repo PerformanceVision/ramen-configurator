@@ -49,7 +49,6 @@ DEFINE udp_services AS
 DEFINE degraded AS
   FROM
     tcp_services, udp_services
-  MERGE ON capture_begin TIMEOUT AFTER 2 SECONDS
   SELECT
     *,
     REMEMBER globally (

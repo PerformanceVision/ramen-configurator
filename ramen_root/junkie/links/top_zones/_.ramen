@@ -78,7 +78,6 @@ DEFINE s2c AS
 -- rotating bloom filter.
 DEFINE degraded AS
   FROM c2s, s2c
-  MERGE ON capture_begin TIMEOUT AFTER 2 SECONDS
   SELECT
     *,
     REMEMBER globally (

@@ -26,7 +26,6 @@ DEFINE 'avg traffic' AS
     '../../../csv/s2c other-ip',
     '../../../csv/c2s non-ip',
     '../../../csv/s2c non-ip'
-  MERGE ON capture_begin TIMEOUT AFTER 2 SECONDS
   SELECT
     (capture_begin // u32(avg_window)) * u32(avg_window) AS start,
     min capture_begin, max capture_end,
