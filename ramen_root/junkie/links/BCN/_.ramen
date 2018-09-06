@@ -179,21 +179,23 @@ DEFINE 'TCP minutely' AS
     sum COALESCE(rtt_count_src, 0) AS sum_rtt_count_src,
     sum rtt_sum_src AS _sum_rtt_sum_src,
     _sum_rtt_sum_src / sum_rtt_count_src AS rtt_avg,
-    (sum rtt_sum2_src - _sum_rtt_sum_src^2 / sum_rtt_count_src) /
+    -- We divide here by 1 packet because the distance to the mean is
+    -- the distance between two means:
+    (sum rtt_sum2_src / 1{packets} - _sum_rtt_sum_src^2 / sum_rtt_count_src) /
         sum_rtt_count_src AS rtt_var,
     sum COALESCE(rd_count_src, 0) AS sum_rd_count_src,
     sum rd_sum_src AS _sum_rd_sum_src,
     _sum_rd_sum_src / sum_rd_count_src AS rd_avg,
-    (sum rd_sum2_src - _sum_rd_sum_src^2 / sum_rd_count_src) /
+    (sum rd_sum2_src / 1{packets} - _sum_rd_sum_src^2 / sum_rd_count_src) /
         sum_rd_count_src AS rd_var,
     sum COALESCE(dtt_count_src, 0) AS sum_dtt_count_src,
     sum dtt_sum_src AS _sum_dtt_sum_src,
     _sum_dtt_sum_src / sum_dtt_count_src AS dtt_avg,
-    (sum dtt_sum2_src - _sum_dtt_sum_src^2 / sum_dtt_count_src) /
+    (sum dtt_sum2_src / 1{packets}  - _sum_dtt_sum_src^2 / sum_dtt_count_src) /
         sum_dtt_count_src AS dtt_var,
     sum connections_time AS _sum_connections_time,
     _sum_connections_time / _sum_connections AS connection_time_avg,
-    (sum connections_time2 - _sum_connections_time^2 / _sum_connections) /
+    (sum connections_time2 / 1{packets} - _sum_connections_time^2 / _sum_connections) /
         _sum_connections AS connection_time_var
   WHERE
     (source_name = "any" OR in.zone_src IN source) AND
