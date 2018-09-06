@@ -162,14 +162,14 @@ DEFINE 'EURT too high' AS
   SELECT
     max_start,
     hysteresis (eurt, max_eurt - max_eurt/10, max_eurt) AS firing
-  NOTIFY "EURT to ${param.name} is too large" WITH
+  NOTIFY "EURT to ${name} is too large" WITH
     "${firing}" AS firing,
     reldiff(eurt, max_eurt) AS certainty,
-    "The average end user response time to application ${param.name} has raised above the configured maximum of ${param.max_eurt}s for the last ${param.obs_window} seconds." AS desc,
-    "${param.id}" AS bca,
-    "${param.service_id}" AS service_id,
+    "The average end user response time to application ${name} has raised above the configured maximum of ${max_eurt}s for the last ${obs_window} seconds." AS desc,
+    "${id}" AS bca,
+    "${service_id}" AS service_id,
     "${eurt}" AS values,
-    "${param.max_eurt}" AS thresholds
+    "${max_eurt}" AS thresholds
   AND KEEP ALL
   AFTER firing != COALESCE(previous.firing, false)
   EVENT STARTING AT max_start;
@@ -189,7 +189,7 @@ DEFINE 'averages: volume anomalies' AS
     abs(_recent_abnormality - 3/5) AS certainty,
     "volume" AS metric,
     "anomaly detected" AS desc,
-    "${param.id}" AS bca
+    "${id}" AS bca
   AND KEEP ALL
   AFTER firing != COALESCE(previous.firing, false)
   EVENT STARTING AT start;
@@ -269,7 +269,7 @@ DEFINE 'averages: retransmissions anomalies' AS
     abs(_recent_abnormality - 3/5) AS certainty,
     "retransmissions" AS metric,
     "anomaly detected" AS desc,
-    "${param.id}" AS bca
+    "${id}" AS bca
   AND KEEP ALL
   AFTER firing != COALESCE(previous.firing, false)
   EVENT STARTING AT start;
@@ -349,7 +349,7 @@ DEFINE 'averages: connections anomalies' AS
     abs(_recent_abnormality - 3/5) AS certainty,
     "connections" AS metric,
     "anomaly detected" AS desc,
-    "${param.id}" AS bca
+    "${id}" AS bca
   AND KEEP ALL
   AFTER firing != COALESCE(previous.firing, false)
   EVENT STARTING AT start;
@@ -428,7 +428,7 @@ DEFINE 'averages: 0-windows anomalies' AS
     abs(_recent_abnormality - 3/5) AS certainty,
     "0-windows" AS metric,
     "anomaly detected" AS desc,
-    "${param.id}" AS bca
+    "${id}" AS bca
   AND KEEP ALL
   AFTER firing != COALESCE(previous.firing, false)
   EVENT STARTING AT start;
@@ -478,7 +478,7 @@ DEFINE 'averages: SRT anomalies' AS
     abs(_recent_abnormality - 3/5) AS certainty,
     "SRT" AS metric,
     "anomaly detected" AS desc,
-    "${param.id}" AS bca
+    "${id}" AS bca
   AND KEEP ALL
   AFTER firing != COALESCE(previous.firing, false)
   EVENT STARTING AT start;
@@ -515,7 +515,7 @@ DEFINE 'averages: RTT anomalies' AS
     abs(_recent_abnormality - 3/5) AS certainty,
     "RTT" AS metric,
     "anomaly detected" AS desc,
-    "${param.id}" AS bca
+    "${id}" AS bca
   AND KEEP ALL
   AFTER firing != COALESCE(previous.firing, false)
   EVENT STARTING AT start;
@@ -566,7 +566,7 @@ DEFINE 'averages: RD anomalies' AS
     abs(_recent_abnormality - 3/5) AS certainty,
     "RD" AS metric,
     "anomaly detected" AS desc,
-    "${param.id}" AS bca
+    "${id}" AS bca
   AND KEEP ALL
   AFTER firing != COALESCE(previous.firing, false)
   EVENT STARTING AT start;
@@ -617,7 +617,7 @@ DEFINE 'averages: DTT anomalies' AS
     abs(_recent_abnormality - 3/5) AS certainty,
     "DTT" AS metric,
     "anomaly detected" AS desc,
-    "${param.id}" AS bca
+    "${id}" AS bca
   AND KEEP ALL
   AFTER firing != COALESCE(previous.firing, false)
   EVENT STARTING AT start;

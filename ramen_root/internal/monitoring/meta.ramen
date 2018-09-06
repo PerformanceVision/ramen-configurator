@@ -83,7 +83,7 @@ DEFINE tot_per_minute
 AS
   FROM per_minute
   SELECT
-    (time // 60) * 60 as time,
+    (time // 60) * 60 AS time,
     sum 1 AS running "Total number of running worker.",
     -- Given data arrive only every minute in the test lab (and some datasets
     -- are frequently missed), let's call "active" any operation that had

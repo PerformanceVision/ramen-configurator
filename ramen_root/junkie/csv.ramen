@@ -67,11 +67,11 @@ DEFINE tcp_raw AS
      rt_sum_server u64,
      rt_square_sum_server u128,
      rtt_count_client u32? {packets},
-     rtt_sum_client u64,                -- 60
-     rtt_square_sum_client u128,
+     rtt_sum_client u64,                -- 60 TODO: microseconds
+     rtt_square_sum_client u128,        -- TODO: microseconds^2
      rtt_count_server u32? {packets},
-     rtt_sum_server u64,
-     rtt_square_sum_server u128,
+     rtt_sum_server u64,                -- TODO: microseconds
+     rtt_square_sum_server u128,        -- TODO: microseconds^2
      rd_count_client u32? {packets},
      rd_sum_client u64,
      rd_square_sum_client u128,
@@ -79,11 +79,11 @@ DEFINE tcp_raw AS
      rd_sum_server u64,
      rd_square_sum_server u128,         -- 70
      dtt_count_client u32? {packets},
-     dtt_sum_client u64,
-     dtt_square_sum_client u128,
+     dtt_sum_client u64,                -- TODO: microseconds
+     dtt_square_sum_client u128,        -- TODO: microseconds^2
      dtt_count_server u32? {packets},
-     dtt_sum_server u64,
-     dtt_square_sum_server u128,
+     dtt_sum_server u64,                -- TODO: microseconds
+     dtt_square_sum_server u128,        -- TODO: microseconds^2
      dcerpc_uuid string?)
   EVENT STARTING AT capture_begin * 1e-6
     AND STOPPING AT capture_end * 1e-6;
