@@ -19,7 +19,7 @@ RUN apt-get --yes update && \
         coreutils
 
 # Rebuild a new image from here
-RUN echo "version 2.0.1~0"
+RUN echo "version 2.0.2~0"
 
 # Install ramen and configurator
 COPY *.deb /tmp/

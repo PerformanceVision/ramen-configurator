@@ -180,7 +180,9 @@ DEFINE 'TCP minutely' AS
     sum rtt_sum_src AS _sum_rtt_sum_src,
     _sum_rtt_sum_src / sum_rtt_count_src AS rtt_avg,
     -- We divide here by 1 packet because the distance to the mean is
-    -- the distance between two means:
+    -- the distance between two means. Alternatively, we could have
+    -- erased sum_rtt_count_src units (packets) so that the average
+    -- would be just seconds:
     (sum rtt_sum2_src / 1{packets} - _sum_rtt_sum_src^2 / sum_rtt_count_src) /
         sum_rtt_count_src AS rtt_var,
     sum COALESCE(rd_count_src, 0) AS sum_rd_count_src,
