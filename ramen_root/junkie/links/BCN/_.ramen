@@ -26,9 +26,15 @@ DEFINE 'avg traffic' AS
     '../../../csv/s2c other-ip',
     '../../../csv/c2s non-ip',
     '../../../csv/s2c non-ip'
+  MERGE TIMEOUT AFTER 30s
+  WHERE
+    start > merge.greatest.start - 3min AND
+    (source_name = "any" OR in.zone_src IN source) AND
+    (dest_name = "any" OR in.zone_dst IN dest)
   SELECT
-    (capture_begin // u32(avg_window)) * u32(avg_window) AS start,
-    min capture_begin, max capture_end,
+    min start, max stop,
+    (start // u32(avg_window)) * u32(avg_window) AS start,
+    out.start + avg_window AS stop,
     -- Traffic
     sum packets_src / avg_window AS packets_per_secs,
     sum bytes_src / avg_window AS bytes_per_secs,
@@ -41,13 +47,9 @@ DEFINE 'avg traffic' AS
     IF _sum_packets_with_payload_src = 0 THEN 0 ELSE
       (sum COALESCE(rd_count_src, 0) / _sum_packets_with_payload_src) / 100 AS avg_rr,
     source_name AS zone_src, dest_name AS zone_dst
-  WHERE
-    (source_name = "any" OR in.zone_src IN source) AND
-    (dest_name = "any" OR in.zone_dst IN dest)
-  GROUP BY capture_begin // u32(avg_window)
+  GROUP BY start // u32(avg_window)
   COMMIT AFTER
-    in.capture_begin > out.min_capture_begin + 2 * u64(avg_window)
-  EVENT STARTING AT start WITH DURATION avg_window;
+    in.start > out.start + 2 * u64(avg_window);
 
 DEFINE percentiles AS
   -- Note: The event start at the end of the observation window and
@@ -55,9 +57,10 @@ DEFINE percentiles AS
   FROM 'avg traffic'
   SELECT
     min start, max start,
-    min min_capture_begin AS min_capture_begin,
-    max max_capture_end AS max_capture_end,
+    max stop AS start,
+    out.start + avg_window AS stop,
     perc percentile (
+      -- FIXME: how usefull could these "globally" be, given there is only one group?
       last u32(obs_window / avg_window) globally bytes_per_secs
     ) AS bytes_per_secs,
     perc percentile (
@@ -69,14 +72,12 @@ DEFINE percentiles AS
     zone_src, zone_dst
   COMMIT AFTER
     sum 1 >= round (obs_window / avg_window) OR
-    in.start > out.max_start + 5
-  EVENT STARTING AT max_capture_end
-   WITH DURATION avg_window;
+    in.start > out.start + 30s;
 
 DEFINE 'traffic too low' AS
   FROM percentiles
   SELECT
-    max_start,
+    max_start AS start,
     -- Turn NULLs into 0-certainty alert
     COALESCE (bytes_per_secs, min_bps, 0) AS bytes_per_secs,
     -- Other case of NULL: no min_bps
@@ -91,16 +92,15 @@ DEFINE 'traffic too low' AS
     "${bytes_per_secs}" AS values,
     "${min_bps}" AS thresholds
   AND KEEP ALL
-  AFTER firing != COALESCE(previous.firing, false)
-  EVENT STARTING AT max_start;
+  AFTER firing != COALESCE(previous.firing, false);
 
 DEFINE 'traffic too high' AS
   FROM percentiles
   SELECT
-      max_start,
-      COALESCE (
-        hysteresis (bytes_per_secs, max_bps*0.9, max_bps),
-        false) AS firing
+    max_start AS start,
+    COALESCE (
+      hysteresis (bytes_per_secs, max_bps*0.9, max_bps),
+      false) AS firing
   NOTIFY "High traffic from ${source_name} to ${dest_name}" WITH
     "${firing}" AS firing,
     COALESCE(reldiff(bytes_per_secs, max_bps), 0) AS certainty,
@@ -109,13 +109,12 @@ DEFINE 'traffic too high' AS
     "${bytes_per_secs}" AS values,
     "${max_bps}" AS thresholds
   AND KEEP ALL
-  AFTER firing != COALESCE(previous.firing, false)
-  EVENT STARTING AT max_start;
+  AFTER firing != COALESCE(previous.firing, false);
 
 DEFINE 'round-trip time' AS
   FROM percentiles
   SELECT
-    max_start,
+    max_start AS start,
     -- Turn NULLs into 0-certainty alert
     COALESCE (rtt, max_rtt, 0) AS rtt,
     -- Other case of NULL: no max_rtt
@@ -130,13 +129,12 @@ DEFINE 'round-trip time' AS
     "${rtt}" AS values,
     "${max_rtt}" AS thresholds
   AND KEEP ALL
-  AFTER firing != COALESCE(previous.firing, false)
-  EVENT STARTING AT max_start;
+  AFTER firing != COALESCE(previous.firing, false);
 
 DEFINE retransmissions AS
   FROM percentiles
   SELECT
-    max_start,
+    max_start AS start,
     -- Turn NULLs into 0-certainty alert
     COALESCE (rr, max_rr, 0) AS rr,
     -- Other case of NULL: no max_rr
@@ -151,16 +149,34 @@ DEFINE retransmissions AS
     "${rr}" AS values,
     "${max_rr}" AS thresholds
   AND KEEP ALL
-  AFTER firing != COALESCE(previous.firing, false)
-  EVENT STARTING AT max_start;
+  AFTER firing != COALESCE(previous.firing, false);
 
 DEFINE 'TCP minutely' AS
   FROM
     '../../../csv/c2s tcp',
     '../../../csv/s2c tcp'
+  MERGE TIMEOUT AFTER 30s
+  WHERE
+    start > merge.greatest.start - 3min AND
+    (source_name = "any" OR in.zone_src IN source) AND
+    (dest_name = "any" OR in.zone_dst IN dest) AND
+    -- Exclude netflow traffic
+    retrans_bytes_src IS NOT NULL AND
+    retrans_payload_src IS NOT NULL AND
+    syns IS NOT NULL AND
+    fins_src IS NOT NULL AND
+    rsts_src IS NOT NULL AND
+    closes IS NOT NULL AND
+    connections IS NOT NULL AND
+    dupacks_src IS NOT NULL AND
+    zero_windows_src IS NOT NULL AND
+    rtt_count_src IS NOT NULL AND
+    rd_count_src IS NOT NULL AND
+    dtt_count_src IS NOT NULL
   SELECT
-    (capture_begin // 60) * 60 AS start,
-    min capture_begin, max capture_end,
+    min start, max stop,
+    (start // 60) * 60 AS start,
+    out.start + 60s AS stop,
     sum packets_src / 60 AS packets_per_secs,
     sum bytes_src / 60 AS bytes_per_secs,
     sum payload_src / 60 AS payload_per_secs,
@@ -199,31 +215,15 @@ DEFINE 'TCP minutely' AS
     _sum_connections_time / _sum_connections AS connection_time_avg,
     (sum connections_time2 / 1{packets} - _sum_connections_time^2 / _sum_connections) /
         _sum_connections AS connection_time_var
-  WHERE
-    (source_name = "any" OR in.zone_src IN source) AND
-    (dest_name = "any" OR in.zone_dst IN dest) AND
-    -- Exclude netflow traffic
-    retrans_bytes_src IS NOT NULL AND
-    retrans_payload_src IS NOT NULL AND
-    syns IS NOT NULL AND
-    fins_src IS NOT NULL AND
-    rsts_src IS NOT NULL AND
-    closes IS NOT NULL AND
-    connections IS NOT NULL AND
-    dupacks_src IS NOT NULL AND
-    zero_windows_src IS NOT NULL AND
-    rtt_count_src IS NOT NULL AND
-    rd_count_src IS NOT NULL AND
-    dtt_count_src IS NOT NULL
-  GROUP BY capture_begin // 60
+  GROUP BY start // 60
   COMMIT AFTER
-    in.capture_begin > out.min_capture_begin + 2 * 60s
-  EVENT STARTING AT start WITH DURATION 60s;
+    in.start > out.min_start + 2 * 60s;
 
 DEFINE 'TCP minutely: volume predictions' AS
   FROM 'TCP minutely'
   SELECT
     start,
+    start + avg_window AS stop,
     packets_per_secs,
     smooth(packets_per_secs) AS pred_0_packets_per_secs,
     fit(5, packets_per_secs) AS pred_1_packets_per_secs,
@@ -287,8 +287,7 @@ DEFINE 'TCP minutely: volume predictions' AS
      abs(pred_1_packets_with_payload_per_secs - packets_with_payload_per_secs) /
        max(abs pred_1_packets_with_payload_per_secs, abs packets_with_payload_per_secs) +
      abs(pred_0_packets_with_payload_per_secs - packets_with_payload_per_secs) /
-       max(abs pred_0_packets_with_payload_per_secs, abs packets_with_payload_per_secs)) / 5 ELSE 0 AS abnormality_packets_with_payload_per_secs
-  EVENT STARTING AT start WITH DURATION avg_window;
+       max(abs pred_0_packets_with_payload_per_secs, abs packets_with_payload_per_secs)) / 5 ELSE 0 AS abnormality_packets_with_payload_per_secs;
 
 DEFINE 'TCP minutely: volume anomalies' AS
   FROM 'TCP minutely: volume predictions'
@@ -307,13 +306,13 @@ DEFINE 'TCP minutely: volume anomalies' AS
     "anomaly detected" AS desc,
     "${id}" AS bcn
   AND KEEP ALL
-  AFTER firing != COALESCE(previous.firing, false)
-  EVENT STARTING AT start;
+  AFTER firing != COALESCE(previous.firing, false);
 
 DEFINE 'TCP minutely: retransmissions predictions' AS
   FROM 'TCP minutely'
   SELECT
     start,
+    start + avg_window AS stop,
     retrans_bytes_per_secs,
     smooth(retrans_bytes_per_secs) AS pred_0_retrans_bytes_per_secs,
     fit(5, retrans_bytes_per_secs) AS pred_1_retrans_bytes_per_secs,
@@ -342,8 +341,7 @@ DEFINE 'TCP minutely: retransmissions predictions' AS
      abs(pred_1_dupacks_per_secs - dupacks_per_secs) /
        max(abs pred_1_dupacks_per_secs, abs dupacks_per_secs) +
      abs(pred_0_dupacks_per_secs - dupacks_per_secs) /
-       max(abs pred_0_dupacks_per_secs, abs dupacks_per_secs)) / 4 ELSE 0 AS abnormality_dupacks_per_secs
-  EVENT STARTING AT start WITH DURATION avg_window;
+       max(abs pred_0_dupacks_per_secs, abs dupacks_per_secs)) / 4 ELSE 0 AS abnormality_dupacks_per_secs;
 
 DEFINE 'TCP minutely: retransmissions anomalies' AS
   FROM 'TCP minutely: retransmissions predictions'
@@ -360,13 +358,13 @@ DEFINE 'TCP minutely: retransmissions anomalies' AS
     "anomaly detected" AS desc,
     "${id}" AS bcn
   AND KEEP ALL
-  AFTER firing != COALESCE(previous.firing, false)
-  EVENT STARTING AT start;
+  AFTER firing != COALESCE(previous.firing, false);
 
 DEFINE 'TCP minutely: connections predictions' AS
   FROM 'TCP minutely'
   SELECT
     start,
+    start + avg_window AS stop,
     fins_per_secs,
     smooth(fins_per_secs) AS pred_0_fins_per_secs,
     fit(5, fins_per_secs) AS pred_1_fins_per_secs,
@@ -440,8 +438,7 @@ DEFINE 'TCP minutely: connections predictions' AS
      abs(pred_1_connection_time_avg - connection_time_avg) /
        max(abs pred_1_connection_time_avg, abs connection_time_avg) +
      abs(pred_0_connection_time_avg - connection_time_avg) /
-       max(abs pred_0_connection_time_avg, abs connection_time_avg)) / 4 ELSE 0 AS abnormality_connection_time_avg
-  EVENT STARTING AT start WITH DURATION avg_window;
+       max(abs pred_0_connection_time_avg, abs connection_time_avg)) / 4 ELSE 0 AS abnormality_connection_time_avg;
 
 DEFINE 'TCP minutely: connections anomalies' AS
   FROM 'TCP minutely: connections predictions'
@@ -461,13 +458,13 @@ DEFINE 'TCP minutely: connections anomalies' AS
     "anomaly detected" AS desc,
     "${id}" AS bcn
   AND KEEP ALL
-  AFTER firing != COALESCE(previous.firing, false)
-  EVENT STARTING AT start;
+  AFTER firing != COALESCE(previous.firing, false);
 
 DEFINE 'TCP minutely: 0-windows predictions' AS
   FROM 'TCP minutely'
   SELECT
     start,
+    start + avg_window AS stop,
     zero_windows_per_secs,
     smooth(zero_windows_per_secs) AS pred_0_zero_windows_per_secs,
     fit(5, zero_windows_per_secs) AS pred_1_zero_windows_per_secs,
@@ -480,8 +477,7 @@ DEFINE 'TCP minutely: 0-windows predictions' AS
      abs(pred_1_zero_windows_per_secs - zero_windows_per_secs) /
        max(abs pred_1_zero_windows_per_secs, abs zero_windows_per_secs) +
      abs(pred_0_zero_windows_per_secs - zero_windows_per_secs) /
-       max(abs pred_0_zero_windows_per_secs, abs zero_windows_per_secs)) / 4 ELSE 0 AS abnormality_zero_windows_per_secs
-  EVENT STARTING AT start WITH DURATION avg_window;
+       max(abs pred_0_zero_windows_per_secs, abs zero_windows_per_secs)) / 4 ELSE 0 AS abnormality_zero_windows_per_secs;
 
 DEFINE 'TCP minutely: 0-windows anomalies' AS
   FROM 'TCP minutely: 0-windows predictions'
@@ -497,13 +493,13 @@ DEFINE 'TCP minutely: 0-windows anomalies' AS
     "anomaly detected" AS desc,
     "${id}" AS bcn
   AND KEEP ALL
-  AFTER firing != COALESCE(previous.firing, false)
-  EVENT STARTING AT start;
+  AFTER firing != COALESCE(previous.firing, false);
 
 DEFINE 'TCP minutely: RTT predictions' AS
   FROM 'TCP minutely'
   SELECT
     start,
+    start + avg_window AS stop,
     rtt_avg,
     smooth(rtt_avg) AS pred_0_rtt_avg,
     fit(5, rtt_avg) AS pred_1_rtt_avg,
@@ -516,8 +512,7 @@ DEFINE 'TCP minutely: RTT predictions' AS
      abs(pred_1_rtt_avg - rtt_avg) /
        max(abs pred_1_rtt_avg, abs rtt_avg) +
      abs(pred_0_rtt_avg - rtt_avg) /
-       max(abs pred_0_rtt_avg, abs rtt_avg)) / 4 ELSE 0 AS abnormality_rtt_avg
-  EVENT STARTING AT start WITH DURATION avg_window;
+       max(abs pred_0_rtt_avg, abs rtt_avg)) / 4 ELSE 0 AS abnormality_rtt_avg;
 
 DEFINE 'TCP minutely: RTT anomalies' AS
   FROM 'TCP minutely: RTT predictions'
@@ -533,13 +528,13 @@ DEFINE 'TCP minutely: RTT anomalies' AS
     "anomaly detected" AS desc,
     "${id}" AS bcn
   AND KEEP ALL
-  AFTER firing != COALESCE(previous.firing, false)
-  EVENT STARTING AT start;
+  AFTER firing != COALESCE(previous.firing, false);
 
 DEFINE 'TCP minutely: RD predictions' AS
   FROM 'TCP minutely'
   SELECT
     start,
+    start + avg_window AS stop,
     rd_avg,
     smooth(rd_avg) AS pred_0_rd_avg,
     fit(5, rd_avg) AS pred_1_rd_avg,
@@ -552,8 +547,7 @@ DEFINE 'TCP minutely: RD predictions' AS
      abs(pred_1_rd_avg - rd_avg) /
        max(abs pred_1_rd_avg, abs rd_avg) +
      abs(pred_0_rd_avg - rd_avg) /
-       max(abs pred_0_rd_avg, abs rd_avg)) / 4 ELSE 0 AS abnormality_rd_avg
-  EVENT STARTING AT start WITH DURATION avg_window;
+       max(abs pred_0_rd_avg, abs rd_avg)) / 4 ELSE 0 AS abnormality_rd_avg;
 
 DEFINE 'TCP minutely: RD anomalies' AS
   FROM 'TCP minutely: RD predictions'
@@ -569,13 +563,13 @@ DEFINE 'TCP minutely: RD anomalies' AS
     "anomaly detected" AS desc,
     "${id}" AS bcn
   AND KEEP ALL
-  AFTER firing != COALESCE(previous.firing, false)
-  EVENT STARTING AT start;
+  AFTER firing != COALESCE(previous.firing, false);
 
 DEFINE 'TCP minutely: DTT predictions' AS
   FROM 'TCP minutely'
   SELECT
     start,
+    start + avg_window AS stop,
     dtt_avg,
     smooth(dtt_avg) AS pred_0_dtt_avg,
     fit(5, dtt_avg) AS pred_1_dtt_avg,
@@ -588,8 +582,7 @@ DEFINE 'TCP minutely: DTT predictions' AS
      abs(pred_1_dtt_avg - dtt_avg) /
        max(abs pred_1_dtt_avg, abs dtt_avg) +
      abs(pred_0_dtt_avg - dtt_avg) /
-       max(abs pred_0_dtt_avg, abs dtt_avg)) / 4 ELSE 0 AS abnormality_dtt_avg
-  EVENT STARTING AT start WITH DURATION avg_window;
+       max(abs pred_0_dtt_avg, abs dtt_avg)) / 4 ELSE 0 AS abnormality_dtt_avg;
 
 DEFINE 'TCP minutely: DTT anomalies' AS
   FROM 'TCP minutely: DTT predictions'
@@ -605,5 +598,4 @@ DEFINE 'TCP minutely: DTT anomalies' AS
     "anomaly detected" AS desc,
     "${id}" AS bcn
   AND KEEP ALL
-  AFTER firing != COALESCE(previous.firing, false)
-  EVENT STARTING AT start;
+  AFTER firing != COALESCE(previous.firing, false);

@@ -20,12 +20,13 @@ DEFINE c2s AS
     ../../../csv/udp,
     ../../../csv/icmp,
     '../../../csv/other-ip'
+  MERGE TIMEOUT AFTER 30s
   WHERE
-    zone_client < zone_server OR
-    zone_client = zone_server AND
-    ip_client <= ip_server
+    start > merge.greatest.start - 3min AND
+    (zone_client < zone_server OR
+     zone_client = zone_server AND ip_client <= ip_server)
   SELECT
-    capture_begin, capture_end,
+    start, stop,
 
     zone_client AS zone_1, zone_server AS zone_2,
     vlan_client AS vlan_1, vlan_server AS vlan_2,
@@ -39,8 +40,7 @@ DEFINE c2s AS
 
     rtt_count_client AS rtt_count_1, rtt_count_server AS rtt_count_2,
     rtt_sum_client AS rtt_sum_1, rtt_sum_server AS rtt_sum_2,
-    rd_count_client AS rd_count_1, rd_count_server AS rd_count_2
-  EVENT STARTS AT capture_begin AND ENDS AT capture_end;
+    rd_count_client AS rd_count_1, rd_count_server AS rd_count_2;
 
 -- In the other way around for the other tuples:
 DEFINE s2c AS
@@ -49,12 +49,13 @@ DEFINE s2c AS
     ../../../csv/udp,
     ../../../csv/icmp,
     '../../../csv/other-ip'
+  MERGE TIMEOUT AFTER 30s
   WHERE
-    zone_server < zone_client OR
-    zone_server = zone_client AND
-    ip_server < ip_client
+    start > merge.greatest.start - 3min AND
+    (zone_server < zone_client OR
+     zone_server = zone_client AND ip_server < ip_client)
   SELECT
-    capture_begin, capture_end,
+    start, stop,
 
     zone_server AS zone_1, zone_client AS zone_2,
     vlan_server AS vlan_1, vlan_client AS vlan_2,
@@ -68,8 +69,7 @@ DEFINE s2c AS
 
     rtt_count_server AS rtt_count_1, rtt_count_client AS rtt_count_2,
     rtt_sum_server AS rtt_sum_1, rtt_sum_client AS rtt_sum_2,
-    rd_count_server AS rd_count_1, rd_count_client AS rd_count_2
-  EVENT STARTS AT capture_begin AND ENDS AT capture_end;
+    rd_count_server AS rd_count_1, rd_count_client AS rd_count_2;
 
 
 -- This node merely computes the number of unique host-host connections, and
@@ -82,7 +82,7 @@ DEFINE degraded AS
     *,
     REMEMBER globally (
       0.03, -- false positive rate
-      capture_begin, -- time
+      start, -- time
       3600, -- memory duration
       -- What to remember:
       -- Notice we want to avoid remembering a nullable value.
@@ -91,7 +91,7 @@ DEFINE degraded AS
     ) AS is_new_hosts_pair,
     -- nullifies the zones if not important:
     is_new_hosts_pair AND IS zone_1, zone_2 IN TOP top_size BY u32(is_new_hosts_pair)
-      IN THE LAST top_duration AT TIME capture_begin AS _important,
+      IN THE LAST top_duration AT TIME start AS _important,
     IF _important THEN zone_1 ELSE NULL AS zone_1,
     IF _important THEN zone_2 ELSE NULL AS zone_2;
 
@@ -110,8 +110,9 @@ AS
       "Approximate number of active hosts using that link.",
 
     -- Time info
-    min capture_begin AS _min_start,
-    (_min_start // obs_window) * obs_window AS capture_begin,
+    min start AS _min_start,
+    (_min_start // obs_window) * obs_window AS start,
+    out.start + obs_window AS stop,
 
     -- Volumetry 1 -> 2
     sum packets_1 / obs_window AS packets_per_secs_1
@@ -166,6 +167,5 @@ AS
     -- parents) ; meanwhile we could also do it using converting nodes but
     -- that will be verbose and less efficient.
 
-  COMMIT AFTER in.capture_begin > out.capture_begin + obs_window + 20s
-  EVENT STARTS AT capture_begin WITH DURATION obs_window
+  COMMIT AFTER in.start > out.start + obs_window + 20s
   FACTORS zone_1, zone_2;

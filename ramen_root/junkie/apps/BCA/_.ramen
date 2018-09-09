@@ -14,9 +14,9 @@ PARAMETERS
 DEFINE averages AS
   FROM ../../../csv/tcp
   SELECT
-    -- Key
-    (capture_begin // u32(avg_window)) * u32(avg_window)
-      AS start,
+    -- Time
+    (start// u32(avg_window)) * u32(avg_window) AS start,
+    out.start + avg_window AS stop,
     -- Traffic
     sum traffic_bytes_client / avg_window AS c2s_bytes_per_secs,
     sum traffic_bytes_server / avg_window AS s2c_bytes_per_secs,
@@ -133,15 +133,16 @@ DEFINE averages AS
     rd_count_server IS NOT NULL AND
     dtt_count_client IS NOT NULL AND
     dtt_count_server IS NOT NULL
-  GROUP BY capture_begin // u32(avg_window)
+  GROUP BY start // u32(avg_window)
   COMMIT AFTER
-    in.capture_begin > out.start + 2 * avg_window
-  EVENT STARTING AT start WITH DURATION avg_window;
+    in.start > out.start + 2 * avg_window;
 
 DEFINE percentiles AS
   FROM averages
   SELECT
-    min start, max start,
+    min start,
+    max start AS start,
+    out.start + obs_window AS stop,
     srtt_avg, crtt_avg, srt_avg, cdtt_avg, sdtt_avg,
     srtt_avg + crtt_avg + srt_avg + cdtt_avg + sdtt_avg AS _eurt_avg,
     perc percentile (
@@ -154,13 +155,12 @@ DEFINE percentiles AS
     COALESCE(_eurt, max_eurt) AS eurt
   COMMIT AFTER
     sum 1 >= u32(obs_window / avg_window) OR
-    in.start > out.max_start + 5
-  EVENT STARTING AT max_start WITH DURATION obs_window;
+    in.start > out.start + 5;
 
 DEFINE 'EURT too high' AS
   FROM percentiles
   SELECT
-    max_start,
+    start,
     hysteresis (eurt, max_eurt - max_eurt/10, max_eurt) AS firing
   NOTIFY "EURT to ${name} is too large" WITH
     "${firing}" AS firing,
@@ -171,8 +171,7 @@ DEFINE 'EURT too high' AS
     "${eurt}" AS values,
     "${max_eurt}" AS thresholds
   AND KEEP ALL
-  AFTER firing != COALESCE(previous.firing, false)
-  EVENT STARTING AT max_start;
+  AFTER firing != COALESCE(previous.firing, false);
 
 DEFINE 'averages: volume anomalies' AS
   FROM 'averages: volume predictions'
@@ -191,13 +190,13 @@ DEFINE 'averages: volume anomalies' AS
     "anomaly detected" AS desc,
     "${id}" AS bca
   AND KEEP ALL
-  AFTER firing != COALESCE(previous.firing, false)
-  EVENT STARTING AT start;
+  AFTER firing != COALESCE(previous.firing, false);
 
 DEFINE 'averages: volume predictions' AS
   FROM averages
   SELECT
     start,
+    start + avg_window AS stop,
     -- bytes_per_secs
     c2s_bytes_per_secs,
     smooth(c2s_bytes_per_secs) AS pred_0_c2s_bytes_per_secs,
@@ -251,8 +250,7 @@ DEFINE 'averages: volume predictions' AS
      abs(pred_1_s2c_packets_per_secs - s2c_packets_per_secs) /
        max(abs pred_1_s2c_packets_per_secs, abs s2c_packets_per_secs) +
      abs(pred_0_s2c_packets_per_secs - s2c_packets_per_secs) /
-       max(abs pred_0_s2c_packets_per_secs, abs s2c_packets_per_secs)) / 4 ELSE 0 AS abnormality_s2c_packets_per_secs
-  EVENT STARTING AT start WITH DURATION avg_window;
+       max(abs pred_0_s2c_packets_per_secs, abs s2c_packets_per_secs)) / 4 ELSE 0 AS abnormality_s2c_packets_per_secs;
 
 DEFINE 'averages: retransmissions anomalies' AS
   FROM 'averages: retransmissions predictions'
@@ -271,13 +269,13 @@ DEFINE 'averages: retransmissions anomalies' AS
     "anomaly detected" AS desc,
     "${id}" AS bca
   AND KEEP ALL
-  AFTER firing != COALESCE(previous.firing, false)
-  EVENT STARTING AT start;
+  AFTER firing != COALESCE(previous.firing, false);
 
 DEFINE 'averages: retransmissions predictions' AS
   FROM averages
   SELECT
     start,
+    start + avg_window AS stop,
     -- retrans_bytes
     c2s_retrans_bytes_per_secs,
     smooth(c2s_retrans_bytes_per_secs) AS pred_0_c2s_retrans_bytes_per_secs,
@@ -331,8 +329,7 @@ DEFINE 'averages: retransmissions predictions' AS
      abs(pred_1_s2c_dupacks_per_secs - s2c_dupacks_per_secs) /
        max(abs pred_1_s2c_dupacks_per_secs, abs s2c_dupacks_per_secs) +
      abs(pred_0_s2c_dupacks_per_secs - s2c_dupacks_per_secs) /
-       max(abs pred_0_s2c_dupacks_per_secs, abs s2c_dupacks_per_secs)) / 4 ELSE 0 AS abnormality_s2c_dupacks_per_secs
-  EVENT STARTING AT start WITH DURATION avg_window;
+       max(abs pred_0_s2c_dupacks_per_secs, abs s2c_dupacks_per_secs)) / 4 ELSE 0 AS abnormality_s2c_dupacks_per_secs;
 
 DEFINE 'averages: connections anomalies' AS
   FROM 'averages: connections predictions'
@@ -351,13 +348,13 @@ DEFINE 'averages: connections anomalies' AS
     "anomaly detected" AS desc,
     "${id}" AS bca
   AND KEEP ALL
-  AFTER firing != COALESCE(previous.firing, false)
-  EVENT STARTING AT start;
+  AFTER firing != COALESCE(previous.firing, false);
 
 DEFINE 'averages: connections predictions' AS
   FROM averages
   SELECT
     start,
+    start + avg_window AS stop,
     -- syns_per_secs
     c2s_syns_per_secs,
     smooth(c2s_syns_per_secs) AS pred_0_c2s_syns_per_secs,
@@ -413,8 +410,7 @@ DEFINE 'averages: connections predictions' AS
      abs(pred_1_ct_avg - ct_avg) /
        max(abs pred_1_ct_avg, abs ct_avg) +
      abs(pred_0_ct_avg - ct_avg) /
-       max(abs pred_0_ct_avg, abs ct_avg)) / 4 ELSE 0 AS abnormality_ct_avg
-  EVENT STARTING AT start WITH DURATION avg_window;
+       max(abs pred_0_ct_avg, abs ct_avg)) / 4 ELSE 0 AS abnormality_ct_avg;
 
 DEFINE 'averages: 0-windows anomalies' AS
   FROM 'averages: 0-windows predictions'
@@ -430,13 +426,13 @@ DEFINE 'averages: 0-windows anomalies' AS
     "anomaly detected" AS desc,
     "${id}" AS bca
   AND KEEP ALL
-  AFTER firing != COALESCE(previous.firing, false)
-  EVENT STARTING AT start;
+  AFTER firing != COALESCE(previous.firing, false);
 
 DEFINE 'averages: 0-windows predictions' AS
   FROM averages
   SELECT
     start,
+    start + avg_window AS stop,
     -- 0wins_per_secs
     c2s_0wins_per_secs,
     smooth(c2s_0wins_per_secs) AS pred_0_c2s_0wins_per_secs,
@@ -463,8 +459,7 @@ DEFINE 'averages: 0-windows predictions' AS
      abs(pred_1_s2c_0wins_per_secs - s2c_0wins_per_secs) /
        max(abs pred_1_s2c_0wins_per_secs, abs s2c_0wins_per_secs) +
      abs(pred_0_s2c_0wins_per_secs - s2c_0wins_per_secs) /
-       max(abs pred_0_s2c_0wins_per_secs, abs s2c_0wins_per_secs)) / 4 ELSE 0 AS abnormality_s2c_0wins_per_secs
-  EVENT STARTING AT start WITH DURATION avg_window;
+       max(abs pred_0_s2c_0wins_per_secs, abs s2c_0wins_per_secs)) / 4 ELSE 0 AS abnormality_s2c_0wins_per_secs;
 
 DEFINE 'averages: SRT anomalies' AS
   FROM 'averages: SRT predictions'
@@ -480,13 +475,13 @@ DEFINE 'averages: SRT anomalies' AS
     "anomaly detected" AS desc,
     "${id}" AS bca
   AND KEEP ALL
-  AFTER firing != COALESCE(previous.firing, false)
-  EVENT STARTING AT start;
+  AFTER firing != COALESCE(previous.firing, false);
 
 DEFINE 'averages: SRT predictions' AS
   FROM averages
   SELECT
     start,
+    start + avg_window AS stop,
     srt_avg,
     smooth(srt_avg) AS pred_0_srt_avg,
     fit(5, srt_avg) AS pred_1_srt_avg,
@@ -499,8 +494,7 @@ DEFINE 'averages: SRT predictions' AS
      abs(pred_1_srt_avg - srt_avg) /
        max(abs pred_1_srt_avg, abs srt_avg) +
      abs(pred_0_srt_avg - srt_avg) /
-       max(abs pred_0_srt_avg, abs srt_avg)) / 4 ELSE 0 AS abnormality_srt_avg
-  EVENT STARTING AT start WITH DURATION avg_window;
+       max(abs pred_0_srt_avg, abs srt_avg)) / 4 ELSE 0 AS abnormality_srt_avg;
 
 DEFINE 'averages: RTT anomalies' AS
   FROM 'averages: RTT predictions'
@@ -517,13 +511,13 @@ DEFINE 'averages: RTT anomalies' AS
     "anomaly detected" AS desc,
     "${id}" AS bca
   AND KEEP ALL
-  AFTER firing != COALESCE(previous.firing, false)
-  EVENT STARTING AT start;
+  AFTER firing != COALESCE(previous.firing, false);
 
 DEFINE 'averages: RTT predictions' AS
   FROM averages
   SELECT
     start,
+    start + avg_window AS stop,
     -- rtt_avg
     crtt_avg,
     smooth(crtt_avg) AS pred_0_crtt_avg,
@@ -550,8 +544,7 @@ DEFINE 'averages: RTT predictions' AS
      abs(pred_1_srtt_avg - srtt_avg) /
        max(abs pred_1_srtt_avg, abs srtt_avg) +
      abs(pred_0_srtt_avg - srtt_avg) /
-       max(abs pred_0_srtt_avg, abs srtt_avg)) / 4 ELSE 0 AS abnormality_srtt_avg
-  EVENT STARTING AT start WITH DURATION avg_window;
+       max(abs pred_0_srtt_avg, abs srtt_avg)) / 4 ELSE 0 AS abnormality_srtt_avg;
 
 DEFINE 'averages: RD anomalies' AS
   FROM 'averages: RD predictions'
@@ -568,13 +561,13 @@ DEFINE 'averages: RD anomalies' AS
     "anomaly detected" AS desc,
     "${id}" AS bca
   AND KEEP ALL
-  AFTER firing != COALESCE(previous.firing, false)
-  EVENT STARTING AT start;
+  AFTER firing != COALESCE(previous.firing, false);
 
 DEFINE 'averages: RD predictions' AS
   FROM averages
   SELECT
     start,
+    start + avg_window AS stop,
     -- rd_avg
     crd_avg,
     smooth(crd_avg) AS pred_0_crd_avg,
@@ -601,8 +594,7 @@ DEFINE 'averages: RD predictions' AS
      abs(pred_1_srd_avg - srd_avg) /
        max(abs pred_1_srd_avg, abs srd_avg) +
      abs(pred_0_srd_avg - srd_avg) /
-       max(abs pred_0_srd_avg, abs srd_avg)) / 4 ELSE 0 AS abnormality_srd_avg
-  EVENT STARTING AT start WITH DURATION avg_window;
+       max(abs pred_0_srd_avg, abs srd_avg)) / 4 ELSE 0 AS abnormality_srd_avg;
 
 DEFINE 'averages: DTT anomalies' AS
   FROM 'averages: DTT predictions'
@@ -619,13 +611,13 @@ DEFINE 'averages: DTT anomalies' AS
     "anomaly detected" AS desc,
     "${id}" AS bca
   AND KEEP ALL
-  AFTER firing != COALESCE(previous.firing, false)
-  EVENT STARTING AT start;
+  AFTER firing != COALESCE(previous.firing, false);
 
 DEFINE 'averages: DTT predictions' AS
   FROM averages
   SELECT
     start,
+    start + avg_window AS stop,
     -- dtt_avg
     cdtt_avg,
     smooth(cdtt_avg) AS pred_0_cdtt_avg,
@@ -652,5 +644,4 @@ DEFINE 'averages: DTT predictions' AS
      abs(pred_1_sdtt_avg - sdtt_avg) /
        max(abs pred_1_sdtt_avg, abs sdtt_avg) +
      abs(pred_0_sdtt_avg - sdtt_avg) /
-       max(abs pred_0_sdtt_avg, abs sdtt_avg)) / 4 ELSE 0 AS abnormality_sdtt_avg
-  EVENT STARTING AT start WITH DURATION avg_window;
+       max(abs pred_0_sdtt_avg, abs sdtt_avg)) / 4 ELSE 0 AS abnormality_sdtt_avg;

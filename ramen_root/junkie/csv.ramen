@@ -101,8 +101,8 @@ DEFINE tcp
 AS
   FROM tcp_raw
   SELECT
-    (capture_begin / 1e6) {seconds} AS capture_begin,
-    (capture_end / 1e6) {seconds} AS capture_end,
+    (capture_begin / 1e6) {seconds} AS start,
+    (capture_end / 1e6) {seconds} AS stop,
     COALESCE(ip(ip4_client), ip(u128(ip6_client)), 0.0.0.0) AS ip_client,
     COALESCE(ip(ip4_server), ip(u128(ip6_server)), 0.0.0.0) AS ip_server,
     COALESCE(ip(ip4_external), ip(u128(ip6_external)), 0.0.0.0) AS ip_external,
@@ -124,13 +124,11 @@ AS
     (dtt_square_sum_client / 1e12) {seconds^2} AS dtt_square_sum_client,
     (dtt_sum_server / 1e6) {seconds} AS dtt_sum_server,
     (dtt_square_sum_server / 1e12) {seconds^2} AS dtt_square_sum_server,
-    * -- -ip4_client -ip6_client etc
-  EVENT STARTING AT capture_begin
-    AND STOPPING AT capture_end;
+    *; -- -ip4_client -ip6_client etc
 
 DEFINE 'c2s tcp' AS
   FROM tcp SELECT
-    poller, capture_begin, capture_end,
+    poller, start, stop,
     device_client AS device_src,
     vlan_client AS vlan_src,
     mac_client AS mac_src,
@@ -170,7 +168,7 @@ DEFINE 'c2s tcp' AS
 
 DEFINE 's2c tcp' AS
   FROM tcp SELECT
-    poller, capture_begin, capture_end,
+    poller, start, stop,
     device_server AS device_src,
     vlan_server AS vlan_src,
     mac_server AS mac_src,
@@ -254,8 +252,8 @@ DEFINE udp
 AS
   FROM udp_raw
   SELECT
-    (capture_begin / 1e6) {seconds} AS capture_begin,
-    (capture_end / 1e6) {seconds} AS capture_end,
+    (capture_begin / 1e6) {seconds} AS start,
+    (capture_end / 1e6) {seconds} AS stop,
     COALESCE(ip(ip4_client), ip(u128(ip6_client)), 0.0.0.0) AS ip_client,
     COALESCE(ip(ip4_server), ip(u128(ip6_server)), 0.0.0.0) AS ip_server,
     COALESCE(ip(ip4_external), ip(u128(ip6_external)), 0.0.0.0) AS ip_external,
@@ -272,13 +270,11 @@ AS
     0. {seconds} AS rtt_sum_server,
     u32?(0) {packets} AS rd_count_client,
     u32?(0) {packets} AS rd_count_server,
-    *
-  EVENT STARTING AT capture_begin
-    AND STOPPING AT capture_end;
+    *;
 
 DEFINE 'c2s udp' AS
   FROM udp SELECT
-    poller, capture_begin, capture_end,
+    poller, start, stop,
     device_client AS device_src,
     vlan_client AS vlan_src,
     mac_client AS mac_src,
@@ -302,7 +298,7 @@ DEFINE 'c2s udp' AS
 
 DEFINE 's2c udp' AS
   FROM udp SELECT
-    poller, capture_begin, capture_end,
+    poller, start, stop,
     device_server AS device_src,
     vlan_server AS vlan_src,
     mac_server AS mac_src,
@@ -375,8 +371,8 @@ DEFINE icmp
 AS
   FROM icmp_raw
   SELECT
-    (capture_begin / 1e6) {seconds} AS capture_begin,
-    (capture_end / 1e6) {seconds} AS capture_end,
+    (capture_begin / 1e6) {seconds} AS start,
+    (capture_end / 1e6) {seconds} AS stop,
     COALESCE(ip(ip4_client), ip(u128(ip6_client)), 0.0.0.0) AS ip_client,
     COALESCE(ip(ip4_server), ip(u128(ip6_server)), 0.0.0.0) AS ip_server,
     COALESCE(ip(ip4_external), ip(u128(ip6_external)), 0.0.0.0) AS ip_external,
@@ -395,13 +391,11 @@ AS
     0. {seconds} AS rtt_sum_server,
     u32?(0) {packets} AS rd_count_client,
     u32?(0) {packets} AS rd_count_server,
-    *
-  EVENT STARTING AT capture_begin
-    AND STOPPING AT capture_end;
+    *;
 
 DEFINE 'c2s icmp' AS
   FROM icmp SELECT
-    poller, capture_begin, capture_end,
+    poller, start, stop,
     device_client AS device_src,
     vlan_client AS vlan_src,
     mac_client AS mac_src,
@@ -422,7 +416,7 @@ DEFINE 'c2s icmp' AS
 
 DEFINE 's2c icmp' AS
   FROM icmp SELECT
-    poller, capture_begin, capture_end,
+    poller, start, stop,
     device_server AS device_src,
     vlan_server AS vlan_src,
     mac_server AS mac_src,
@@ -480,8 +474,8 @@ DEFINE 'other-ip'
 AS
   FROM 'other-ip_raw'
   SELECT
-    (capture_begin / 1e6) {seconds} AS capture_begin,
-    (capture_end / 1e6) {seconds} AS capture_end,
+    (capture_begin / 1e6) {seconds} AS start,
+    (capture_end / 1e6) {seconds} AS stop,
     COALESCE(ip(ip4_client), ip(u128(ip6_client)), 0.0.0.0) AS ip_client,
     COALESCE(ip(ip4_server), ip(u128(ip6_server)), 0.0.0.0) AS ip_server,
     eth(mac_client) AS mac_client,
@@ -496,13 +490,11 @@ AS
     0. {seconds} AS rtt_sum_server,
     u32?(0) {packets} AS rd_count_client,
     u32?(0) {packets} AS rd_count_server,
-    *
-  EVENT STARTING AT capture_begin
-    AND STOPPING AT capture_end;
+    *;
 
 DEFINE 'c2s other-ip' AS
   FROM 'other-ip' SELECT
-    poller, capture_begin, capture_end,
+    poller, start, stop,
     device_client AS device_src,
     vlan_client AS vlan_src,
     mac_client AS mac_src,
@@ -522,7 +514,7 @@ DEFINE 'c2s other-ip' AS
 
 DEFINE 's2c other-ip' AS
   FROM 'other-ip' SELECT
-    poller, capture_begin, capture_end,
+    poller, start, stop,
     device_server AS device_src,
     vlan_server AS vlan_src,
     mac_server AS mac_src,
@@ -573,21 +565,19 @@ DEFINE 'non-ip'
 AS
   FROM 'non-ip_raw'
   SELECT
-    (capture_begin / 1e6) {seconds} AS capture_begin,
-    (capture_end / 1e6) {seconds} AS capture_end,
+    (capture_begin / 1e6) {seconds} AS start,
+    (capture_end / 1e6) {seconds} AS stop,
     eth(mac_client) AS mac_client,
     eth(mac_server) AS mac_server,
     traffic_packets_client AS payload_packets_client,
     traffic_packets_server AS payload_packets_server,
     traffic_bytes_client AS payload_bytes_client,
     traffic_bytes_server AS payload_bytes_server,
-    *
-  EVENT STARTING AT capture_begin
-    AND STOPPING AT capture_end;
+    *;
 
 DEFINE 'c2s non-ip' AS
   FROM 'non-ip' SELECT
-    poller, capture_begin, capture_end,
+    poller, start, stop,
     device_client AS device_src,
     vlan_client AS vlan_src,
     mac_client AS mac_src,
@@ -605,7 +595,7 @@ DEFINE 'c2s non-ip' AS
 
 DEFINE 's2c non-ip' AS
   FROM 'non-ip' SELECT
-    poller, capture_begin, capture_end,
+    poller, start, stop,
     device_server AS device_src,
     vlan_server AS vlan_src,
     mac_server AS mac_src,
@@ -665,17 +655,15 @@ DEFINE dns
 AS
   FROM dns_raw
   SELECT
-    (capture_begin / 1e6) {seconds} AS capture_begin,
-    (capture_end / 1e6) {seconds} AS capture_end,
+    (capture_begin / 1e6) {seconds} AS start,
+    (capture_end / 1e6) {seconds} AS stop,
     COALESCE(ip(ip4_client), ip(u128(ip6_client)), 0.0.0.0) AS ip_client,
     COALESCE(ip(ip4_server), ip(u128(ip6_server)), 0.0.0.0) AS ip_server,
     eth(mac_client) AS mac_client,
     eth(mac_server) AS mac_server,
     (rt_sum_server / 1e6) {seconds} AS rt_sum_server,
     (rt_square_sum_server / 1e12) {seconds^2} AS rt_square_sum_server,
-    *
-  EVENT STARTING AT capture_begin
-    AND STOPPING AT capture_end;
+    *;
 
 DEFINE http_raw AS
   READ AND DELETE
@@ -762,8 +750,8 @@ DEFINE http
 AS
   FROM http_raw
   SELECT
-    (capture_begin / 1e6) {seconds} AS capture_begin,
-    (capture_end / 1e6) {seconds} AS capture_end,
+    (capture_begin / 1e6) {seconds} AS start,
+    (capture_end / 1e6) {seconds} AS stop,
     COALESCE(ip(ip4_client), ip(u128(ip6_client)), 0.0.0.0) AS ip_client,
     COALESCE(ip(ip4_server), ip(u128(ip6_server)), 0.0.0.0) AS ip_server,
     COALESCE(ip(ip4_orig_client), ip(u128(ip6_orig_client)), 0.0.0.0) AS ip_orig_client,
@@ -783,9 +771,7 @@ AS
     (dtt_square_sum_client / 1e12) {seconds^2} AS dtt_square_sum_client,
     (dtt_sum_server / 1e6) {seconds} AS dtt_sum_server,
     (dtt_square_sum_server / 1e12) {seconds^2} AS dtt_square_sum_server,
-    *
-  EVENT STARTING AT capture_begin
-    AND STOPPING AT capture_end;
+    *;
 
 DEFINE citrix_raw AS
   READ AND DELETE
@@ -840,8 +826,8 @@ DEFINE citrix
 AS
   FROM citrix_raw
   SELECT
-    (capture_begin / 1e6) {seconds} AS capture_begin,
-    (capture_end / 1e6) {seconds} AS capture_end,
+    (capture_begin / 1e6) {seconds} AS start,
+    (capture_end / 1e6) {seconds} AS stop,
     COALESCE(ip(ip4_client), ip(u128(ip6_client)), 0.0.0.0) AS ip_client,
     COALESCE(ip(ip4_server), ip(u128(ip6_server)), 0.0.0.0) AS ip_server,
     eth(mac_client) AS mac_client,
@@ -852,9 +838,7 @@ AS
     (dtt_square_sum_client / 1e12) {seconds^2} AS dtt_square_sum_client,
     (dtt_sum_server / 1e6) {seconds} AS dtt_sum_server,
     (dtt_square_sum_server / 1e12) {seconds^2} AS dtt_square_sum_server,
-    *
-  EVENT STARTING AT capture_begin
-    AND STOPPING AT capture_end;
+    *;
 
 DEFINE citrix_chanless_raw AS
   READ AND DELETE
@@ -919,8 +903,8 @@ DEFINE citrix_chanless
 AS
   FROM citrix_chanless_raw
   SELECT
-    (capture_begin / 1e6) {seconds} AS capture_begin,
-    (capture_end / 1e6) {seconds} AS capture_end,
+    (capture_begin / 1e6) {seconds} AS start,
+    (capture_end / 1e6) {seconds} AS stop,
     COALESCE(ip(ip4_client), ip(u128(ip6_client)), 0.0.0.0) AS ip_client,
     COALESCE(ip(ip4_server), ip(u128(ip6_server)), 0.0.0.0) AS ip_server,
     eth(mac_client) AS mac_client,
@@ -935,9 +919,7 @@ AS
     (login_time_square_sum / 1e12) {seconds^2} AS login_time_square_sum,
     (launch_time_sum / 1e6) {seconds} AS launch_time_sum,
     (launch_time_square_sum / 1e12) {seconds^2} AS launch_time_square_sum,
-    *
-  EVENT STARTING AT capture_begin
-    AND STOPPING AT capture_end;
+    *;
 
 DEFINE smb_raw AS
   READ AND DELETE
@@ -1008,8 +990,8 @@ DEFINE smb
 AS
   FROM smb_raw
   SELECT
-    (capture_begin / 1e6) {seconds} AS capture_begin,
-    (capture_end / 1e6) {seconds} AS capture_end,
+    (capture_begin / 1e6) {seconds} AS start,
+    (capture_end / 1e6) {seconds} AS stop,
     COALESCE(ip(ip4_client), ip(u128(ip6_client)), 0.0.0.0) AS ip_client,
     COALESCE(ip(ip4_server), ip(u128(ip6_server)), 0.0.0.0) AS ip_server,
     eth(mac_client) AS mac_client,
@@ -1024,9 +1006,7 @@ AS
     (dtt_square_sum_client / 1e12) {seconds^2} AS dtt_square_sum_client,
     (dtt_sum_server / 1e6) {seconds} AS dtt_sum_server,
     (dtt_square_sum_server / 1e12) {seconds^2} AS dtt_square_sum_server,
-    *
-  EVENT STARTING AT capture_begin
-    AND STOPPING AT capture_end;
+    *;
 
 DEFINE sql_raw AS
   READ AND DELETE
@@ -1088,8 +1068,8 @@ DEFINE sql
 AS
   FROM sql_raw
   SELECT
-    (capture_begin / 1e6) {seconds} AS capture_begin,
-    (capture_end / 1e6) {seconds} AS capture_end,
+    (capture_begin / 1e6) {seconds} AS start,
+    (capture_end / 1e6) {seconds} AS stop,
     COALESCE(ip(ip4_client), ip(u128(ip6_client)), 0.0.0.0) AS ip_client,
     COALESCE(ip(ip4_server), ip(u128(ip6_server)), 0.0.0.0) AS ip_server,
     eth(mac_client) AS mac_client,
@@ -1104,9 +1084,7 @@ AS
     (dtt_square_sum_client / 1e12) {seconds^2} AS dtt_square_sum_client,
     (dtt_sum_server / 1e6) {seconds} AS dtt_sum_server,
     (dtt_square_sum_server / 1e12) {seconds^2} AS dtt_square_sum_server,
-    *
-  EVENT STARTING AT capture_begin
-    AND STOPPING AT capture_end;
+    *;
 
 DEFINE voip_raw AS
   READ AND DELETE
@@ -1205,8 +1183,8 @@ DEFINE voip
 AS
   FROM voip_raw
   SELECT
-    (capture_begin / 1e6) {seconds} AS capture_begin,
-    (capture_end / 1e6) {seconds} AS capture_end,
+    (capture_begin / 1e6) {seconds} AS start,
+    (capture_end / 1e6) {seconds} AS stop,
     COALESCE(ip(ip4_client), ip(u128(ip6_client)), 0.0.0.0) AS ip_client,
     COALESCE(ip(ip4_server), ip(u128(ip6_server)), 0.0.0.0) AS ip_server,
     eth(mac_client) AS mac_client,
@@ -1233,6 +1211,4 @@ AS
     (sign_rd_square_sum_client / 1e12) {seconds^2} AS sign_rd_square_sum_client,
     (sign_rd_sum_server / 1e6) {seconds} AS sign_rd_sum_server,
     (sign_rd_square_sum_server / 1e12) {seconds^2} AS sign_rd_square_sum_server,
-    *
-  EVENT STARTING AT capture_begin
-    AND STOPPING AT capture_end;
+    *;

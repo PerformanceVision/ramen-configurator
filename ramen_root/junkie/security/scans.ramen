@@ -4,30 +4,31 @@ AS
   FROM
     ../../csv/tcp,
     ../../csv/udp
+  MERGE TIMEOUT AFTER 30s
+  WHERE start > merge.greatest.start - 3min
   WHEN
     NOT remember globally (
-      0.1, capture_begin, 3600,
+      0.1, start, 3600,
       -- We do not take into account IP proto, so a ping on a TCP port
       -- grants you a free ping on the same UDP port.
       ip_client, ip_server, port_server) AND
     IS ip_client, ip_server IN TOP 100
   SELECT
-    min capture_begin AS start,
-    max capture_end AS end,
+    min start AS start,
+    max stop AS stop,
     ip_client,
     ip_server,
     sum 1 as port_count
       "Approximate number of ports probed by the client to this server"
-  GROUP BY capture_begin // 3600, ip_client, ip_server
-  COMMIT AFTER in.capture_begin > out.start + 120s
-  EVENT STARTS AT start AND ENDS AT end;
+  GROUP BY start // 3600, ip_client, ip_server
+  COMMIT AFTER in.start > out.start + 120s;
 
 DEFINE 'port scan alert' AS
   FROM 'top port scans'
   WHEN port_count > 30
   NOTIFY "Port-Scan from ${ip_client} to ${ip_server}" WITH
     reldiff(port_count, 30) AS certainty,
-    "${ip_client} has probed at least ${port_count} ports of ${ip_server} from ${start} to ${end}'" AS desc,
+    "${ip_client} has probed at least ${port_count} ports of ${ip_server} from ${start} to ${stop}'" AS desc,
     "${ip_client},${ip_server}" AS ips,
     "${port_count}" AS values,
     "30" AS thresholds;
@@ -40,22 +41,23 @@ AS
     ../../csv/udp,
     ../../csv/icmp,
     '../../csv/other-ip'
+  MERGE TIMEOUT AFTER 30s
   WHEN
+    start > merge.greatest.start - 3min AND
     NOT remember globally (
-      0.1, capture_begin, 3600,
+      0.1, start, 3600,
       -- An IP scanner could use varying proto/port to detect host
       -- presence so we just care about src and dst here:
       ip_client, ip_server) AND
     IS ip_client IN TOP 100
   SELECT
-    min capture_begin AS start,
-    max capture_end AS end,
+    min start AS start,
+    max stop AS stop,
     ip_client,
     sum 1 as ip_count
       "Approximate number of hosts probed by this client."
-  GROUP BY capture_begin // 3600, ip_client
-  COMMIT AFTER in.capture_begin > start + 120s
-  EVENT STARTS AT start AND ENDS AT end;
+  GROUP BY start // 3600, ip_client
+  COMMIT AFTER in.start > start + 120s;
 
 DEFINE 'ip_scan_alert' AS
   FROM 'top ip scans'

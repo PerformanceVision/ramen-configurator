@@ -10,29 +10,29 @@ AS
     ../../csv/udp,
     ../../csv/icmp,
     '../../csv/other-ip'
+  MERGE TIMEOUT AFTER 30s
+  WHERE start > merge.greatest.start - 3min
   SELECT
-    (capture_begin // avg_win) * avg_win AS start,
-    min capture_begin, max capture_end,
+    (start // avg_win) * avg_win AS start,
+    out.start + avg_win AS stop,
+    min start, max stop,
     -- Traffic (of any kind) we haven't seen in the last 3600 secs.
     -- Increase the estimate of *not* remembering since we ask for 10% of
     -- false positives.
     sum (1.1 * float(not remember (
            0.1, -- 10% of false positives
-           capture_begin, 3600,
+           start, 3600,
            ip_client, ip_server))) / 100
         AS nb_new_cnxs_per_secs
         "Approximate number of newly communicating hosts (as in: hosts that were not communicating for at least one hour)",
     -- Clients we haven't seen in the last 3600 secs.
     sum (1.1 * float(not remember (
-           0.1,
-           capture_begin, 3600,
-           ip_client))) / 100
+           0.1, start, 3600, ip_client))) / 100
         AS nb_new_clients_per_secs
         "Approximate number of new clients (as in: hosts that were not clients of anything for at least one hour)"
-  GROUP BY capture_begin // avg_win
+  GROUP BY start // avg_win
   COMMIT AFTER
-    in.capture_begin > out.min_capture_begin + 2 * u64(avg_win)
-  EVENT STARTING AT start WITH DURATION avg_win;
+    in.start > out.min_start  + 2 * u64(avg_win);
 
 DEFINE 'new peers: DDoS predictions' AS
   FROM 'new peers'

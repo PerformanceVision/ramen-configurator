@@ -13,8 +13,7 @@ PARAMETERS
 DEFINE tcp_services AS
   FROM ../../../csv/tcp
   SELECT
-    capture_begin,
-    capture_end,
+    start, stop,
     COALESCE(vlan_server, vlan_client, 0) AS vlan,
     ip_client, ip_server, port_server,
     "TCP" as protocol,
@@ -24,14 +23,12 @@ DEFINE tcp_services AS
     rtt_count_client, rtt_count_server,
     rtt_sum_client, rtt_sum_server,
     rd_count_client, rd_count_server,
-    rt_count_server, rt_sum_server
-  EVENT STARTS AT capture_begin AND ENDS AT capture_end;
+    rt_count_server, rt_sum_server;
 
 DEFINE udp_services AS
   FROM ../../../csv/udp
   SELECT
-    capture_begin,
-    capture_end,
+    start, stop,
     COALESCE(vlan_server, vlan_client, 0) AS vlan,
     ip_client, ip_server, port_server,
     "UDP" as protocol,
@@ -42,25 +39,26 @@ DEFINE udp_services AS
     rtt_sum_client, rtt_sum_server,
     rd_count_client, rd_count_server,
     u32(NULL) {packets} AS rt_count_server,
-    0. {seconds} AS rt_sum_server
-  EVENT STARTS AT capture_begin AND ENDS AT capture_end;
+    0. {seconds} AS rt_sum_server;
 
 -- Merge all possible CSV together
 DEFINE degraded AS
   FROM
     tcp_services, udp_services
+  MERGE TIMEOUT AFTER 30s
+  WHERE start > merge.greatest.start - 3min
   SELECT
     *,
     REMEMBER globally (
       0.03, -- false positive rate
-      capture_begin, -- time
+      start, -- time
       3600, -- memory duration
       -- What to remember:
       vlan, ip_server, port_server, protocol, ip_client
     ) AS is_new_client,
     -- nullifies the service identity if not important:
     is_new_client AND IS vlan, ip_server, port_server, protocol IN TOP top_size BY u32(is_new_client)
-      IN THE LAST top_duration AT TIME capture_begin AS _important,
+      IN THE LAST top_duration AT TIME start AS _important,
     -- Note: This would fail to typecheck with the internal typechecker
     -- without the casts around the NULLs because of a bug in CASE/NULL:
     -- NULL is not constrained and will eventually be assigned the bool type.
@@ -85,8 +83,9 @@ AS
       "Approximate number of distinct clients for this service.",
 
     -- Time info
-    min capture_begin AS _min_start,
-    (_min_start // obs_window) * obs_window AS capture_begin,
+    min start AS _min_start,
+    (_min_start // obs_window) * obs_window AS start,
+    out.start + obs_window AS stop,
 
     -- Volumetry
     sum traffic_packets_client AS packets_from_client,
@@ -142,6 +141,5 @@ AS
     min _avg_rr_from_server,
     max _avg_rr_from_server
 
-  COMMIT AFTER in.capture_begin > out.capture_begin + obs_window + 20s
-  EVENT STARTS AT capture_begin WITH DURATION obs_window
+  COMMIT AFTER in.start > out.start + obs_window + 20s
   FACTORS vlan, port, protocol;
