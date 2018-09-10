@@ -24,7 +24,7 @@ let run_program debug ramen_cmd root_dir persist_dir ?as_ fname params =
       (shell_quote ramen_cmd)
       (if debug then " --debug" else "")
       (shell_quote persist_dir)
-      (Option.map_default (fun as_ -> " -o "^ shell_quote as_) "" as_)
+      (Option.map_default (fun as_ -> " --as "^ shell_quote as_) "" as_)
       (List.print ~first:"" ~last:"" ~sep:" " (fun oc (n, v) ->
         Printf.fprintf oc "-p %s" (shell_quote (n ^"="^ v)))) params
       (shell_quote fname) |>
