@@ -83,7 +83,7 @@ let kill ramen_cmd persist_dir prog =
     run_cmd |> ignore
 
 let sync_programs db debug ramen_cmd root_dir persist_dir uncompress
-                  csv_prefix with_bcns with_bcas =
+                  csv_prefix csv_delete with_bcns with_bcas =
   let no_params = Hashtbl.create 0 in
   let old_running = get_running ramen_cmd persist_dir "junkie/*" in
   let new_running = ref Set.String.empty in
@@ -95,6 +95,7 @@ let sync_programs db debug ramen_cmd root_dir persist_dir uncompress
     let h = Hashtbl.create 2 in
     Hashtbl.add h ""
       [ "csv_prefix", dquote csv_prefix ;
+        "csv_delete", string_of_bool csv_delete ;
         "csv_compressed", string_of_bool uncompress ] ;
     h in
   comp "junkie/csv" params ;
@@ -253,7 +254,7 @@ let sync_notif_conf =
       prev_cmds := Some cmds)
 
 let start debug monitor ramen_cmd root_dir persist_dir db_name
-          uncompress csv_prefix
+          uncompress csv_prefix csv_delete
           with_bcns with_bcas notif_conf_file dry_run_ =
   logger := make_logger debug ;
   dry_run := dry_run_ ;
@@ -261,7 +262,7 @@ let start debug monitor ramen_cmd root_dir persist_dir db_name
   let db = get_db db_name in
   let update_bcs () =
     sync_programs db debug ramen_cmd root_dir persist_dir uncompress
-                  csv_prefix with_bcns with_bcas
+                  csv_prefix csv_delete with_bcns with_bcas
   and update_notif_conf () =
     if notif_conf_file <> "" then
       sync_notif_conf db notif_conf_file
@@ -322,6 +323,11 @@ let csv_prefix =
                    [ "csv" ] in
   Arg.(required (opt (some string) None i))
 
+let csv_delete =
+  let i = Arg.info ~doc:"Delete CSV files once injected"
+                   [ "delete" ] in
+  Arg.(value (flag i))
+
 let with_bcns =
   let i = Arg.info ~doc:"Also output the program with BCN configuration"
                    [ "with-bcns" ; "with-bcn" ; "bcns" ; "bcn" ] in
@@ -356,6 +362,7 @@ let start_cmd =
       $ db_name
       $ uncompress_opt
       $ csv_prefix
+      $ csv_delete
       $ with_bcns
       $ with_bcas
       $ notif_conf_file
