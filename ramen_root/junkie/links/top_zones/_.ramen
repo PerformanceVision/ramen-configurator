@@ -20,7 +20,7 @@ DEFINE c2s AS
     ../../../csv/udp,
     ../../../csv/icmp,
     '../../../csv/other-ip'
-  MERGE TIMEOUT AFTER 30s
+  MERGE TIMEOUT AFTER 5s
   WHERE
     start > merge.greatest.start - 3min AND
     (zone_client < zone_server OR
@@ -49,7 +49,7 @@ DEFINE s2c AS
     ../../../csv/udp,
     ../../../csv/icmp,
     '../../../csv/other-ip'
-  MERGE TIMEOUT AFTER 30s
+  MERGE TIMEOUT AFTER 5s
   WHERE
     start > merge.greatest.start - 3min AND
     (zone_server < zone_client OR

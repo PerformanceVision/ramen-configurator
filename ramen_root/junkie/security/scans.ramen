@@ -4,7 +4,7 @@ AS
   FROM
     ../../csv/tcp,
     ../../csv/udp
-  MERGE TIMEOUT AFTER 30s
+  MERGE TIMEOUT AFTER 5s
   WHERE start > merge.greatest.start - 3min
   WHEN
     NOT remember globally (
@@ -41,7 +41,7 @@ AS
     ../../csv/udp,
     ../../csv/icmp,
     '../../csv/other-ip'
-  MERGE TIMEOUT AFTER 30s
+  MERGE TIMEOUT AFTER 5s
   WHEN
     start > merge.greatest.start - 3min AND
     NOT remember globally (

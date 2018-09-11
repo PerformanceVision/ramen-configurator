@@ -45,7 +45,7 @@ DEFINE udp_services AS
 DEFINE degraded AS
   FROM
     tcp_services, udp_services
-  MERGE TIMEOUT AFTER 30s
+  MERGE TIMEOUT AFTER 5s
   WHERE start > merge.greatest.start - 3min
   SELECT
     *,

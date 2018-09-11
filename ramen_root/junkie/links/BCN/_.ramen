@@ -26,7 +26,7 @@ DEFINE 'avg traffic' AS
     '../../../csv/s2c other-ip',
     '../../../csv/c2s non-ip',
     '../../../csv/s2c non-ip'
-  MERGE TIMEOUT AFTER 30s
+  MERGE TIMEOUT AFTER 5s
   WHERE
     start > merge.greatest.start - 3min AND
     (source_name = "any" OR in.zone_src IN source) AND
@@ -155,7 +155,7 @@ DEFINE 'TCP minutely' AS
   FROM
     '../../../csv/c2s tcp',
     '../../../csv/s2c tcp'
-  MERGE TIMEOUT AFTER 30s
+  MERGE TIMEOUT AFTER 5s
   WHERE
     start > merge.greatest.start - 3min AND
     (source_name = "any" OR in.zone_src IN source) AND
