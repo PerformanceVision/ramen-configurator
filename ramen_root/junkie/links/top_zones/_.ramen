@@ -167,5 +167,5 @@ AS
     -- parents) ; meanwhile we could also do it using converting nodes but
     -- that will be verbose and less efficient.
 
-  COMMIT AFTER in.start > out.start + obs_window + 20s
+  COMMIT AFTER in.start > out.start + obs_window * 1.3
   FACTORS zone_1, zone_2;

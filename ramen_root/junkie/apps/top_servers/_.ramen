@@ -141,5 +141,5 @@ AS
     min _avg_rr_from_server,
     max _avg_rr_from_server
 
-  COMMIT AFTER in.start > out.start + obs_window + 20s
+  COMMIT AFTER in.start > out.start + obs_window * 1.3
   FACTORS vlan, port, protocol;

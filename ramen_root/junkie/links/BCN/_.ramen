@@ -52,27 +52,25 @@ DEFINE 'avg traffic' AS
     in.start > out.start + 2 * u64(avg_window);
 
 DEFINE percentiles AS
-  -- Note: The event start at the end of the observation window and
-  -- lasts for one avg window!
+  -- Note: The event maps to the observation window
   FROM 'avg traffic'
   SELECT
     min start, max start,
-    max stop AS start,
-    out.start + avg_window AS stop,
+    (min_start // obs_window) * obs_window AS start,
+    out.start + obs_window AS stop,
     perc percentile (
-      -- FIXME: how usefull could these "globally" be, given there is only one group?
-      last u32(obs_window / avg_window) globally bytes_per_secs
+      last u32(obs_window / avg_window) bytes_per_secs
     ) AS bytes_per_secs,
     perc percentile (
-      last u32(obs_window / avg_window) globally avg_rtt
+      last u32(obs_window / avg_window) avg_rtt
     ) AS rtt,
     perc percentile (
-      last u32(obs_window / avg_window) globally avg_rr
+      last u32(obs_window / avg_window) avg_rr
     ) AS rr,
     zone_src, zone_dst
   COMMIT AFTER
     sum 1 >= round (obs_window / avg_window) OR
-    in.start > out.start + 30s;
+    in.start > out.start + obs_window * 1.5;
 
 DEFINE 'traffic too low' AS
   FROM percentiles

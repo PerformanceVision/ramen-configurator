@@ -155,7 +155,7 @@ DEFINE percentiles AS
     COALESCE(_eurt, max_eurt) AS eurt
   COMMIT AFTER
     sum 1 >= u32(obs_window / avg_window) OR
-    in.start > out.start + 5;
+    in.start > out.start + obs_window * 1.3;
 
 DEFINE 'EURT too high' AS
   FROM percentiles
