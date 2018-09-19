@@ -1,6 +1,10 @@
 -- vim: ft=sql expandtab
 -- Meta-Monitoring
 
+PARAMETERS
+  -- Since we have 1hour aggregates we cannot be too picky:
+  max_event_time_spread DEFAULTS TO 7200s;
+
 DEFINE stats AS
   LISTEN FOR INSTRUMENTATION;
 
@@ -17,6 +21,9 @@ AS
     out.start + 60s AS stop,
     max start AS _max_start,
     _max_start - out.start AS _dt,
+
+    max max_event_time AS max_event_time
+      "Largest event time emitted so far",
 
     max tuples_in AS tuples_in,
     IF _dt > 0 THEN
@@ -92,7 +99,12 @@ AS
     sum u32(COALESCE(last_out_age <= 180, false)) AS active
       "Number of workers that have produced at least a tuple in the last 3 minutes.",
     sum COALESCE(out_per_secs, 0) AS tot_out_per_secs
-      "Number of produced tuples by all workers so far."
+      "Number of produced tuples by all workers so far.",
+
+    min max_event_time AS min_event_time
+      "Oldest max_event_time amongst all workers.",
+    max max_event_time AS max_event_time
+      "Latest max_event_time amongst all workers."
   GROUP BY true
   COMMIT BEFORE out.start <> lag out.start ;
 
@@ -122,3 +134,23 @@ DEFINE alert_output AS
 DEFINE alert_output_do_notif AS
   FROM alert_output
   NOTIFY "output changed" AFTER tot_diff > 0.75;
+
+-- Also alert when the difference between the max event times is too large:
+DEFINE alert_event_times AS
+  FROM tot_per_minute
+  SELECT
+    start, stop,
+    COALESCE(max_event_time - min_event_time, 0) AS event_time_spread
+      "Duration between oldest and latest max_event_time",
+    hysteresis(event_time_spread,
+               0.8 * max_event_time_spread,
+               max_event_time_spread) AS firing
+  NOTIFY "late workers" WITH
+    firing,
+    reldiff(event_time_spread, max_event_time_spread) AS certainty,
+    "The diference between oldest (${min_event_time}) and latest (${max_event_time}) event times is too large"
+      AS desc,
+    event_time_spread AS values,
+    max_event_time_spread AS thresholds
+  AND KEEP ALL
+  AFTER firing != COALESCE(previous.firing, false);
