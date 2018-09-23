@@ -6,7 +6,8 @@
 PARAMETERS
   top_size DEFAULT TO 100,
   top_duration DEFAULT TO 3600,
-  obs_window DEFAULT TO 60;
+  obs_window DEFAULT TO 60,
+  false_pos_rate DEFAULT TO 0.1;
 
 -- In c2s and s2c we have a unidirectional view of the IP traffic.
 -- Here, we'd like to build a view where all the data concerning all
@@ -80,8 +81,8 @@ DEFINE degraded AS
   FROM c2s, s2c
   SELECT
     *,
-    REMEMBER globally (
-      0.03, -- false positive rate
+    NOT REMEMBER globally (
+      false_pos_rate,
       start, -- time
       3600, -- memory duration
       -- What to remember:
@@ -106,8 +107,8 @@ AS
     -- Zone info
     zone_1,
     zone_2,
-    sum u32(is_new_hosts_pair) AS host_pairs
-      "Approximate number of active hosts using that link.",
+    sum u32(is_new_hosts_pair) * (1 + false_pos_rate) AS host_pairs
+      "Approximate number of active connections using that link.",
 
     -- Time info
     min start AS _min_start,

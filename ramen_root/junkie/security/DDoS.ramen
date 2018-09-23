@@ -1,5 +1,6 @@
 PARAMETERS
-  avg_win DEFAULTS TO 120s;
+  avg_win DEFAULTS TO 120s,
+  false_pos_rate DEFAULT TO 0.1; -- 10% of false positives
   -- TODO: also remember durations?
 
 DEFINE 'new peers'
@@ -19,15 +20,15 @@ AS
     -- Traffic (of any kind) we haven't seen in the last 3600 secs.
     -- Increase the estimate of *not* remembering since we ask for 10% of
     -- false positives.
-    sum (1.1 * float(not remember (
-           0.1, -- 10% of false positives
+    sum ((1 + false_pos_rate) * float(not remember (
+           false_pos_rate,
            start, 3600,
            ip_client, ip_server))) / 100
         AS nb_new_cnxs_per_secs
         "Approximate number of newly communicating hosts (as in: hosts that were not communicating for at least one hour)",
     -- Clients we haven't seen in the last 3600 secs.
-    sum (1.1 * float(not remember (
-           0.1, start, 3600, ip_client))) / 100
+    sum ((1 + false_pos_rate) * float(not remember (
+           false_pos_rate, start, 3600, ip_client))) / 100
         AS nb_new_clients_per_secs
         "Approximate number of new clients (as in: hosts that were not clients of anything for at least one hour)"
   GROUP BY start // avg_win

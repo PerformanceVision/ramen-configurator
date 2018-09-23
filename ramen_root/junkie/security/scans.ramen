@@ -1,3 +1,5 @@
+PARAMETER false_pos_rate DEFAULT TO 0.1; -- 10% of false positives
+
 DEFINE 'top port scans'
   "Detection of port scanners."
 AS
@@ -8,7 +10,7 @@ AS
   WHERE start > merge.greatest.start - 3min
   WHEN
     NOT remember globally (
-      0.1, start, 3600,
+      false_pos_rate, start, 3600,
       -- We do not take into account IP proto, so a ping on a TCP port
       -- grants you a free ping on the same UDP port.
       ip_client, ip_server, port_server) AND
@@ -18,7 +20,7 @@ AS
     max stop AS stop,
     ip_client,
     ip_server,
-    sum 1 as port_count
+    (1 + false_pos_rate) * sum 1 as port_count
       "Approximate number of ports probed by the client to this server"
   GROUP BY start // 3600, ip_client, ip_server
   COMMIT AFTER in.start > out.start + 120s;
@@ -45,7 +47,7 @@ AS
   WHEN
     start > merge.greatest.start - 3min AND
     NOT remember globally (
-      0.1, start, 3600,
+      false_pos_rate, start, 3600,
       -- An IP scanner could use varying proto/port to detect host
       -- presence so we just care about src and dst here:
       ip_client, ip_server) AND
@@ -54,7 +56,7 @@ AS
     min start AS start,
     max stop AS stop,
     ip_client,
-    sum 1 as ip_count
+    (1 + false_pos_rate) * sum 1 as ip_count
       "Approximate number of hosts probed by this client."
   GROUP BY start // 3600, ip_client
   COMMIT AFTER in.start > start + 120s;

@@ -6,7 +6,8 @@
 PARAMETERS
   top_size DEFAULT TO 100,
   top_duration DEFAULT TO 3600,
-  obs_window DEFAULT TO 60;
+  obs_window DEFAULT TO 60,
+  false_pos_rate DEFAULT TO 0.1;
 
 -- We need to make all CSV similar before merging them:
 
@@ -49,8 +50,8 @@ DEFINE degraded AS
   WHERE start > merge.greatest.start - 3min
   SELECT
     *,
-    REMEMBER globally (
-      0.03, -- false positive rate
+    NOT REMEMBER globally (
+      false_pos_rate,
       start, -- time
       3600, -- memory duration
       -- What to remember:
@@ -79,7 +80,7 @@ AS
     vlan, ip, port,
     protocol DOC "IP protocol.",
 
-    sum u32(is_new_client) AS clients
+    sum u32(is_new_client) * (1 + false_pos_rate) AS clients
       "Approximate number of distinct clients for this service.",
 
     -- Time info
