@@ -58,7 +58,7 @@ DEFINE degraded AS
       vlan, ip_server, port_server, protocol, ip_client
     ) AS is_new_client,
     -- nullifies the service identity if not important:
-    is_new_client AND IS vlan, ip_server, port_server, protocol IN TOP top_size BY u32(is_new_client)
+    IS vlan, ip_server, port_server, protocol IN TOP top_size BY u32(is_new_client)
       IN THE LAST top_duration AT TIME start AS _important,
     -- Note: This would fail to typecheck with the internal typechecker
     -- without the casts around the NULLs because of a bug in CASE/NULL:

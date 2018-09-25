@@ -1,4 +1,7 @@
-PARAMETER false_pos_rate DEFAULT TO 0.1; -- 10% of false positives
+PARAMETERS
+  false_pos_rate DEFAULT TO 0.1, -- 10% of false positives
+  max_ports DEFAULT TO 50,
+  max_hosts DEFAULT TO 100;
 
 DEFINE 'top port scans'
   "Detection of port scanners."
@@ -7,14 +10,15 @@ AS
     ../../csv/tcp,
     ../../csv/udp
   MERGE TIMEOUT AFTER 5s
-  WHERE start > merge.greatest.start - 3min
-  WHEN
-    NOT remember globally (
-      false_pos_rate, start, 3600,
-      -- We do not take into account IP proto, so a ping on a TCP port
-      -- grants you a free ping on the same UDP port.
-      ip_client, ip_server, port_server) AND
-    IS ip_client, ip_server IN TOP 100
+  WHERE
+    start > merge.greatest.start - 3min AND
+    IS ip_client, ip_server IN TOP 100 BY (
+      u32(
+        NOT remember globally (
+          false_pos_rate, start, 3600,
+          -- We do not take into account IP proto, so a ping on a TCP port
+          -- grants you a free ping on the same UDP port.
+          ip_client, ip_server, port_server)))
   SELECT
     min start AS start,
     max stop AS stop,
@@ -27,13 +31,13 @@ AS
 
 DEFINE 'port scan alert' AS
   FROM 'top port scans'
-  WHEN port_count > 30
+  WHEN port_count > max_ports
   NOTIFY "Port-Scan from ${ip_client} to ${ip_server}" WITH
-    reldiff(port_count, 30) AS certainty,
+    reldiff(port_count, max_ports) AS certainty,
     "${ip_client} has probed at least ${port_count} ports of ${ip_server} from ${start} to ${stop}'" AS desc,
     "${ip_client},${ip_server}" AS ips,
     "${port_count}" AS values,
-    "30" AS thresholds;
+    "${max_ports}" AS thresholds;
 
 DEFINE 'top ip scans'
   "Detection of host scanners."
@@ -46,12 +50,13 @@ AS
   MERGE TIMEOUT AFTER 5s
   WHEN
     start > merge.greatest.start - 3min AND
-    NOT remember globally (
-      false_pos_rate, start, 3600,
-      -- An IP scanner could use varying proto/port to detect host
-      -- presence so we just care about src and dst here:
-      ip_client, ip_server) AND
-    IS ip_client IN TOP 100
+    IS ip_client IN TOP 100 BY (
+      U32(
+        NOT remember globally (
+        false_pos_rate, start, 3600,
+        -- An IP scanner could use varying proto/port to detect host
+        -- presence so we just care about src and dst here:
+        ip_client, ip_server)))
   SELECT
     min start AS start,
     max stop AS stop,
@@ -63,9 +68,9 @@ AS
 
 DEFINE 'ip_scan_alert' AS
   FROM 'top ip scans'
-  WHEN ip_count > 100
+  WHEN ip_count > max_hosts
   NOTIFY "IP-Scan from ${ip_client}" WITH
-    reldiff(ip_count, 100) AS certainty,
+    reldiff(ip_count, max_hosts) AS certainty,
     "${ip_client}" AS ips,
     "${ip_count}" AS values,
-    "100" AS thresholds;
+    "${max_hosts}" AS thresholds;

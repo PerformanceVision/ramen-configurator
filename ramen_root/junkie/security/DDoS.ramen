@@ -23,12 +23,12 @@ AS
     sum ((1 + false_pos_rate) * float(not remember (
            false_pos_rate,
            start, 3600,
-           ip_client, ip_server))) / 100
+           ip_client, ip_server))) / avg_win
         AS nb_new_cnxs_per_secs
         "Approximate number of newly communicating hosts (as in: hosts that were not communicating for at least one hour)",
     -- Clients we haven't seen in the last 3600 secs.
     sum ((1 + false_pos_rate) * float(not remember (
-           false_pos_rate, start, 3600, ip_client))) / 100
+           false_pos_rate, start, 3600, ip_client))) / avg_win
         AS nb_new_clients_per_secs
         "Approximate number of new clients (as in: hosts that were not clients of anything for at least one hour)"
   GROUP BY start // avg_win
@@ -76,7 +76,7 @@ DEFINE 'new peers: DDoS anomalies' AS
      abnormality_nb_new_cnxs_per_secs > 0.75) AS abnormality,
     5-ma float(abnormality) AS _recent_abnormality,
     hysteresis (_recent_abnormality, 3/5, 4/5) AS firing
-  NOTIFY "new peers DDoS looks abnormal" WITH
+  NOTIFY "Possible DDoS detected" WITH
     "${firing}" AS firing,
     abs(_recent_abnormality - 3/5) AS certainty,
     "possible DDoS" AS desc
