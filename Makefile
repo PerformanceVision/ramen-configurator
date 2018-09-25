@@ -170,7 +170,11 @@ docker-push:
 # Cleaning
 
 clean-comp:
-	@find ramen_root/ -\( -name '*.x' -o -name '*.ml' -o -name '*.cmx' -o -name '*.annot' -o -name '*.s' -o -name '*.cmi' -o -name '*.o' -\) -delete
+	@find ramen_root/ -\( \
+	  -name '*.x' -o -name '*.ml' -o -name '*.cmx' -o -name '*.annot' -o \
+	  -name '*.s' -o -name '*.cmi' -o -name '*.o' -o -name '*.smt2' -o \
+	  -name '*.smt2.no_opt' \
+	-\) -delete
 
 clean: clean-comp
 	@echo 'Cleaning all build files'
