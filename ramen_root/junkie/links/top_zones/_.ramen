@@ -4,7 +4,7 @@
 -- ones with the most distinct individual host-host pairings (approximate).
 
 PARAMETERS
-  top_size DEFAULT TO 100,
+  top_size DEFAULT TO 20,
   top_duration DEFAULT TO 3600,
   obs_window DEFAULT TO 60,
   false_pos_rate DEFAULT TO 0.1;

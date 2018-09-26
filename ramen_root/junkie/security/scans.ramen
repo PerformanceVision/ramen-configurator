@@ -2,7 +2,7 @@ PARAMETERS
   false_pos_rate DEFAULT TO 0.1, -- 10% of false positives
   max_ports DEFAULT TO 50,
   max_hosts DEFAULT TO 100,
-  top_size DEFAULT TO 100;
+  top_size DEFAULT TO 20;
 
 DEFINE 'top port scans'
   "Detection of port scanners."
