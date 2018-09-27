@@ -75,7 +75,7 @@ DEFINE top
   "Per minute statistics about the most important services (per number of clients)."
 AS
   FROM degraded
-  GROUP BY vlan, ip, port, protocol
+  GROUP BY vlan, ip, port, protocol, start // obs_window
   SELECT
     vlan, ip, port,
     protocol DOC "IP protocol.",

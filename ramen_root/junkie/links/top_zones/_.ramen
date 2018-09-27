@@ -102,7 +102,7 @@ DEFINE top
   "Statistics about the most important links in between zones (per number of active hosts)."
 AS
   FROM degraded
-  GROUP BY zone_1, zone_2
+  GROUP BY zone_1, zone_2, start // obs_window
   SELECT
     -- Zone info
     zone_1,
