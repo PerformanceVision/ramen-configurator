@@ -27,7 +27,7 @@ DEFINE c2s AS
     (zone_client < zone_server OR
      zone_client = zone_server AND ip_client <= ip_server)
   SELECT
-    start, stop,
+    metric, start, stop,
 
     zone_client AS zone_1, zone_server AS zone_2,
     vlan_client AS vlan_1, vlan_server AS vlan_2,
@@ -56,7 +56,7 @@ DEFINE s2c AS
     (zone_server < zone_client OR
      zone_server = zone_client AND ip_server < ip_client)
   SELECT
-    start, stop,
+    metric, start, stop,
 
     zone_server AS zone_1, zone_client AS zone_2,
     vlan_server AS vlan_1, vlan_client AS vlan_2,

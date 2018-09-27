@@ -102,6 +102,7 @@ DEFINE tcp
 AS
   FROM tcp_raw
   SELECT
+    "tcp" AS metric,
     (capture_begin / 1e6) {seconds} AS start,
     (capture_end / 1e6) {seconds} AS stop,
     COALESCE(ip(ip4_client), ip(u128(ip6_client)), 0.0.0.0) AS ip_client,
@@ -253,6 +254,7 @@ DEFINE udp
 AS
   FROM udp_raw
   SELECT
+    "udp" AS metric,
     (capture_begin / 1e6) {seconds} AS start,
     (capture_end / 1e6) {seconds} AS stop,
     COALESCE(ip(ip4_client), ip(u128(ip6_client)), 0.0.0.0) AS ip_client,
@@ -372,6 +374,7 @@ DEFINE icmp
 AS
   FROM icmp_raw
   SELECT
+    "icmp" AS metric,
     (capture_begin / 1e6) {seconds} AS start,
     (capture_end / 1e6) {seconds} AS stop,
     COALESCE(ip(ip4_client), ip(u128(ip6_client)), 0.0.0.0) AS ip_client,
@@ -475,6 +478,7 @@ DEFINE 'other-ip'
 AS
   FROM 'other-ip_raw'
   SELECT
+    "other-ip" AS metric,
     (capture_begin / 1e6) {seconds} AS start,
     (capture_end / 1e6) {seconds} AS stop,
     COALESCE(ip(ip4_client), ip(u128(ip6_client)), 0.0.0.0) AS ip_client,
@@ -566,6 +570,7 @@ DEFINE 'non-ip'
 AS
   FROM 'non-ip_raw'
   SELECT
+    "non-ip" AS metric,
     (capture_begin / 1e6) {seconds} AS start,
     (capture_end / 1e6) {seconds} AS stop,
     eth(mac_client) AS mac_client,
@@ -656,6 +661,7 @@ DEFINE dns
 AS
   FROM dns_raw
   SELECT
+    "dns" AS metric,
     (capture_begin / 1e6) {seconds} AS start,
     (capture_end / 1e6) {seconds} AS stop,
     COALESCE(ip(ip4_client), ip(u128(ip6_client)), 0.0.0.0) AS ip_client,
@@ -751,6 +757,7 @@ DEFINE http
 AS
   FROM http_raw
   SELECT
+    "http" AS metric,
     (capture_begin / 1e6) {seconds} AS start,
     (capture_end / 1e6) {seconds} AS stop,
     COALESCE(ip(ip4_client), ip(u128(ip6_client)), 0.0.0.0) AS ip_client,
@@ -827,6 +834,7 @@ DEFINE citrix
 AS
   FROM citrix_raw
   SELECT
+    "citrix" AS metric,
     (capture_begin / 1e6) {seconds} AS start,
     (capture_end / 1e6) {seconds} AS stop,
     COALESCE(ip(ip4_client), ip(u128(ip6_client)), 0.0.0.0) AS ip_client,
@@ -904,6 +912,7 @@ DEFINE citrix_chanless
 AS
   FROM citrix_chanless_raw
   SELECT
+    "citrix-chanless" AS metric,
     (capture_begin / 1e6) {seconds} AS start,
     (capture_end / 1e6) {seconds} AS stop,
     COALESCE(ip(ip4_client), ip(u128(ip6_client)), 0.0.0.0) AS ip_client,
@@ -991,6 +1000,7 @@ DEFINE smb
 AS
   FROM smb_raw
   SELECT
+    "smb" AS metric,
     (capture_begin / 1e6) {seconds} AS start,
     (capture_end / 1e6) {seconds} AS stop,
     COALESCE(ip(ip4_client), ip(u128(ip6_client)), 0.0.0.0) AS ip_client,
@@ -1069,6 +1079,7 @@ DEFINE sql
 AS
   FROM sql_raw
   SELECT
+    "sql" AS metric,
     (capture_begin / 1e6) {seconds} AS start,
     (capture_end / 1e6) {seconds} AS stop,
     COALESCE(ip(ip4_client), ip(u128(ip6_client)), 0.0.0.0) AS ip_client,
@@ -1184,6 +1195,7 @@ DEFINE voip
 AS
   FROM voip_raw
   SELECT
+    "voip" AS metric,
     (capture_begin / 1e6) {seconds} AS start,
     (capture_end / 1e6) {seconds} AS stop,
     COALESCE(ip(ip4_client), ip(u128(ip6_client)), 0.0.0.0) AS ip_client,
