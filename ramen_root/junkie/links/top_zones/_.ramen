@@ -36,7 +36,8 @@ DEFINE c2s AS
 
     traffic_packets_client AS packets_1, traffic_packets_server AS packets_2,
     traffic_bytes_client AS bytes_1, traffic_bytes_server AS bytes_2,
-    payload_packets_client AS packets_with_payload_1, payload_packets_server AS packets_with_payload_2,
+    payload_packets_client AS packets_with_payload_1,
+    payload_packets_server AS packets_with_payload_2,
     payload_bytes_client AS payload_1, payload_bytes_server AS payload_2,
 
     rtt_count_client AS rtt_count_1, rtt_count_server AS rtt_count_2,
@@ -65,7 +66,8 @@ DEFINE s2c AS
 
     traffic_packets_server AS packets_1, traffic_packets_client AS packets_2,
     traffic_bytes_server AS bytes_1, traffic_bytes_client AS bytes_2,
-    payload_packets_server AS packets_with_payload_1, payload_packets_client AS packets_with_payload_2,
+    payload_packets_server AS packets_with_payload_1,
+    payload_packets_client AS packets_with_payload_2,
     payload_bytes_server AS payload_1, payload_bytes_client AS payload_2,
 
     rtt_count_server AS rtt_count_1, rtt_count_client AS rtt_count_2,
