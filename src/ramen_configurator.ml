@@ -15,7 +15,7 @@ let run_cmd cmd =
     failwith
   ) else output
 
-let run_program debug ramen_cmd root_dir persist_dir ?as_ fname params =
+let run_program debug ramen_cmd persist_dir ?as_ fname params =
   !logger.info "Running program %s%s with parameters %a"
     fname (Option.map_default (fun as_ -> " (as: "^ as_ ^")") "" as_)
     (List.print (Tuple2.print String.print String.print)) params ;
@@ -42,14 +42,14 @@ let run_file debug ramen_cmd root_dir persist_dir no_ext params =
   let fname = root_dir ^"/"^ no_ext ^".x" in
   let as_ = no_ext in
   if Hashtbl.is_empty params then (
-    run_program debug ramen_cmd root_dir persist_dir ~as_ fname [] ;
+    run_program debug ramen_cmd persist_dir ~as_ fname [] ;
     Set.String.singleton as_
   ) else (
     Hashtbl.fold (fun uniq_name params rs ->
       let as_ =
         if uniq_name = "" then as_ else
           chop_placeholder as_ ^"/"^ uniq_name in
-      run_program debug ramen_cmd root_dir persist_dir ~as_ fname params ;
+      run_program debug ramen_cmd persist_dir ~as_ fname params ;
       Set.String.add as_ rs
     ) params Set.String.empty)
 

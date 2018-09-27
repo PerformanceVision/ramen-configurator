@@ -59,7 +59,7 @@ let () =
   Array.fast_sort Int.compare tss ;
   let ctime i = ctime (float_of_int i) in
   let max_ts, max_count =
-    Array.fold_left (fun (max_ts, max_count as prev) ts ->
+    Array.fold_left (fun (_max_ts, max_count as prev) ts ->
       let count = Hashtbl.find packs ts in
       (*let date = ctime ts in
       Printf.printf "%s %d %d\n" date ts count;*)
