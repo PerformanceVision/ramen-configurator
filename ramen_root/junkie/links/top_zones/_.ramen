@@ -5,8 +5,8 @@
 
 PARAMETERS
   top_size DEFAULT TO 20,
-  top_duration DEFAULT TO 3600,
-  obs_window DEFAULT TO 60,
+  top_duration DEFAULT TO 1h,
+  obs_window DEFAULT TO 1min,
   false_pos_rate DEFAULT TO 0.1;
 
 -- In c2s and s2c we have a unidirectional view of the IP traffic.
@@ -84,10 +84,10 @@ DEFINE degraded AS
   MERGE TIMEOUT AFTER 5s
   SELECT
     *,
-    NOT REMEMBER globally (
+    NOT REMEMBER (
       false_pos_rate,
       start, -- time
-      3600, -- memory duration
+      1h, -- memory duration
       -- What to remember:
       -- Notice we want to avoid remembering a nullable value.
       -- Also, in theory vlan_1 = vlan_2.

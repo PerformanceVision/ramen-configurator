@@ -15,9 +15,9 @@ AS
   WHERE
     start > merge.greatest.start - 3min AND
     IS ip_client, ip_server IN TOP top_size OVER top_max_size BY (
-      u32(
-        NOT remember globally (
-          false_pos_rate, start, 3600,
+      U32(
+        NOT REMEMBER (
+          false_pos_rate, start, 1h,
           -- We do not take into account IP proto, so a ping on a TCP port
           -- grants you a free ping on the same UDP port.
           ip_client, ip_server, port_server)))
@@ -27,13 +27,13 @@ AS
     max stop AS stop,
     ip_client,
     ip_server,
-    (1 + false_pos_rate) * sum 1 as port_count
+    (1 + false_pos_rate) * sum 1 AS port_count
       "Approximate number of ports probed by the client to this server"
-  GROUP BY start // 3600, ip_client, ip_server
+  GROUP BY start // 1h, ip_client, ip_server
   COMMIT AFTER in.start > out.start + 1h2m
   FACTOR ip_client, ip_server;
 
-DEFINE 'port scan alert' AS
+DEFINE port_scan_alert AS
   FROM 'top port scans'
   WHEN port_count > max_ports
   NOTIFY "Port-Scan from ${ip_client} to ${ip_server}" WITH
@@ -56,23 +56,23 @@ AS
     start > merge.greatest.start - 3min AND
     IS ip_client IN TOP top_size OVER top_max_size BY (
       U32(
-        NOT remember globally (
-        false_pos_rate, start, 3600,
-        -- An IP scanner could use varying proto/port to detect host
-        -- presence so we just care about src and dst here:
-        ip_client, ip_server)))
+        NOT REMEMBER (
+          false_pos_rate, start, 1h,
+          -- An IP scanner could use varying proto/port to detect host
+          -- presence so we just care about src and dst here:
+          ip_client, ip_server)))
       IN THE LAST 1h
   SELECT
     min start AS start,
     max stop AS stop,
     ip_client,
-    (1 + false_pos_rate) * sum 1 as ip_count
+    (1 + false_pos_rate) * sum 1 AS ip_count
       "Approximate number of hosts probed by this client."
-  GROUP BY start // 3600, ip_client
+  GROUP BY start // 1h, ip_client
   COMMIT AFTER in.start > out.start + 1h2m
   FACTORS ip_client;
 
-DEFINE 'ip_scan_alert' AS
+DEFINE ip_scan_alert AS
   FROM 'top ip scans'
   WHEN ip_count > max_hosts
   NOTIFY "IP-Scan from ${ip_client}" WITH
