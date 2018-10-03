@@ -305,11 +305,11 @@ DEFINE 'TCP minutely: volume anomalies' AS
      abnormality_packets_per_secs > 0.75) AS abnormality,
     5-ma float(abnormality) AS _recent_abnormality,
     NOT (HYSTERESIS (_recent_abnormality, 3/5, 4/5)) AS firing
-  NOTIFY "BCN - TCP minutely volume looks abnormal" WITH
+  NOTIFY "BCN - Anomaly detected" WITH
     firing,
     0.1 * abs(_recent_abnormality - 3/5) AS certainty,
     "volume" AS metric,
-    "anomaly detected" AS desc,
+    "TCP volume looks abnormal from ${source_name} to ${dest_name}" AS desc,
     id AS bcn
   AND KEEP ALL
   AFTER firing != COALESCE(previous.firing, false);
@@ -357,11 +357,11 @@ DEFINE 'TCP minutely: retransmissions anomalies' AS
      abnormality_retrans_bytes_per_secs > 0.75) AS abnormality,
     5-ma float(abnormality) AS _recent_abnormality,
     NOT (HYSTERESIS (_recent_abnormality, 3/5, 4/5)) AS firing
-  NOTIFY "BCN - TCP minutely retransmissions looks abnormal" WITH
+  NOTIFY "BCN - Anomaly detected" WITH
     firing,
     0.1 * abs(_recent_abnormality - 3/5) AS certainty,
     "retransmissions" AS metric,
-    "anomaly detected" AS desc,
+    "TCP retransmissions from ${source_name} to ${dest_name} looks abnormal" AS desc,
     id AS bcn
   AND KEEP ALL
   AFTER firing != COALESCE(previous.firing, false);
@@ -457,11 +457,12 @@ DEFINE 'TCP minutely: connections anomalies' AS
      abnormality_fins_per_secs > 0.75) AS abnormality,
     5-ma float(abnormality) AS _recent_abnormality,
     NOT (HYSTERESIS (_recent_abnormality, 3/5, 4/5)) AS firing
-  NOTIFY "BCN - TCP minutely connections looks abnormal" WITH
+  NOTIFY "BCN - Anomaly detected" WITH
     firing,
     0.1 * abs(_recent_abnormality - 3/5) AS certainty,
     "connections" AS metric,
-    "anomaly detected" AS desc,
+    "TCP connections from ${source_name} to ${dest_name} looks abnormal"
+      AS desc,
     id AS bcn
   AND KEEP ALL
   AFTER firing != COALESCE(previous.firing, false);
@@ -492,11 +493,12 @@ DEFINE 'TCP minutely: 0-windows anomalies' AS
     (abnormality_zero_windows_per_secs > 0.75) AS abnormality,
     5-ma float(abnormality) AS _recent_abnormality,
     NOT (HYSTERESIS (_recent_abnormality, 3/5, 4/5)) AS firing
-  NOTIFY "BCN - TCP minutely 0-windows looks abnormal" WITH
+  NOTIFY "BCN - Anomaly detected" WITH
     firing,
     0.1 * abs(_recent_abnormality - 3/5) AS certainty,
     "0-windows" AS metric,
-    "anomaly detected" AS desc,
+    "TCP 0-windows from ${source_name} to ${dest_name} looks abnormal"
+      AS desc,
     id AS bcn
   AND KEEP ALL
   AFTER firing != COALESCE(previous.firing, false);
@@ -527,11 +529,12 @@ DEFINE 'TCP minutely: RTT anomalies' AS
     (abnormality_rtt_avg > 0.75) AS abnormality,
     5-ma float(abnormality) AS _recent_abnormality,
     NOT (HYSTERESIS (_recent_abnormality, 3/5, 4/5)) AS firing
-  NOTIFY "BCN - TCP minutely RTT looks abnormal" WITH
+  NOTIFY "BCN - Anomaly deteted" WITH
     firing,
     0.1 * abs(_recent_abnormality - 3/5) AS certainty,
     "RTT" AS metric,
-    "anomaly detected" AS desc,
+    "TCP RTT from ${source_name} to ${dest_name} looks abnormal"
+      AS desc,
     id AS bcn
   AND KEEP ALL
   AFTER firing != COALESCE(previous.firing, false);
@@ -562,11 +565,12 @@ DEFINE 'TCP minutely: RD anomalies' AS
     (abnormality_rd_avg > 0.75) AS abnormality,
     5-ma float(abnormality) AS _recent_abnormality,
     NOT (HYSTERESIS (_recent_abnormality, 3/5, 4/5)) AS firing
-  NOTIFY "BCN - TCP minutely RD looks abnormal" WITH
+  NOTIFY "BCN - Anomaly detected" WITH
     firing,
     0.1 * abs(_recent_abnormality - 3/5) AS certainty,
     "RD" AS metric,
-    "anomaly detected" AS desc,
+    "TCP RD from ${source_name} to ${dest_name} looks abnormal"
+      AS desc,
     id AS bcn
   AND KEEP ALL
   AFTER firing != COALESCE(previous.firing, false);
@@ -597,11 +601,12 @@ DEFINE 'TCP minutely: DTT anomalies' AS
     (abnormality_dtt_avg > 0.75) AS abnormality,
     5-ma float(abnormality) AS _recent_abnormality,
     NOT (HYSTERESIS (_recent_abnormality, 3/5, 4/5)) AS firing
-  NOTIFY "BCN - TCP minutely DTT looks abnormal" WITH
+  NOTIFY "BCN - Anomaly detected" WITH
     firing,
     0.1 * abs(_recent_abnormality - 3/5) AS certainty,
     "DTT" AS metric,
-    "anomaly detected" AS desc,
+    "TCP DTT from ${source_name} to ${dest_name} looks abnormal"
+      AS desc,
     id AS bcn
   AND KEEP ALL
   AFTER firing != COALESCE(previous.firing, false);
