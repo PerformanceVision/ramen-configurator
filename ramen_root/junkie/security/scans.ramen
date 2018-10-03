@@ -1,36 +1,43 @@
 PARAMETERS
   false_pos_rate DEFAULT TO 0.1, -- 10% of false positives
   max_ports DEFAULT TO 50,
-  max_hosts DEFAULT TO 100,
-  max_packets DEFAULT TO 3, -- above that it's not a probe
+  max_hosts DEFAULT TO 200,
+  max_num_packets DEFAULT TO 3, -- above that it's not a probe
   top_size DEFAULT TO 20,
   top_max_size DEFAULT TO 100k;
 
-DEFINE 'top port scans'
-  "Detection of port scanners."
-AS
+-- Start by filtering all entries but the new ones
+DEFINE new_triplets AS
   FROM
     ../../csv/tcp,
     ../../csv/udp
   MERGE TIMEOUT AFTER 5s
   WHERE
     start > merge.greatest.start - 3min AND
+    NOT REMEMBER (
+      false_pos_rate, start, 1h,
+      -- We do not take into account IP proto, so a ping on a TCP port
+      -- grants you a free ping on the same UDP port.
+      ip_client, ip_server, port_server)
+  SELECT
+    start, stop,
+    ip_client, ip_server,
     -- We could do better than that and look at RST but we do not have that for
     -- TCP - wait for https://github.com/rixed/ramen/issues/50
-    traffic_packets_client + traffic_packets_server <= max_packets AND
-    IS ip_client, ip_server IN TOP top_size OVER top_max_size BY (
-      U32(
-        NOT REMEMBER (
-          false_pos_rate, start, 1h,
-          -- We do not take into account IP proto, so a ping on a TCP port
-          -- grants you a free ping on the same UDP port.
-          ip_client, ip_server, port_server)))
-      IN THE LAST 1h
+    traffic_packets_client + traffic_packets_server AS num_packets,
+    IS ip_client, ip_server IN TOP top_size OVER top_max_size IN THE LAST 1h
+      AS is_important;
+
+DEFINE 'top port scans'
+  "Detection of port scanners."
+AS
+  FROM new_triplets
+  WHERE
+    num_packets <= max_num_packets AND is_important
   SELECT
     min start AS start,
     max stop AS stop,
-    ip_client,
-    ip_server,
+    ip_client, ip_server,
     (1 + false_pos_rate) * sum 1 AS port_count
       "Approximate number of ports probed by the client to this server"
   GROUP BY start // 1h, ip_client, ip_server
@@ -47,9 +54,7 @@ DEFINE port_scan_alert AS
     "${port_count}" AS values,
     "${max_ports}" AS thresholds;
 
-DEFINE 'top ip scans'
-  "Detection of host scanners."
-AS
+DEFINE new_pairs AS
   FROM
     ../../csv/tcp,
     ../../csv/udp,
@@ -58,19 +63,28 @@ AS
   MERGE TIMEOUT AFTER 5s
   WHEN
     start > merge.greatest.start - 3min AND
-    traffic_packets_client + traffic_packets_server <= max_packets AND
-    IS ip_client IN TOP top_size OVER top_max_size BY (
-      U32(
-        NOT REMEMBER (
-          false_pos_rate, start, 1h,
-          -- An IP scanner could use varying proto/port to detect host
-          -- presence so we just care about src and dst here:
-          ip_client, ip_server)))
-      IN THE LAST 1h
+    NOT REMEMBER (
+      false_pos_rate, start, 1h,
+      -- An IP scanner could use varying proto/port to detect host
+      -- presence so we just care about src and dst here:
+      ip_client, ip_server)
+  SELECT
+    start, stop,
+    traffic_packets_client + traffic_packets_server AS num_packets,
+    ip_client,
+    IS ip_client IN TOP top_size OVER top_max_size IN THE LAST 1h
+      AS is_important;
+
+DEFINE 'top ip scans'
+  "Detection of host scanners."
+AS
+  FROM new_pairs
+  WHEN
+    num_packets <= max_num_packets AND is_important
   SELECT
     min start AS start,
     max stop AS stop,
-    ip_client,
+    ip_client DOC "IP of the scanner",
     (1 + false_pos_rate) * sum 1 AS ip_count
       "Approximate number of hosts probed by this client."
   GROUP BY start // 1h, ip_client
