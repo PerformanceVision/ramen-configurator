@@ -143,6 +143,7 @@ DEFINE percentiles AS
     min start,
     max start AS start,
     out.start + obs_window AS stop,
+    ct_per_secs, -- useful for significance test
     srtt_avg, crtt_avg, srt_avg, cdtt_avg, sdtt_avg,
     srtt_avg + crtt_avg + srt_avg + cdtt_avg + sdtt_avg AS _eurt_avg,
     perc percentile (
@@ -162,6 +163,8 @@ DEFINE 'EURT too high' AS
   SELECT
     start,
     NOT (HYSTERESIS (eurt, max_eurt - max_eurt/10, max_eurt)) AS firing
+  WHERE
+    ct_per_secs * 1min > min_handshake_count
   NOTIFY "BCA - EURT to ${name} is too large" WITH
     firing,
     1 AS certainty,
@@ -184,6 +187,8 @@ DEFINE 'averages: volume anomalies' AS
      abnormality_c2s_bytes_per_secs > 0.75) AS abnormality,
     5-ma float(abnormality) AS _recent_abnormality,
     NOT (HYSTERESIS (_recent_abnormality, 3/5, 4/5)) AS firing
+  WHERE
+    ct_per_secs * 1min > min_handshake_count
   NOTIFY "BCA - Anomaly detected" WITH
     firing,
     0.1 * abs(_recent_abnormality - 3/5) AS certainty,
@@ -198,6 +203,7 @@ DEFINE 'averages: volume predictions' AS
   SELECT
     start,
     start + avg_window AS stop,
+    ct_per_secs,
     -- bytes_per_secs
     c2s_bytes_per_secs,
     smooth(c2s_bytes_per_secs) AS pred_0_c2s_bytes_per_secs,
@@ -263,6 +269,8 @@ DEFINE 'averages: retransmissions anomalies' AS
      abnormality_c2s_retrans_bytes_per_secs > 0.75) AS abnormality,
     5-ma float(abnormality) AS _recent_abnormality,
     NOT (HYSTERESIS (_recent_abnormality, 3/5, 4/5)) AS firing
+  WHERE
+    ct_per_secs * 1min > min_handshake_count
   NOTIFY "BCA - Anomaly detected" WITH
     firing,
     0.1 * abs(_recent_abnormality - 3/5) AS certainty,
@@ -277,6 +285,7 @@ DEFINE 'averages: retransmissions predictions' AS
   SELECT
     start,
     start + avg_window AS stop,
+    ct_per_secs,
     -- retrans_bytes
     c2s_retrans_bytes_per_secs,
     smooth(c2s_retrans_bytes_per_secs) AS pred_0_c2s_retrans_bytes_per_secs,
@@ -342,6 +351,8 @@ DEFINE 'averages: connections anomalies' AS
      abnormality_c2s_syns_per_secs > 0.75) AS abnormality,
     5-ma float(abnormality) AS _recent_abnormality,
     NOT (HYSTERESIS (_recent_abnormality, 3/5, 4/5)) AS firing
+  WHERE
+    ct_per_secs * 1min > min_handshake_count
   NOTIFY "BCA - Anomaly detected" WITH
     firing,
     0.1 * abs(_recent_abnormality - 3/5) AS certainty,
@@ -356,6 +367,7 @@ DEFINE 'averages: connections predictions' AS
   SELECT
     start,
     start + avg_window AS stop,
+    ct_per_secs,
     -- syns_per_secs
     c2s_syns_per_secs,
     smooth(c2s_syns_per_secs) AS pred_0_c2s_syns_per_secs,
@@ -420,6 +432,8 @@ DEFINE 'averages: 0-windows anomalies' AS
      abnormality_c2s_0wins_per_secs > 0.75) AS abnormality,
     5-ma float(abnormality) AS _recent_abnormality,
     NOT (HYSTERESIS (_recent_abnormality, 3/5, 4/5)) AS firing
+  WHERE
+    ct_per_secs * 1min > min_handshake_count
   NOTIFY "BCA - Anomaly detected" WITH
     firing,
     0.1 * abs(_recent_abnormality - 3/5) AS certainty,
@@ -434,6 +448,7 @@ DEFINE 'averages: 0-windows predictions' AS
   SELECT
     start,
     start + avg_window AS stop,
+    ct_per_secs,
     -- 0wins_per_secs
     c2s_0wins_per_secs,
     smooth(c2s_0wins_per_secs) AS pred_0_c2s_0wins_per_secs,
@@ -469,6 +484,8 @@ DEFINE 'averages: SRT anomalies' AS
     (abnormality_srt_avg > 0.75) AS abnormality,
     5-ma float(abnormality) AS _recent_abnormality,
     NOT (HYSTERESIS (_recent_abnormality, 3/5, 4/5)) AS firing
+  WHERE
+    ct_per_secs * 1min > min_handshake_count
   NOTIFY "BCA - Anomaly detected" WITH
     firing,
     0.1 * abs(_recent_abnormality - 3/5) AS certainty,
@@ -483,6 +500,7 @@ DEFINE 'averages: SRT predictions' AS
   SELECT
     start,
     start + avg_window AS stop,
+    ct_per_secs,
     srt_avg,
     smooth(srt_avg) AS pred_0_srt_avg,
     fit(5, srt_avg) AS pred_1_srt_avg,
@@ -505,6 +523,8 @@ DEFINE 'averages: RTT anomalies' AS
      abnormality_crtt_avg > 0.75) AS abnormality,
     5-ma float(abnormality) AS _recent_abnormality,
     NOT (HYSTERESIS (_recent_abnormality, 3/5, 4/5)) AS firing
+  WHERE
+    ct_per_secs * 1min > min_handshake_count
   NOTIFY "BCA - Anomaly detected" WITH
     firing,
     0.1 * abs(_recent_abnormality - 3/5) AS certainty,
@@ -519,6 +539,7 @@ DEFINE 'averages: RTT predictions' AS
   SELECT
     start,
     start + avg_window AS stop,
+    ct_per_secs,
     -- rtt_avg
     crtt_avg,
     smooth(crtt_avg) AS pred_0_crtt_avg,
@@ -555,6 +576,8 @@ DEFINE 'averages: RD anomalies' AS
      abnormality_crd_avg > 0.75) AS abnormality,
     5-ma float(abnormality) AS _recent_abnormality,
     NOT (HYSTERESIS (_recent_abnormality, 3/5, 4/5)) AS firing
+  WHERE
+    ct_per_secs * 1min > min_handshake_count
   NOTIFY "BCA - Anomaly detected" WITH
     firing,
     0.1 * abs(_recent_abnormality - 3/5) AS certainty,
@@ -569,6 +592,7 @@ DEFINE 'averages: RD predictions' AS
   SELECT
     start,
     start + avg_window AS stop,
+    ct_per_secs,
     -- rd_avg
     crd_avg,
     smooth(crd_avg) AS pred_0_crd_avg,
@@ -605,6 +629,8 @@ DEFINE 'averages: DTT anomalies' AS
      abnormality_cdtt_avg > 0.75) AS abnormality,
     5-ma float(abnormality) AS _recent_abnormality,
     NOT (HYSTERESIS (_recent_abnormality, 3/5, 4/5)) AS firing
+  WHERE
+    ct_per_secs * 1min > min_handshake_count
   NOTIFY "BCA - Anomaly detected" WITH
     firing,
     0.1 * abs(_recent_abnormality - 3/5) AS certainty,
@@ -619,6 +645,7 @@ DEFINE 'averages: DTT predictions' AS
   SELECT
     start,
     start + avg_window AS stop,
+    ct_per_secs,
     -- dtt_avg
     cdtt_avg,
     smooth(cdtt_avg) AS pred_0_cdtt_avg,
