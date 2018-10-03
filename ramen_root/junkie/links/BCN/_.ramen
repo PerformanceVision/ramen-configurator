@@ -5,7 +5,7 @@ PARAMETERS
   max_bps U32? {bytes*seconds^-1} DEFAULTS TO NULL,
   max_rtt FLOAT? {seconds} DEFAULTS TO NULL,
   max_rr FLOAT? {} DEFAULTS TO NULL,
-  min_for_relevance DEFAULTS TO 10, -- TODO
+  min_for_relevance DEFAULTS TO 10,
   avg_window {seconds} DEFAULTS TO 60.0,
   obs_window {seconds} DEFAULTS TO 600.0,
   perc DEFAULTS TO 90.0,
@@ -101,6 +101,8 @@ DEFINE 'traffic too high' AS
     COALESCE (
       NOT (HYSTERESIS (bytes_per_secs, max_bps*0.9, max_bps)),
       false) AS firing
+  WHERE
+    COALESCE(bytes_per_secs, 0) >= min_for_relevance
   NOTIFY "BCN - High traffic from ${source_name} to ${dest_name}" WITH
     firing,
     1 AS certainty,
@@ -123,6 +125,8 @@ DEFINE 'round-trip time' AS
     COALESCE (
       NOT (HYSTERESIS (rtt, max_rtt*0.9, max_rtt)),
       false) AS firing
+  WHERE
+    COALESCE(bytes_per_secs, 0) >= min_for_relevance
   NOTIFY "BCN - RTT too high from ${source_name} to ${dest_name}" WITH
     firing,
     1 AS certainty,
@@ -145,6 +149,8 @@ DEFINE retransmissions AS
     COALESCE (
       NOT (HYSTERESIS (rr, max_rr*0.9, max_rr)),
       false) AS firing
+  WHERE
+    COALESCE(bytes_per_secs, 0) >= min_for_relevance
   NOTIFY "BCN - Too many retransmissions from ${source_name} to ${dest_name}" WITH
     firing,
     1 AS certainty,
@@ -305,6 +311,8 @@ DEFINE 'TCP minutely: volume anomalies' AS
      abnormality_packets_per_secs > 0.75) AS abnormality,
     5-ma float(abnormality) AS _recent_abnormality,
     NOT (HYSTERESIS (_recent_abnormality, 3/5, 4/5)) AS firing
+  WHERE
+    bytes_per_secs >= min_for_relevance
   NOTIFY "BCN - Anomaly detected" WITH
     firing,
     0.1 * abs(_recent_abnormality - 3/5) AS certainty,
@@ -319,6 +327,7 @@ DEFINE 'TCP minutely: retransmissions predictions' AS
   SELECT
     start,
     start + avg_window AS stop,
+    bytes_per_secs,
     retrans_bytes_per_secs,
     smooth(retrans_bytes_per_secs) AS pred_0_retrans_bytes_per_secs,
     fit(5, retrans_bytes_per_secs) AS pred_1_retrans_bytes_per_secs,
@@ -357,6 +366,8 @@ DEFINE 'TCP minutely: retransmissions anomalies' AS
      abnormality_retrans_bytes_per_secs > 0.75) AS abnormality,
     5-ma float(abnormality) AS _recent_abnormality,
     NOT (HYSTERESIS (_recent_abnormality, 3/5, 4/5)) AS firing
+  WHERE
+    bytes_per_secs >= min_for_relevance
   NOTIFY "BCN - Anomaly detected" WITH
     firing,
     0.1 * abs(_recent_abnormality - 3/5) AS certainty,
@@ -371,6 +382,7 @@ DEFINE 'TCP minutely: connections predictions' AS
   SELECT
     start,
     start + avg_window AS stop,
+    bytes_per_secs,
     fins_per_secs,
     smooth(fins_per_secs) AS pred_0_fins_per_secs,
     fit(5, fins_per_secs) AS pred_1_fins_per_secs,
@@ -457,6 +469,8 @@ DEFINE 'TCP minutely: connections anomalies' AS
      abnormality_fins_per_secs > 0.75) AS abnormality,
     5-ma float(abnormality) AS _recent_abnormality,
     NOT (HYSTERESIS (_recent_abnormality, 3/5, 4/5)) AS firing
+  WHERE
+    bytes_per_secs >= min_for_relevance
   NOTIFY "BCN - Anomaly detected" WITH
     firing,
     0.1 * abs(_recent_abnormality - 3/5) AS certainty,
@@ -472,6 +486,7 @@ DEFINE 'TCP minutely: 0-windows predictions' AS
   SELECT
     start,
     start + avg_window AS stop,
+    bytes_per_secs,
     zero_windows_per_secs,
     smooth(zero_windows_per_secs) AS pred_0_zero_windows_per_secs,
     fit(5, zero_windows_per_secs) AS pred_1_zero_windows_per_secs,
@@ -493,6 +508,8 @@ DEFINE 'TCP minutely: 0-windows anomalies' AS
     (abnormality_zero_windows_per_secs > 0.75) AS abnormality,
     5-ma float(abnormality) AS _recent_abnormality,
     NOT (HYSTERESIS (_recent_abnormality, 3/5, 4/5)) AS firing
+  WHERE
+    bytes_per_secs >= min_for_relevance
   NOTIFY "BCN - Anomaly detected" WITH
     firing,
     0.1 * abs(_recent_abnormality - 3/5) AS certainty,
@@ -508,6 +525,7 @@ DEFINE 'TCP minutely: RTT predictions' AS
   SELECT
     start,
     start + avg_window AS stop,
+    bytes_per_secs,
     rtt_avg,
     smooth(rtt_avg) AS pred_0_rtt_avg,
     fit(5, rtt_avg) AS pred_1_rtt_avg,
@@ -529,6 +547,8 @@ DEFINE 'TCP minutely: RTT anomalies' AS
     (abnormality_rtt_avg > 0.75) AS abnormality,
     5-ma float(abnormality) AS _recent_abnormality,
     NOT (HYSTERESIS (_recent_abnormality, 3/5, 4/5)) AS firing
+  WHERE
+    bytes_per_secs >= min_for_relevance
   NOTIFY "BCN - Anomaly deteted" WITH
     firing,
     0.1 * abs(_recent_abnormality - 3/5) AS certainty,
@@ -544,6 +564,7 @@ DEFINE 'TCP minutely: RD predictions' AS
   SELECT
     start,
     start + avg_window AS stop,
+    bytes_per_secs,
     rd_avg,
     smooth(rd_avg) AS pred_0_rd_avg,
     fit(5, rd_avg) AS pred_1_rd_avg,
@@ -565,6 +586,8 @@ DEFINE 'TCP minutely: RD anomalies' AS
     (abnormality_rd_avg > 0.75) AS abnormality,
     5-ma float(abnormality) AS _recent_abnormality,
     NOT (HYSTERESIS (_recent_abnormality, 3/5, 4/5)) AS firing
+  WHERE
+    bytes_per_secs >= min_for_relevance
   NOTIFY "BCN - Anomaly detected" WITH
     firing,
     0.1 * abs(_recent_abnormality - 3/5) AS certainty,
@@ -580,6 +603,7 @@ DEFINE 'TCP minutely: DTT predictions' AS
   SELECT
     start,
     start + avg_window AS stop,
+    bytes_per_secs,
     dtt_avg,
     smooth(dtt_avg) AS pred_0_dtt_avg,
     fit(5, dtt_avg) AS pred_1_dtt_avg,
@@ -601,6 +625,8 @@ DEFINE 'TCP minutely: DTT anomalies' AS
     (abnormality_dtt_avg > 0.75) AS abnormality,
     5-ma float(abnormality) AS _recent_abnormality,
     NOT (HYSTERESIS (_recent_abnormality, 3/5, 4/5)) AS firing
+  WHERE
+    bytes_per_secs >= min_for_relevance
   NOTIFY "BCN - Anomaly detected" WITH
     firing,
     0.1 * abs(_recent_abnormality - 3/5) AS certainty,
