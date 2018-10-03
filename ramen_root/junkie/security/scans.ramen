@@ -2,6 +2,7 @@ PARAMETERS
   false_pos_rate DEFAULT TO 0.1, -- 10% of false positives
   max_ports DEFAULT TO 50,
   max_hosts DEFAULT TO 100,
+  max_packets DEFAULT TO 3, -- above that it's not a probe
   top_size DEFAULT TO 20,
   top_max_size DEFAULT TO 100k;
 
@@ -14,6 +15,9 @@ AS
   MERGE TIMEOUT AFTER 5s
   WHERE
     start > merge.greatest.start - 3min AND
+    -- We could do better than that and look at RST but we do not have that for
+    -- TCP - wait for https://github.com/rixed/ramen/issues/50
+    traffic_packets_client + traffic_packets_server <= max_packets AND
     IS ip_client, ip_server IN TOP top_size OVER top_max_size BY (
       U32(
         NOT REMEMBER (
@@ -54,6 +58,7 @@ AS
   MERGE TIMEOUT AFTER 5s
   WHEN
     start > merge.greatest.start - 3min AND
+    traffic_packets_client + traffic_packets_server <= max_packets AND
     IS ip_client IN TOP top_size OVER top_max_size BY (
       U32(
         NOT REMEMBER (
