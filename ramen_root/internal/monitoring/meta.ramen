@@ -135,7 +135,9 @@ DEFINE alert_output_do_notif AS
   FROM alert_output
   SELECT tot_diff > 0.75 AS firing
   NOTIFY "internal - output changed" WITH
-    firing, 0.1 AS certainty
+    firing,
+    0.1 AS certainty,
+    "Large variations in ramen number of output tuples" AS desc
   AFTER firing != COALESCE(previous.firing, false);
 
 -- Also alert when the difference between the max event times is too large:

@@ -82,6 +82,7 @@ DEFINE ip_scan_alert AS
   WHEN ip_count > max_hosts
   NOTIFY "Security - IP-Scan from ${ip_client}" WITH
     0.1 * reldiff(ip_count, max_hosts) AS certainty,
+    "${ip_client} has probed at least ${ip_count} hosts from ${start} to ${stop}'" AS desc,
     "${ip_client}" AS ips,
     "${ip_count}" AS values,
     "${max_hosts}" AS thresholds;
