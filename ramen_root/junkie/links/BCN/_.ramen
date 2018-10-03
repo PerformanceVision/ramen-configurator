@@ -82,9 +82,9 @@ DEFINE 'traffic too low' AS
     COALESCE (
       NOT (HYSTERESIS (bytes_per_secs, min_bps*1.1, min_bps)),
       false) AS firing
-  NOTIFY "Low traffic from ${source_name} to ${dest_name}" WITH
+  NOTIFY "BCN - Low traffic from ${source_name} to ${dest_name}" WITH
     firing,
-    COALESCE(reldiff(bytes_per_secs, min_bps), 0) AS certainty,
+    1 AS certainty,
     "The traffic from zone ${source_name} to ${dest_name} has sunk below the configured minimum of ${min_bps} for the last ${obs_window} seconds."
       AS desc,
     id AS bcn,
@@ -101,9 +101,9 @@ DEFINE 'traffic too high' AS
     COALESCE (
       NOT (HYSTERESIS (bytes_per_secs, max_bps*0.9, max_bps)),
       false) AS firing
-  NOTIFY "High traffic from ${source_name} to ${dest_name}" WITH
+  NOTIFY "BCN - High traffic from ${source_name} to ${dest_name}" WITH
     firing,
-    COALESCE(reldiff(bytes_per_secs, max_bps), 0) AS certainty,
+    1 AS certainty,
     "The traffic from zone ${source_name} to ${dest_name} has raised above the configured maximum of ${max_bps} for the last ${obs_window} seconds."
       AS desc,
     id AS bcn,
@@ -123,9 +123,9 @@ DEFINE 'round-trip time' AS
     COALESCE (
       NOT (HYSTERESIS (rtt, max_rtt*0.9, max_rtt)),
       false) AS firing
-  NOTIFY "RTT too high from ${source_name} to ${dest_name}" WITH
+  NOTIFY "BCN - RTT too high from ${source_name} to ${dest_name}" WITH
     firing,
-    COALESCE(reldiff(rtt, max_rtt), 0) AS certainty,
+    1 AS certainty,
     "Traffic from zone ${source_name} to zone ${dest_name} has an average RTT of ${rtt}, greater than the configured maximum of ${max_rtt}s, for the last ${obs_window} seconds."
       AS desc,
     id AS bcn,
@@ -145,9 +145,9 @@ DEFINE retransmissions AS
     COALESCE (
       NOT (HYSTERESIS (rr, max_rr*0.9, max_rr)),
       false) AS firing
-  NOTIFY "Too many retransmissions from ${source_name} to ${dest_name}" WITH
+  NOTIFY "BCN - Too many retransmissions from ${source_name} to ${dest_name}" WITH
     firing,
-    COALESCE(reldiff(rr, max_rr), 0) AS certainty,
+    1 AS certainty,
     "Traffic from zone ${source_name} to zone ${dest_name} has an average retransmission rate of ${rr}%%, greater than the configured maximum of ${max_rr}s, for the last ${obs_window} seconds."
       AS desc,
     id AS bcn,
@@ -305,9 +305,9 @@ DEFINE 'TCP minutely: volume anomalies' AS
      abnormality_packets_per_secs > 0.75) AS abnormality,
     5-ma float(abnormality) AS _recent_abnormality,
     NOT (HYSTERESIS (_recent_abnormality, 3/5, 4/5)) AS firing
-  NOTIFY "TCP minutely volume looks abnormal" WITH
+  NOTIFY "BCN - TCP minutely volume looks abnormal" WITH
     firing,
-    abs(_recent_abnormality - 3/5) AS certainty,
+    0.1 * abs(_recent_abnormality - 3/5) AS certainty,
     "volume" AS metric,
     "anomaly detected" AS desc,
     id AS bcn
@@ -357,9 +357,9 @@ DEFINE 'TCP minutely: retransmissions anomalies' AS
      abnormality_retrans_bytes_per_secs > 0.75) AS abnormality,
     5-ma float(abnormality) AS _recent_abnormality,
     NOT (HYSTERESIS (_recent_abnormality, 3/5, 4/5)) AS firing
-  NOTIFY "TCP minutely retransmissions looks abnormal" WITH
+  NOTIFY "BCN - TCP minutely retransmissions looks abnormal" WITH
     firing,
-    abs(_recent_abnormality - 3/5) AS certainty,
+    0.1 * abs(_recent_abnormality - 3/5) AS certainty,
     "retransmissions" AS metric,
     "anomaly detected" AS desc,
     id AS bcn
@@ -457,9 +457,9 @@ DEFINE 'TCP minutely: connections anomalies' AS
      abnormality_fins_per_secs > 0.75) AS abnormality,
     5-ma float(abnormality) AS _recent_abnormality,
     NOT (HYSTERESIS (_recent_abnormality, 3/5, 4/5)) AS firing
-  NOTIFY "TCP minutely connections looks abnormal" WITH
+  NOTIFY "BCN - TCP minutely connections looks abnormal" WITH
     firing,
-    abs(_recent_abnormality - 3/5) AS certainty,
+    0.1 * abs(_recent_abnormality - 3/5) AS certainty,
     "connections" AS metric,
     "anomaly detected" AS desc,
     id AS bcn
@@ -492,9 +492,9 @@ DEFINE 'TCP minutely: 0-windows anomalies' AS
     (abnormality_zero_windows_per_secs > 0.75) AS abnormality,
     5-ma float(abnormality) AS _recent_abnormality,
     NOT (HYSTERESIS (_recent_abnormality, 3/5, 4/5)) AS firing
-  NOTIFY "TCP minutely 0-windows looks abnormal" WITH
+  NOTIFY "BCN - TCP minutely 0-windows looks abnormal" WITH
     firing,
-    abs(_recent_abnormality - 3/5) AS certainty,
+    0.1 * abs(_recent_abnormality - 3/5) AS certainty,
     "0-windows" AS metric,
     "anomaly detected" AS desc,
     id AS bcn
@@ -527,9 +527,9 @@ DEFINE 'TCP minutely: RTT anomalies' AS
     (abnormality_rtt_avg > 0.75) AS abnormality,
     5-ma float(abnormality) AS _recent_abnormality,
     NOT (HYSTERESIS (_recent_abnormality, 3/5, 4/5)) AS firing
-  NOTIFY "TCP minutely RTT looks abnormal" WITH
+  NOTIFY "BCN - TCP minutely RTT looks abnormal" WITH
     firing,
-    abs(_recent_abnormality - 3/5) AS certainty,
+    0.1 * abs(_recent_abnormality - 3/5) AS certainty,
     "RTT" AS metric,
     "anomaly detected" AS desc,
     id AS bcn
@@ -562,9 +562,9 @@ DEFINE 'TCP minutely: RD anomalies' AS
     (abnormality_rd_avg > 0.75) AS abnormality,
     5-ma float(abnormality) AS _recent_abnormality,
     NOT (HYSTERESIS (_recent_abnormality, 3/5, 4/5)) AS firing
-  NOTIFY "TCP minutely RD looks abnormal" WITH
+  NOTIFY "BCN - TCP minutely RD looks abnormal" WITH
     firing,
-    abs(_recent_abnormality - 3/5) AS certainty,
+    0.1 * abs(_recent_abnormality - 3/5) AS certainty,
     "RD" AS metric,
     "anomaly detected" AS desc,
     id AS bcn
@@ -597,9 +597,9 @@ DEFINE 'TCP minutely: DTT anomalies' AS
     (abnormality_dtt_avg > 0.75) AS abnormality,
     5-ma float(abnormality) AS _recent_abnormality,
     NOT (HYSTERESIS (_recent_abnormality, 3/5, 4/5)) AS firing
-  NOTIFY "TCP minutely DTT looks abnormal" WITH
+  NOTIFY "BCN - TCP minutely DTT looks abnormal" WITH
     firing,
-    abs(_recent_abnormality - 3/5) AS certainty,
+    0.1 * abs(_recent_abnormality - 3/5) AS certainty,
     "DTT" AS metric,
     "anomaly detected" AS desc,
     id AS bcn

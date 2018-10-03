@@ -162,9 +162,9 @@ DEFINE 'EURT too high' AS
   SELECT
     start,
     NOT (HYSTERESIS (eurt, max_eurt - max_eurt/10, max_eurt)) AS firing
-  NOTIFY "EURT to ${name} is too large" WITH
+  NOTIFY "BCA - EURT to ${name} is too large" WITH
     firing,
-    reldiff(eurt, max_eurt) AS certainty,
+    1 AS certainty,
     "The average end user response time to application ${name} has raised above the configured maximum of ${max_eurt}s for the last ${obs_window} seconds."
       AS desc,
     id AS bca,
@@ -184,9 +184,9 @@ DEFINE 'averages: volume anomalies' AS
      abnormality_c2s_bytes_per_secs > 0.75) AS abnormality,
     5-ma float(abnormality) AS _recent_abnormality,
     NOT (HYSTERESIS (_recent_abnormality, 3/5, 4/5)) AS firing
-  NOTIFY "averages volume looks abnormal" WITH
+  NOTIFY "BCA - averages volume looks abnormal" WITH
     firing,
-    abs(_recent_abnormality - 3/5) AS certainty,
+    0.1 * abs(_recent_abnormality - 3/5) AS certainty,
     "volume" AS metric,
     "anomaly detected" AS desc,
     id AS bca
@@ -263,9 +263,9 @@ DEFINE 'averages: retransmissions anomalies' AS
      abnormality_c2s_retrans_bytes_per_secs > 0.75) AS abnormality,
     5-ma float(abnormality) AS _recent_abnormality,
     NOT (HYSTERESIS (_recent_abnormality, 3/5, 4/5)) AS firing
-  NOTIFY "averages retransmissions looks abnormal" WITH
+  NOTIFY "BCA - averages retransmissions looks abnormal" WITH
     firing,
-    abs(_recent_abnormality - 3/5) AS certainty,
+    0.1 * abs(_recent_abnormality - 3/5) AS certainty,
     "retransmissions" AS metric,
     "anomaly detected" AS desc,
     id AS bca
@@ -342,9 +342,9 @@ DEFINE 'averages: connections anomalies' AS
      abnormality_c2s_syns_per_secs > 0.75) AS abnormality,
     5-ma float(abnormality) AS _recent_abnormality,
     NOT (HYSTERESIS (_recent_abnormality, 3/5, 4/5)) AS firing
-  NOTIFY "averages connections looks abnormal" WITH
+  NOTIFY "BCA - averages connections looks abnormal" WITH
     firing,
-    abs(_recent_abnormality - 3/5) AS certainty,
+    0.1 * abs(_recent_abnormality - 3/5) AS certainty,
     "connections" AS metric,
     "anomaly detected" AS desc,
     id AS bca
@@ -420,9 +420,9 @@ DEFINE 'averages: 0-windows anomalies' AS
      abnormality_c2s_0wins_per_secs > 0.75) AS abnormality,
     5-ma float(abnormality) AS _recent_abnormality,
     NOT (HYSTERESIS (_recent_abnormality, 3/5, 4/5)) AS firing
-  NOTIFY "averages 0-windows looks abnormal" WITH
+  NOTIFY "BCA - averages 0-windows looks abnormal" WITH
     firing,
-    abs(_recent_abnormality - 3/5) AS certainty,
+    0.1 * abs(_recent_abnormality - 3/5) AS certainty,
     "0-windows" AS metric,
     "anomaly detected" AS desc,
     id AS bca
@@ -469,9 +469,9 @@ DEFINE 'averages: SRT anomalies' AS
     (abnormality_srt_avg > 0.75) AS abnormality,
     5-ma float(abnormality) AS _recent_abnormality,
     NOT (HYSTERESIS (_recent_abnormality, 3/5, 4/5)) AS firing
-  NOTIFY "averages SRT looks abnormal" WITH
+  NOTIFY "BCA - averages SRT looks abnormal" WITH
     firing,
-    abs(_recent_abnormality - 3/5) AS certainty,
+    0.1 * abs(_recent_abnormality - 3/5) AS certainty,
     "SRT" AS metric,
     "anomaly detected" AS desc,
     id AS bca
@@ -505,9 +505,9 @@ DEFINE 'averages: RTT anomalies' AS
      abnormality_crtt_avg > 0.75) AS abnormality,
     5-ma float(abnormality) AS _recent_abnormality,
     NOT (HYSTERESIS (_recent_abnormality, 3/5, 4/5)) AS firing
-  NOTIFY "averages RTT looks abnormal" WITH
+  NOTIFY "BCA - averages RTT looks abnormal" WITH
     firing,
-    abs(_recent_abnormality - 3/5) AS certainty,
+    0.1 * abs(_recent_abnormality - 3/5) AS certainty,
     "RTT" AS metric,
     "anomaly detected" AS desc,
     id AS bca
@@ -555,9 +555,9 @@ DEFINE 'averages: RD anomalies' AS
      abnormality_crd_avg > 0.75) AS abnormality,
     5-ma float(abnormality) AS _recent_abnormality,
     NOT (HYSTERESIS (_recent_abnormality, 3/5, 4/5)) AS firing
-  NOTIFY "averages RD looks abnormal" WITH
+  NOTIFY "BCA - averages RD looks abnormal" WITH
     firing,
-    abs(_recent_abnormality - 3/5) AS certainty,
+    0.1 * abs(_recent_abnormality - 3/5) AS certainty,
     "RD" AS metric,
     "anomaly detected" AS desc,
     id AS bca
@@ -605,9 +605,9 @@ DEFINE 'averages: DTT anomalies' AS
      abnormality_cdtt_avg > 0.75) AS abnormality,
     5-ma float(abnormality) AS _recent_abnormality,
     NOT (HYSTERESIS (_recent_abnormality, 3/5, 4/5)) AS firing
-  NOTIFY "averages DTT looks abnormal" WITH
+  NOTIFY "BCA - averages DTT looks abnormal" WITH
     firing,
-    abs(_recent_abnormality - 3/5) AS certainty,
+    0.1 * abs(_recent_abnormality - 3/5) AS certainty,
     "DTT" AS metric,
     "anomaly detected" AS desc,
     id AS bca

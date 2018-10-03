@@ -76,9 +76,9 @@ DEFINE 'new peers: DDoS anomalies' AS
      abnormality_nb_new_cnxs_per_secs > 0.75) AS abnormality,
     5-ma float(abnormality) AS _recent_abnormality,
     NOT (HYSTERESIS (_recent_abnormality, 3/5, 4/5)) AS firing
-  NOTIFY "Possible DDoS detected" WITH
+  NOTIFY "Security - Possible DDoS detected" WITH
     "${firing}" AS firing,
-    abs(_recent_abnormality - 3/5) AS certainty,
+    0.1 * abs(_recent_abnormality - 3/5) AS certainty,
     "possible DDoS" AS desc
   AND KEEP ALL
   AFTER firing != COALESCE(previous.firing, false);

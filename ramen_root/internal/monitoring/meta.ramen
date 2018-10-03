@@ -133,7 +133,8 @@ DEFINE alert_output AS
 
 DEFINE alert_output_do_notif AS
   FROM alert_output
-  NOTIFY "output changed" AFTER tot_diff > 0.75;
+  NOTIFY "internal - output changed" WITH 0.1 AS certainty
+  AFTER tot_diff > 0.75;
 
 -- Also alert when the difference between the max event times is too large:
 DEFINE alert_event_times AS
@@ -145,9 +146,9 @@ DEFINE alert_event_times AS
     NOT (HYSTERESIS(event_time_spread,
                     0.8 * max_event_time_spread,
                     max_event_time_spread)) AS firing
-  NOTIFY "late workers" WITH
+  NOTIFY "internal - late workers" WITH
     firing,
-    reldiff(event_time_spread, max_event_time_spread) AS certainty,
+    0.1 * reldiff(event_time_spread, max_event_time_spread) AS certainty,
     "The diference between oldest (${min_event_time}) and latest (${max_event_time}) event times is too large"
       AS desc,
     event_time_spread AS values,

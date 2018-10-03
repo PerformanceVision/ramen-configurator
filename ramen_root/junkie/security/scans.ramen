@@ -36,8 +36,8 @@ AS
 DEFINE port_scan_alert AS
   FROM 'top port scans'
   WHEN port_count > max_ports
-  NOTIFY "Port-Scan from ${ip_client} to ${ip_server}" WITH
-    reldiff(port_count, max_ports) AS certainty,
+  NOTIFY "Security - Port-Scan from ${ip_client} to ${ip_server}" WITH
+    0.1 * reldiff(port_count, max_ports) AS certainty,
     "${ip_client} has probed at least ${port_count} ports of ${ip_server} from ${start} to ${stop}'" AS desc,
     "${ip_client},${ip_server}" AS ips,
     "${port_count}" AS values,
@@ -75,8 +75,8 @@ AS
 DEFINE ip_scan_alert AS
   FROM 'top ip scans'
   WHEN ip_count > max_hosts
-  NOTIFY "IP-Scan from ${ip_client}" WITH
-    reldiff(ip_count, max_hosts) AS certainty,
+  NOTIFY "Security - IP-Scan from ${ip_client}" WITH
+    0.1 * reldiff(ip_count, max_hosts) AS certainty,
     "${ip_client}" AS ips,
     "${ip_count}" AS values,
     "${max_hosts}" AS thresholds;
