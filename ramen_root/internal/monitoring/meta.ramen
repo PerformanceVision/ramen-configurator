@@ -142,9 +142,9 @@ DEFINE alert_event_times AS
     start, stop,
     COALESCE(max_event_time - min_event_time, 0) AS event_time_spread
       "Duration between oldest and latest max_event_time",
-    hysteresis(event_time_spread,
-               0.8 * max_event_time_spread,
-               max_event_time_spread) AS firing
+    NOT (HYSTERESIS(event_time_spread,
+                    0.8 * max_event_time_spread,
+                    max_event_time_spread)) AS firing
   NOTIFY "late workers" WITH
     firing,
     reldiff(event_time_spread, max_event_time_spread) AS certainty,

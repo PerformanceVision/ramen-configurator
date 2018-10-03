@@ -161,7 +161,7 @@ DEFINE 'EURT too high' AS
   FROM percentiles
   SELECT
     start,
-    hysteresis (eurt, max_eurt - max_eurt/10, max_eurt) AS firing
+    NOT (HYSTERESIS (eurt, max_eurt - max_eurt/10, max_eurt)) AS firing
   NOTIFY "EURT to ${name} is too large" WITH
     firing,
     reldiff(eurt, max_eurt) AS certainty,
@@ -183,7 +183,7 @@ DEFINE 'averages: volume anomalies' AS
      abnormality_s2c_bytes_per_secs > 0.75 OR
      abnormality_c2s_bytes_per_secs > 0.75) AS abnormality,
     5-ma float(abnormality) AS _recent_abnormality,
-    hysteresis (_recent_abnormality, 3/5, 4/5) AS firing
+    NOT (HYSTERESIS (_recent_abnormality, 3/5, 4/5)) AS firing
   NOTIFY "averages volume looks abnormal" WITH
     firing,
     abs(_recent_abnormality - 3/5) AS certainty,
@@ -262,7 +262,7 @@ DEFINE 'averages: retransmissions anomalies' AS
      abnormality_s2c_retrans_bytes_per_secs > 0.75 OR
      abnormality_c2s_retrans_bytes_per_secs > 0.75) AS abnormality,
     5-ma float(abnormality) AS _recent_abnormality,
-    hysteresis (_recent_abnormality, 3/5, 4/5) AS firing
+    NOT (HYSTERESIS (_recent_abnormality, 3/5, 4/5)) AS firing
   NOTIFY "averages retransmissions looks abnormal" WITH
     firing,
     abs(_recent_abnormality - 3/5) AS certainty,
@@ -341,7 +341,7 @@ DEFINE 'averages: connections anomalies' AS
      abnormality_s2c_rsts_per_secs > 0.75 OR
      abnormality_c2s_syns_per_secs > 0.75) AS abnormality,
     5-ma float(abnormality) AS _recent_abnormality,
-    hysteresis (_recent_abnormality, 3/5, 4/5) AS firing
+    NOT (HYSTERESIS (_recent_abnormality, 3/5, 4/5)) AS firing
   NOTIFY "averages connections looks abnormal" WITH
     firing,
     abs(_recent_abnormality - 3/5) AS certainty,
@@ -419,7 +419,7 @@ DEFINE 'averages: 0-windows anomalies' AS
     (abnormality_s2c_0wins_per_secs > 0.75 OR
      abnormality_c2s_0wins_per_secs > 0.75) AS abnormality,
     5-ma float(abnormality) AS _recent_abnormality,
-    hysteresis (_recent_abnormality, 3/5, 4/5) AS firing
+    NOT (HYSTERESIS (_recent_abnormality, 3/5, 4/5)) AS firing
   NOTIFY "averages 0-windows looks abnormal" WITH
     firing,
     abs(_recent_abnormality - 3/5) AS certainty,
@@ -468,7 +468,7 @@ DEFINE 'averages: SRT anomalies' AS
     start,
     (abnormality_srt_avg > 0.75) AS abnormality,
     5-ma float(abnormality) AS _recent_abnormality,
-    hysteresis (_recent_abnormality, 3/5, 4/5) AS firing
+    NOT (HYSTERESIS (_recent_abnormality, 3/5, 4/5)) AS firing
   NOTIFY "averages SRT looks abnormal" WITH
     firing,
     abs(_recent_abnormality - 3/5) AS certainty,
@@ -504,7 +504,7 @@ DEFINE 'averages: RTT anomalies' AS
     (abnormality_srtt_avg > 0.75 OR
      abnormality_crtt_avg > 0.75) AS abnormality,
     5-ma float(abnormality) AS _recent_abnormality,
-    hysteresis (_recent_abnormality, 3/5, 4/5) AS firing
+    NOT (HYSTERESIS (_recent_abnormality, 3/5, 4/5)) AS firing
   NOTIFY "averages RTT looks abnormal" WITH
     firing,
     abs(_recent_abnormality - 3/5) AS certainty,
@@ -554,7 +554,7 @@ DEFINE 'averages: RD anomalies' AS
     (abnormality_srd_avg > 0.75 OR
      abnormality_crd_avg > 0.75) AS abnormality,
     5-ma float(abnormality) AS _recent_abnormality,
-    hysteresis (_recent_abnormality, 3/5, 4/5) AS firing
+    NOT (HYSTERESIS (_recent_abnormality, 3/5, 4/5)) AS firing
   NOTIFY "averages RD looks abnormal" WITH
     firing,
     abs(_recent_abnormality - 3/5) AS certainty,
@@ -604,7 +604,7 @@ DEFINE 'averages: DTT anomalies' AS
     (abnormality_sdtt_avg > 0.75 OR
      abnormality_cdtt_avg > 0.75) AS abnormality,
     5-ma float(abnormality) AS _recent_abnormality,
-    hysteresis (_recent_abnormality, 3/5, 4/5) AS firing
+    NOT (HYSTERESIS (_recent_abnormality, 3/5, 4/5)) AS firing
   NOTIFY "averages DTT looks abnormal" WITH
     firing,
     abs(_recent_abnormality - 3/5) AS certainty,
