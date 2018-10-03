@@ -34,7 +34,7 @@ AS
     (1 + false_pos_rate) * sum 1 AS port_count
       "Approximate number of ports probed by the client to this server"
   GROUP BY start // 1h, ip_client, ip_server
-  COMMIT AFTER in.start > out.start + 1h2m
+  COMMIT AFTER in.start > out.start + 1h10m
   FACTOR ip_client, ip_server;
 
 DEFINE port_scan_alert AS
@@ -74,7 +74,7 @@ AS
     (1 + false_pos_rate) * sum 1 AS ip_count
       "Approximate number of hosts probed by this client."
   GROUP BY start // 1h, ip_client
-  COMMIT AFTER in.start > out.start + 1h2m
+  COMMIT AFTER in.start > out.start + 1h10m
   FACTORS ip_client;
 
 DEFINE ip_scan_alert AS
