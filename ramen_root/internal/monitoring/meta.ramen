@@ -133,8 +133,10 @@ DEFINE alert_output AS
 
 DEFINE alert_output_do_notif AS
   FROM alert_output
-  NOTIFY "internal - output changed" WITH 0.1 AS certainty
-  AFTER tot_diff > 0.75;
+  SELECT tot_diff > 0.75 AS firing
+  NOTIFY "internal - output changed" WITH
+    firing, 0.1 AS certainty
+  AFTER firing != COALESCE(previous.firing, false);
 
 -- Also alert when the difference between the max event times is too large:
 DEFINE alert_event_times AS
