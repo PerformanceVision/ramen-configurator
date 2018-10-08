@@ -189,7 +189,7 @@ let send_trap sink =
        extParameters.0 s '${desc}'"
     (shell_quote sink)
 
-let write_notif_conf fname cmds =
+let write_notif_conf fname alert_internal cmds =
   !logger.info "Writing notifier configuration in %S" fname ;
   (* We could share the same type for the conf, and then serialize it,
    * but that would force us to package a library from ramen, for the only
@@ -198,8 +198,9 @@ let write_notif_conf fname cmds =
    * this string: *)
   File.with_file_out ~mode:[`create;`text;`trunc] fname (fun oc ->
     Printf.fprintf oc {|
-{ teams = [
-    {
+{
+  teams = [
+    %s{
       name = "" ;
       contacts =
         [
@@ -237,25 +238,27 @@ let write_notif_conf fname cmds =
   ]
 }
 |}
+    (if alert_internal then "" else "{ name = \"Internal\" ; contacts = [] }, ")
     (if cmds <> [] then " ;" else "")
     (List.print ~first:"" ~sep:" ;\n" ~last:"\n" (fun oc cmd ->
       Printf.fprintf oc "ViaExec %S" cmd)) cmds)
 
 let sync_notif_conf =
   let prev_cmds = ref None in
-  fun db notif_conf_file ->
+  fun db notif_conf_file alert_internal ->
     let open Conf_of_sqlite in
     let rcpts, snmpsink = get_alerts_sink db in
     let cmds = [] in
     let cmds = if rcpts = "" then cmds else send_email rcpts :: cmds in
     let cmds = if snmpsink = "" then cmds else send_trap snmpsink :: cmds in
     if !prev_cmds <> Some cmds then (
-      write_notif_conf notif_conf_file cmds ;
+      write_notif_conf notif_conf_file alert_internal cmds ;
       prev_cmds := Some cmds)
 
 let start debug monitor ramen_cmd root_dir persist_dir db_name
           uncompress csv_prefix csv_delete
-          with_bcns with_bcas notif_conf_file dry_run_ =
+          with_bcns with_bcas alert_internal
+          notif_conf_file dry_run_ =
   logger := make_logger debug ;
   dry_run := dry_run_ ;
   let open Conf_of_sqlite in
@@ -265,7 +268,7 @@ let start debug monitor ramen_cmd root_dir persist_dir db_name
                   csv_prefix csv_delete with_bcns with_bcas
   and update_notif_conf () =
     if notif_conf_file <> "" then
-      sync_notif_conf db notif_conf_file
+      sync_notif_conf db notif_conf_file alert_internal
   in
   update_notif_conf () ;
   update_bcs () ;
@@ -344,6 +347,11 @@ let notif_conf_file =
                    ~env ["notifier-config"; "notif-config"] in
   Arg.(value (opt string "" i))
 
+let alert_internal =
+  let i = Arg.info ~doc:"Also send \"Internal\" notifications."
+                   [ "alert-internal" ] in
+  Arg.(value (flag i))
+
 let dry_run =
   let i = Arg.info ~doc:"Just display what would be killed/run"
                    [ "dry-run" ] in
@@ -365,6 +373,7 @@ let start_cmd =
       $ csv_delete
       $ with_bcns
       $ with_bcas
+      $ alert_internal
       $ notif_conf_file
       $ dry_run),
     info "ramen_configurator" ~version ~doc)

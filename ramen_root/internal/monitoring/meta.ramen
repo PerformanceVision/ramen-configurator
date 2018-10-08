@@ -134,7 +134,7 @@ DEFINE alert_output AS
 DEFINE alert_output_do_notif AS
   FROM alert_output
   SELECT tot_diff > 0.75 AS firing
-  NOTIFY "internal - output changed" WITH
+  NOTIFY "Internal - Output changed" WITH
     firing,
     0.1 AS certainty,
     "Large variations in ramen number of output tuples" AS desc
@@ -150,7 +150,7 @@ DEFINE alert_event_times AS
     NOT (HYSTERESIS(event_time_spread,
                     0.8 * max_event_time_spread,
                     max_event_time_spread)) AS firing
-  NOTIFY "internal - late workers" WITH
+  NOTIFY "Internal - Late workers" WITH
     firing,
     0.1 * reldiff(event_time_spread, max_event_time_spread) AS certainty,
     "The diference between oldest (${min_event_time}) and latest (${max_event_time}) event times is too large"
