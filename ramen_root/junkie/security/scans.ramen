@@ -14,6 +14,7 @@ DEFINE new_triplets AS
   MERGE TIMEOUT AFTER 5s
   WHERE
     start > merge.greatest.start - 3min AND
+    -- TODO: we could filter out by max_num_packets up here
     NOT REMEMBER (
       false_pos_rate, start, 1h,
       -- We do not take into account IP proto, so a ping on a TCP port

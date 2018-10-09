@@ -23,24 +23,24 @@ DEFINE averages AS
     sum traffic_packets_client / avg_window AS c2s_packets_per_secs,
     sum traffic_packets_server / avg_window AS s2c_packets_per_secs,
     -- Retransmissions
-    sum COALESCE(retrans_traffic_bytes_client, 0) / avg_window
+    sum retrans_traffic_bytes_client / avg_window
       AS c2s_retrans_bytes_per_secs,
-    sum COALESCE(retrans_traffic_bytes_server, 0) / avg_window
+    sum retrans_traffic_bytes_server / avg_window
       AS s2c_retrans_bytes_per_secs,
     -- TCP flags
-    sum COALESCE(syn_count_client, 0) / avg_window AS c2s_syns_per_secs,
-    sum COALESCE(fin_count_client, 0) / avg_window AS c2s_fins_per_secs,
-    sum COALESCE(fin_count_server, 0) / avg_window AS s2c_fins_per_secs,
-    sum COALESCE(rst_count_client, 0) / avg_window AS c2s_rsts_per_secs,
-    sum COALESCE(rst_count_server, 0) / avg_window AS s2c_rsts_per_secs,
-    sum COALESCE(close_count, 0) / avg_window AS close_per_secs,
+    sum syn_count_client / avg_window AS c2s_syns_per_secs,
+    sum fin_count_client / avg_window AS c2s_fins_per_secs,
+    sum fin_count_server / avg_window AS s2c_fins_per_secs,
+    sum rst_count_client / avg_window AS c2s_rsts_per_secs,
+    sum rst_count_server / avg_window AS s2c_rsts_per_secs,
+    sum close_count / avg_window AS close_per_secs,
     -- TCP issues
-    sum COALESCE(dupack_count_client, 0) / avg_window AS c2s_dupacks_per_secs,
-    sum COALESCE(dupack_count_server, 0) / avg_window AS s2c_dupacks_per_secs,
-    sum COALESCE(zero_window_count_client, 0) / avg_window AS c2s_0wins_per_secs,
-    sum COALESCE(zero_window_count_server, 0) / avg_window AS s2c_0wins_per_secs,
+    sum dupack_count_client / avg_window AS c2s_dupacks_per_secs,
+    sum dupack_count_server / avg_window AS s2c_dupacks_per_secs,
+    sum zero_window_count_client / avg_window AS c2s_0wins_per_secs,
+    sum zero_window_count_server / avg_window AS s2c_0wins_per_secs,
     -- Connection Time
-    sum COALESCE(ct_count, 0) AS sum_ct_count,
+    sum ct_count,
     sum ct_sum AS _sum_ct_sum,
     sum_ct_count / avg_window AS ct_per_secs,
     IF sum_ct_count = 0 THEN 0 ELSE
@@ -48,7 +48,7 @@ DEFINE averages AS
     IF sum_ct_count = 0 THEN 0 ELSE
       sqrt (((sum ct_square_sum - _sum_ct_sum^2) / sum_ct_count)) AS ct_stddev,
     -- Server Response Time
-    sum COALESCE(rt_count_server, 0) AS sum_rt_count_server,
+    sum rt_count_server,
     sum rt_sum_server AS _sum_rt_sum_server,
     sum_rt_count_server / avg_window AS srt_per_secs,
     IF sum_rt_count_server = 0 THEN 0 ELSE
@@ -57,7 +57,7 @@ DEFINE averages AS
       sqrt ((sum rt_square_sum_server - _sum_rt_sum_server^2) /
             sum_rt_count_server) AS srt_stddev,
     -- Round Trip Time CSC
-    sum COALESCE(rtt_count_server, 0) AS sum_rtt_count_server,
+    sum rtt_count_server,
     sum rtt_sum_server AS _sum_rtt_sum_server,
     sum_rtt_count_server / avg_window AS crtt_per_secs,
     IF sum_rtt_count_server = 0 THEN 0 ELSE
@@ -66,7 +66,7 @@ DEFINE averages AS
       sqrt ((sum rtt_square_sum_server - _sum_rtt_sum_server^2) /
             sum_rtt_count_server) AS crtt_stddev,
     -- Round Trip Time SCS
-    sum COALESCE(rtt_count_client, 0) AS sum_rtt_count_client,
+    sum rtt_count_client,
     sum rtt_sum_client AS _sum_rtt_sum_client,
     sum_rtt_count_client / avg_window AS srtt_per_secs,
     IF sum_rtt_count_client = 0 THEN 0 ELSE
@@ -75,7 +75,7 @@ DEFINE averages AS
       sqrt ((sum rtt_square_sum_client - _sum_rtt_sum_client^2) /
             sum_rtt_count_client) AS srtt_stddev,
     -- Retransmition Delay C2S
-    sum COALESCE(rd_count_client, 0) AS sum_rd_count_client,
+    sum rd_count_client,
     sum rd_sum_client AS _sum_rd_sum_client,
     sum_rd_count_client / avg_window AS crd_per_secs,
     IF sum_rd_count_client = 0 THEN 0 ELSE
@@ -84,7 +84,7 @@ DEFINE averages AS
       sqrt ((sum rd_square_sum_client - _sum_rd_sum_client^2) /
             sum_rd_count_client) AS crd_stddev,
     -- Retransmition Delay S2C
-    sum COALESCE(rd_count_server, 0) AS sum_rd_count_server,
+    sum rd_count_server,
     sum rd_sum_server AS _sum_rd_sum_server,
     sum_rd_count_server / avg_window AS srd_per_secs,
     IF sum_rd_count_server = 0 THEN 0 ELSE
@@ -93,7 +93,7 @@ DEFINE averages AS
       sqrt ((sum rd_square_sum_server - _sum_rd_sum_server^2) /
             sum_rd_count_server) AS srd_stddev,
     -- Data Transfer Time C2S
-    sum COALESCE(dtt_count_client, 0) AS sum_dtt_count_client,
+    sum dtt_count_client,
     sum dtt_sum_client AS _sum_dtt_sum_client,
     sum_dtt_count_client / avg_window AS cdtt_per_secs,
     IF sum_dtt_count_client = 0 THEN 0 ELSE
@@ -102,7 +102,7 @@ DEFINE averages AS
       sqrt ((sum dtt_square_sum_client - _sum_dtt_sum_client^2) /
             sum_dtt_count_client) AS cdtt_stddev,
     -- Data Transfer Time S2C
-    sum COALESCE(dtt_count_server, 0) AS sum_dtt_count_server,
+    sum dtt_count_server,
     sum dtt_sum_server AS _sum_dtt_sum_server,
     sum_dtt_count_server / avg_window AS sdtt_per_secs,
     IF sum_dtt_count_server = 0 THEN 0 ELSE
@@ -113,26 +113,7 @@ DEFINE averages AS
   WHERE
     application = service_id AND
     -- Exclude netflow
-    retrans_traffic_bytes_client IS NOT NULL AND
-    retrans_traffic_bytes_server IS NOT NULL AND
-    syn_count_client IS NOT NULL AND
-    fin_count_client IS NOT NULL AND
-    fin_count_server IS NOT NULL AND
-    rst_count_client IS NOT NULL AND
-    rst_count_server IS NOT NULL AND
-    close_count IS NOT NULL AND
-    dupack_count_client IS NOT NULL AND
-    dupack_count_server IS NOT NULL AND
-    zero_window_count_client IS NOT NULL AND
-    zero_window_count_server IS NOT NULL AND
-    ct_count IS NOT NULL AND
-    rt_count_server IS NOT NULL AND
-    rtt_count_server IS NOT NULL AND
-    rtt_count_client IS NOT NULL AND
-    rd_count_client IS NOT NULL AND
-    rd_count_server IS NOT NULL AND
-    dtt_count_client IS NOT NULL AND
-    dtt_count_server IS NOT NULL
+    NOT is_netflow
   GROUP BY start // u32(avg_window)
   COMMIT AFTER
     in.start > out.start + 2 * avg_window;

@@ -23,7 +23,8 @@ RAMEN_SOURCES = \
 	ramen_root/junkie/links/BCN/_.ramen \
 	ramen_root/junkie/apps/BCA/_.ramen \
 	ramen_root/junkie/apps/top_servers/_.ramen \
-	ramen_root/junkie/apps/transactions/_.ramen
+	ramen_root/junkie/protocols/transactions/_.ramen \
+	ramen_root/junkie/protocols/top_errors/_.ramen
 
 INSTALLED_BIN = src/ramen_configurator
 INSTALLED_WORKERS = $(RAMEN_SOURCES:.ramen=.x)
@@ -69,7 +70,8 @@ ramen_root/junkie/links/BCN/_.x: ramen_root/junkie/csv.x
 ramen_root/junkie/links/top_zones/_.x: ramen_root/junkie/csv.x
 ramen_root/junkie/apps/BCA/_.x: ramen_root/junkie/csv.x
 ramen_root/junkie/apps/top_servers/_.x: ramen_root/junkie/csv.x
-ramen_root/junkie/apps/transactions/_.x: ramen_root/junkie/csv.x
+ramen_root/junkie/protocols/transactions/_.x: ramen_root/junkie/csv.x
+ramen_root/junkie/protocols/top_errors/_.x: ramen_root/junkie/csv.x
 
 SOURCES = $(CONFIGURATOR_SOURCES) $(FINDCSV_SOURCES)
 

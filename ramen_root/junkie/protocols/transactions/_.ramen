@@ -10,22 +10,24 @@ PARAMETERS
 
 DEFINE tcp_connections AS
   FROM ../../../csv/tcp
-  WHERE COALESCE(ct_count > 0, false)
+  WHERE ct_count > 0
   SELECT
     start,  -- approximation
-    COALESCE(ct_count, 1) AS count,
+    ct_count AS count,
     start + ct_sum / out.count{} AS stop,
+    zone_server,
     "TCP-Syn" AS protocol,
     string(ip_server) AS query,
     true AS success;
 
 DEFINE tcp_generic AS
   FROM ../../../csv/tcp
-  WHERE COALESCE(rt_count_server > 0, false)
+  WHERE rt_count_server > 0
   SELECT
     start,
-    COALESCE(rt_count_server, 1) AS count,
+    rt_count_server AS count,
     start + rt_sum_server / out.count{} AS stop,
+    zone_server,
     "TCP-Gen" AS protocol,
     string(ip_server) AS query,
     true AS success;
@@ -38,6 +40,7 @@ DEFINE dns_resolutions AS
     start,
     rt_count_server AS count,
     start + rt_sum_server / out.count{} AS stop,
+    zone_server,
     "DNS" AS protocol,
     query_name || (IF query_type <> 1 THEN " (AAA)" ELSE "") AS query,
     error_count = 0 AS success;
@@ -48,6 +51,7 @@ DEFINE http_hits AS
   SELECT
     start,
     start + COALESCE(resp_begin_ts, 0) - query_end_ts AS stop,
+    zone_server,
     "HTTP" AS protocol,
     host || url AS query,
     NOT timeouted AND COALESCE(resp_code < 400, false) AS success,
@@ -64,6 +68,7 @@ DEFINE citrix_mix AS
     start,
     rt_count_server AS count,
     start + rt_sum_server / out.count{} AS stop,
+    zone_server,
     "Citrix" AS protocol,
     COALESCE(username || "@", "") || domain ||
       COALESCE("(" || citrix_application || ")", "") AS query,
@@ -75,6 +80,7 @@ DEFINE smb_mix AS
   SELECT
     start,
     start + COALESCE(resp_begin_ts, 0) - query_end_ts AS stop,
+    zone_server,
     "SMB" AS protocol,
     COALESCE(user || "@", "") || domain || COALESCE(":" || path, "") AS query,
     COALESCE(status = 0, false) AS success, -- TODO
@@ -86,13 +92,18 @@ DEFINE sql_queries AS
   SELECT
     start,
     start + COALESCE(resp_begin_ts, 0) - query_end_ts AS stop,
+    zone_server,
     "SQL" AS protocol,
     COALESCE(dbname ||": ", "") || query AS query,
     NOT is_error AS success,
     1 AS count;
 
+-- TODO: We could have a group by zone_server, protocol, success with an ongoing
+-- TOP selecting for each group the worse queries, and then in the next node we
+-- could aggregate per zone_server, protocol, success and query.
+
 DEFINE 'response times'
-  "Aggregation of all possible query/responses"
+  "Aggregation of all possible queries/responses"
 AS
   FROM
     tcp_connections,
@@ -104,14 +115,14 @@ AS
     smb_mix
   MERGE TIMEOUT AFTER 5s
   WHERE start > merge.greatest.start - 3min
-  GROUP BY protocol, success, start // obs_window
+  GROUP BY zone_server, protocol, success, start // obs_window
   SELECT
     (start // obs_window) * obs_window AS start,
     out.start + obs_window AS stop,
-    protocol, success,
+    zone_server, protocol, success,
     SUM count AS count,
     -- TODO: nb_buckets
     HISTOGRAM(stop - start, 0, 30, 20) AS response_times
   -- Since we order the tuple according chronologically at input:
   COMMIT AFTER in.start > out.start + obs_window
-  FACTORS protocol, success;
+  FACTORS zone_server, protocol, success;

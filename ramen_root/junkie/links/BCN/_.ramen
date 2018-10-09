@@ -1,3 +1,5 @@
+-- vim: ft=sql expandtab
+
 PARAMETERS
   uniq_name DEFAULTS TO "",
   id DEFAULTS TO 0,
@@ -39,13 +41,13 @@ DEFINE 'avg traffic' AS
     sum packets_src / avg_window AS packets_per_secs,
     sum bytes_src / avg_window AS bytes_per_secs,
     -- RTT (in seconds)
-    sum COALESCE(rtt_count_src, 0) AS _sum_rtt_count_src,
+    sum rtt_count_src AS _sum_rtt_count_src,
     IF _sum_rtt_count_src = 0 THEN 0 ELSE
       sum rtt_sum_src / _sum_rtt_count_src AS avg_rtt,
     -- RD: percentage of retransmitted packets over packets with payload
     sum packets_with_payload_src AS _sum_packets_with_payload_src,
     IF _sum_packets_with_payload_src = 0 THEN 0 ELSE
-      (sum COALESCE(rd_count_src, 0) / _sum_packets_with_payload_src) / 100 AS avg_rr,
+      (sum rd_count_src / _sum_packets_with_payload_src) / 100 AS avg_rr,
     source_name AS zone_src, dest_name AS zone_dst
   GROUP BY start // u32(avg_window)
   COMMIT AFTER
@@ -173,18 +175,7 @@ DEFINE 'TCP minutely' AS
     (source_name = "any" OR in.zone_src IN source) AND
     (dest_name = "any" OR in.zone_dst IN dest) AND
     -- Exclude netflow traffic
-    retrans_bytes_src IS NOT NULL AND
-    retrans_payload_src IS NOT NULL AND
-    syns IS NOT NULL AND
-    fins_src IS NOT NULL AND
-    rsts_src IS NOT NULL AND
-    closes IS NOT NULL AND
-    connections IS NOT NULL AND
-    dupacks_src IS NOT NULL AND
-    zero_windows_src IS NOT NULL AND
-    rtt_count_src IS NOT NULL AND
-    rd_count_src IS NOT NULL AND
-    dtt_count_src IS NOT NULL
+    NOT is_netflow
   SELECT
     min start, max stop,
     (start // 60) * 60 AS start,
@@ -193,18 +184,18 @@ DEFINE 'TCP minutely' AS
     sum bytes_src / 60 AS bytes_per_secs,
     sum payload_src / 60 AS payload_per_secs,
     sum packets_with_payload_src / 60 AS packets_with_payload_per_secs,
-    sum COALESCE(retrans_bytes_src, 0) / 60 AS retrans_bytes_per_secs,
-    sum COALESCE(retrans_payload_src, 0) / 60 AS retrans_payload_per_secs,
-    sum COALESCE(fins_src, 0) / 60 AS fins_per_secs,
-    sum COALESCE(rsts_src, 0) / 60 AS rsts_per_secs,
+    sum retrans_bytes_src / 60 AS retrans_bytes_per_secs,
+    sum retrans_payload_src / 60 AS retrans_payload_per_secs,
+    sum fins_src / 60 AS fins_per_secs,
+    sum rsts_src / 60 AS rsts_per_secs,
     sum timeouts / 60 AS timeouts_per_secs,
-    sum COALESCE(syns, 0) / 60 AS syns_per_secs,
-    sum COALESCE(closes, 0) / 60 AS closes_per_secs,
-    sum COALESCE(connections, 0) AS _sum_connections,
+    sum syns / 60 AS syns_per_secs,
+    sum closes / 60 AS closes_per_secs,
+    sum connections AS _sum_connections,
     _sum_connections / 60 AS connections_per_secs,
-    sum COALESCE(dupacks_src, 0) / 60 AS dupacks_per_secs,
-    sum COALESCE(zero_windows_src, 0) / 60 AS zero_windows_per_secs,
-    sum COALESCE(rtt_count_src, 0) AS sum_rtt_count_src,
+    sum dupacks_src / 60 AS dupacks_per_secs,
+    sum zero_windows_src / 60 AS zero_windows_per_secs,
+    sum rtt_count_src,
     sum rtt_sum_src AS _sum_rtt_sum_src,
     _sum_rtt_sum_src / sum_rtt_count_src AS rtt_avg,
     -- We divide here by 1 packet because the distance to the mean is
@@ -213,12 +204,12 @@ DEFINE 'TCP minutely' AS
     -- would be just seconds:
     (sum rtt_sum2_src / 1{packets} - _sum_rtt_sum_src^2 / sum_rtt_count_src) /
         sum_rtt_count_src AS rtt_var,
-    sum COALESCE(rd_count_src, 0) AS sum_rd_count_src,
+    sum rd_count_src,
     sum rd_sum_src AS _sum_rd_sum_src,
     _sum_rd_sum_src / sum_rd_count_src AS rd_avg,
     (sum rd_sum2_src / 1{packets} - _sum_rd_sum_src^2 / sum_rd_count_src) /
         sum_rd_count_src AS rd_var,
-    sum COALESCE(dtt_count_src, 0) AS sum_dtt_count_src,
+    sum dtt_count_src,
     sum dtt_sum_src AS _sum_dtt_sum_src,
     _sum_dtt_sum_src / sum_dtt_count_src AS dtt_avg,
     (sum dtt_sum2_src / 1{packets}  - _sum_dtt_sum_src^2 / sum_dtt_count_src) /

@@ -104,7 +104,8 @@ let sync_programs db debug ramen_cmd root_dir persist_dir uncompress
                       "1hour", [ "obs_window", "3600" ] ] in
   comp "junkie/links/top_zones/_" aggr_times ;
   comp "junkie/apps/top_servers/_" aggr_times ;
-  comp "junkie/apps/transactions/_" aggr_times ;
+  comp "junkie/protocols/transactions/_" aggr_times ;
+  comp "junkie/protocols/top_errors/_" aggr_times ;
   let bcns, bcas = Conf_of_sqlite.get_bcs db in
   let bcns = List.take with_bcns bcns
   and bcas = List.take with_bcas bcas in

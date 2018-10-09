@@ -1,0 +1,101 @@
+-- vim: ft=sql expandtab
+-- Track servers with most errors, per minutes.
+
+PARAMETERS
+  top_size DEFAULT TO 20,
+  top_duration DEFAULT TO 1h,
+  obs_window DEFAULT TO 1min;
+
+-- Top of type * code * error_ip_server * error_port every obs_window
+DEFINE icmp_degraded AS
+  FROM ../../../csv/icmp
+  SELECT
+    start, stop,
+    IS icmp_type, icmp_code, error_ip_server, error_port_server IN TOP top_size
+      IN THE LAST top_duration AT TIME start AS _important,
+    -- degrade the key of not important:
+    icmp_type, icmp_code,
+    IF _important THEN error_ip_server AS error_ip_server,
+    IF _important THEN error_port_server AS error_port_server;
+
+DEFINE icmp
+  "Top ICMP errors."
+AS
+  FROM icmp_degraded
+  GROUP BY
+    icmp_type, icmp_code, error_ip_server, error_port_server,
+    start // obs_window
+  SELECT
+    -- Time info:
+    (start // obs_window) * obs_window AS start,
+    out.start + obs_window AS stop,
+
+    -- Error description:
+    icmp_type, icmp_code, error_ip_server, error_port_server,
+    sum 1 AS count
+  COMMIT AFTER in.start > out.start + obs_window * 1.3
+  FACTORS icmp_type, icmp_code;
+
+-- Select the worse TCP servers:
+DEFINE tcp_degraded AS
+  FROM ../../../csv/tcp
+  SELECT
+    start, stop,
+    (IS ip_server IN TOP top_size BY zero_window_count_server
+      IN THE LAST top_duration AT TIME start) OR
+    (IS ip_server IN TOP top_size BY (dupack_count_client + dupack_count_server)
+      IN THE LAST top_duration AT TIME start) OR
+    (IS ip_server IN TOP top_size BY (retrans_traffic_bytes_client + retrans_traffic_bytes_server)
+      IN THE LAST top_duration AT TIME start) OR
+    (IS ip_server IN TOP top_size BY (rst_count_server + timeout_count)
+      IN THE LAST top_duration AT TIME start)
+      AS _important,
+    -- The data
+    traffic_bytes_client, traffic_bytes_server,
+    traffic_packets_client, traffic_packets_server,
+    payload_bytes_client, payload_bytes_server,
+    payload_packets_client, payload_packets_server,
+    retrans_traffic_bytes_client, retrans_traffic_bytes_server,
+    retrans_payload_bytes_client, retrans_payload_bytes_server,
+    syn_count_client, fin_count_client,
+    fin_count_server, rst_count_client,
+    rst_count_server, timeout_count, close_count,
+    dupack_count_client, dupack_count_server,
+    zero_window_count_client, zero_window_count_server,
+    -- Degraded non important ip_server:
+    IF _important THEN ip_server AS ip_server;
+
+DEFINE tcp
+  "Worse TCP servers."
+AS
+  FROM tcp_degraded
+  GROUP BY ip_server, start // obs_window
+  SELECT
+    -- Time info:
+    (start // obs_window) * obs_window AS start,
+    out.start + obs_window AS stop,
+    -- Data:
+    ip_server,
+    sum traffic_bytes_client / obs_window AS traffic_bytes_client_per_secs,
+    sum traffic_bytes_server / obs_window AS traffic_bytes_server_per_secs,
+    sum traffic_packets_client / obs_window AS traffic_packets_client_per_secs,
+    sum traffic_packets_server / obs_window AS traffic_packets_server_per_secs,
+    sum payload_bytes_client / obs_window AS payload_bytes_client_per_secs,
+    sum payload_bytes_server / obs_window AS payload_bytes_server_per_secs,
+    sum retrans_traffic_bytes_client / obs_window AS retrans_traffic_bytes_client_per_secs,
+    sum retrans_traffic_bytes_server / obs_window AS retrans_traffic_bytes_server_per_secs,
+    sum retrans_payload_bytes_client / obs_window AS retrans_payload_bytes_client,
+    sum retrans_payload_bytes_server / obs_window AS retrans_payload_bytes_server,
+    sum syn_count_client / obs_window AS syn_count_client,
+    sum fin_count_client / obs_window AS fin_count_client,
+    sum fin_count_server / obs_window AS fin_count_server,
+    sum rst_count_client / obs_window AS rst_count_client,
+    sum rst_count_server / obs_window AS rst_count_server,
+    sum timeout_count / obs_window AS timeout_count,
+    sum close_count / obs_window AS close_count,
+    sum dupack_count_client / obs_window AS dupack_count_client,
+    sum dupack_count_server / obs_window AS dupack_count_server,
+    sum zero_window_count_client / obs_window AS zero_window_count_client,
+    sum zero_window_count_server / obs_window AS zero_window_count_server
+  COMMIT AFTER in.start > out.start + obs_window * 1.3
+  FACTORS ip_server;

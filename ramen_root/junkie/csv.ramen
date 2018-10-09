@@ -126,6 +126,35 @@ AS
     (dtt_square_sum_client / 1e12) {seconds^2} AS dtt_square_sum_client,
     (dtt_sum_server / 1e6) {seconds} AS dtt_sum_server,
     (dtt_square_sum_server / 1e12) {seconds^2} AS dtt_square_sum_server,
+    -- Also fix NULL counters:
+    retrans_traffic_bytes_client IS NULL AND
+    retrans_traffic_bytes_server IS NULL AND
+    syn_count_client IS NULL AND
+    fin_count_client IS NULL AND
+    fin_count_server IS NULL -- etc...
+      AS is_netflow,
+    COALESCE(ct_count, 0) AS ct_count,
+    COALESCE(close_count, 0) AS close_count,
+    COALESCE(rt_count_server, 0) AS rt_count_server,
+    COALESCE(rtt_count_client, 0) AS rtt_count_client,
+    COALESCE(rtt_count_server, 0) AS rtt_count_server,
+    COALESCE(rd_count_client, 0) AS rd_count_client,
+    COALESCE(rd_count_server, 0) AS rd_count_server,
+    COALESCE(dtt_count_client, 0) AS dtt_count_client,
+    COALESCE(dtt_count_server, 0) AS dtt_count_server,
+    COALESCE(dupack_count_client, 0) AS dupack_count_client,
+    COALESCE(dupack_count_server, 0) AS dupack_count_server,
+    COALESCE(zero_window_count_client, 0) AS zero_window_count_client,
+    COALESCE(zero_window_count_server, 0) AS zero_window_count_server,
+    COALESCE(syn_count_client, 0) AS syn_count_client,
+    COALESCE(rst_count_client, 0) AS rst_count_client,
+    COALESCE(rst_count_server, 0) AS rst_count_server,
+    COALESCE(fin_count_client, 0) AS fin_count_client,
+    COALESCE(fin_count_server, 0) AS fin_count_server,
+    COALESCE(retrans_traffic_bytes_client, 0) AS retrans_traffic_bytes_client,
+    COALESCE(retrans_traffic_bytes_server, 0) AS retrans_traffic_bytes_server,
+    COALESCE(retrans_payload_bytes_client, 0) AS retrans_payload_bytes_client,
+    COALESCE(retrans_payload_bytes_server, 0) AS retrans_payload_bytes_server,
     *; -- -ip4_client -ip6_client etc
 
 DEFINE 'c2s tcp' AS
@@ -165,7 +194,7 @@ DEFINE 'c2s tcp' AS
     timeout_count AS timeouts, close_count AS closes,
     ct_count AS connections, ct_sum AS connections_time,
     ct_square_sum AS connections_time2, syn_count_client AS syns,
-    dcerpc_uuid
+    dcerpc_uuid, is_netflow
   WHERE traffic_packets_client > 0;
 
 DEFINE 's2c tcp' AS
@@ -205,10 +234,10 @@ DEFINE 's2c tcp' AS
     timeout_count AS timeouts, close_count AS closes,
     ct_count AS connections, ct_sum AS connections_time,
     ct_square_sum AS connections_time2, syn_count_client AS syns,
-    dcerpc_uuid
+    dcerpc_uuid, is_netflow
   WHERE traffic_packets_server > 0;
 
-
+-- FIXME: how do we know if is_netflow?
 DEFINE udp_raw AS
   READ AND DELETE IF csv_delete
        FILES csv_prefix || "udp_v29.*csv" || (IF csv_compressed THEN ".lz4" ELSE "")
@@ -267,12 +296,12 @@ AS
     -- the many UDP protocols that are supported?)
     traffic_packets_client AS payload_packets_client,
     traffic_packets_server AS payload_packets_server,
-    u32?(0) {packets} AS rtt_count_client,
+    u32(0) {packets} AS rtt_count_client,
     0. {seconds} AS rtt_sum_client,
-    u32?(0) {packets} AS rtt_count_server,
+    u32(0) {packets} AS rtt_count_server,
     0. {seconds} AS rtt_sum_server,
-    u32?(0) {packets} AS rd_count_client,
-    u32?(0) {packets} AS rd_count_server,
+    u32(0) {packets} AS rd_count_client,
+    u32(0) {packets} AS rd_count_server,
     *;
 
 DEFINE 'c2s udp' AS
@@ -389,12 +418,12 @@ AS
     traffic_packets_server AS payload_packets_server,
     traffic_bytes_client AS payload_bytes_client,
     traffic_bytes_client AS payload_bytes_server,
-    u32?(0) {packets} AS rtt_count_client,
+    u32(0) {packets} AS rtt_count_client,
     0. {seconds} AS rtt_sum_client,
-    u32?(0) {packets} AS rtt_count_server,
+    u32(0) {packets} AS rtt_count_server,
     0. {seconds} AS rtt_sum_server,
-    u32?(0) {packets} AS rd_count_client,
-    u32?(0) {packets} AS rd_count_server,
+    u32(0) {packets} AS rd_count_client,
+    u32(0) {packets} AS rd_count_server,
     *;
 
 DEFINE 'c2s icmp' AS
@@ -489,12 +518,12 @@ AS
     traffic_packets_server AS payload_packets_server,
     traffic_bytes_client AS payload_bytes_client,
     traffic_bytes_server AS payload_bytes_server,
-    u32?(0) {packets} AS rtt_count_client,
+    u32(0) {packets} AS rtt_count_client,
     0. {seconds} AS rtt_sum_client,
-    u32?(0) {packets} AS rtt_count_server,
+    u32(0) {packets} AS rtt_count_server,
     0. {seconds} AS rtt_sum_server,
-    u32?(0) {packets} AS rd_count_client,
-    u32?(0) {packets} AS rd_count_server,
+    u32(0) {packets} AS rd_count_client,
+    u32(0) {packets} AS rd_count_server,
     *;
 
 DEFINE 'c2s other-ip' AS
@@ -592,10 +621,10 @@ DEFINE 'c2s non-ip' AS
     traffic_packets_client AS packets_src,
     traffic_bytes_client AS bytes_src,
     zone_server AS zone_dst,
-    u32?(0) {packets} AS rtt_count_src,
+    u32(0) {packets} AS rtt_count_src,
     0. {seconds} AS rtt_sum_src,
     0u32 {packets} AS packets_with_payload_src,
-    u32?(0) {packets} AS rd_count_src,
+    u32(0) {packets} AS rd_count_src,
     application, protostack
   WHERE traffic_packets_client > 0;
 
@@ -610,10 +639,10 @@ DEFINE 's2c non-ip' AS
     traffic_packets_server AS packets_src,
     traffic_bytes_server AS bytes_src,
     zone_client AS zone_dst,
-    u32?(0) {packets} AS rtt_count_src,
+    u32(0) {packets} AS rtt_count_src,
     0. {seconds} AS rtt_sum_src,
     0u32 {packets} AS packets_with_payload_src,
-    u32?(0) {packets} AS rd_count_src,
+    u32(0) {packets} AS rd_count_src,
     application, protostack
   WHERE traffic_packets_server > 0;
 
