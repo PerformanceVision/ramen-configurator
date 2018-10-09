@@ -101,7 +101,6 @@ let sync_programs db debug ramen_cmd root_dir persist_dir uncompress
   comp "junkie/csv" params ;
   let aggr_times =
     Hashtbl.of_list [ "1min",  [ "obs_window", "60" ] ;
-                      "10min", [ "obs_window", "600" ] ;
                       "1hour", [ "obs_window", "3600" ] ] in
   comp "junkie/links/top_zones/_" aggr_times ;
   comp "junkie/apps/top_servers/_" aggr_times ;
