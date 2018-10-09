@@ -174,8 +174,7 @@ DEFINE 'TCP minutely' AS
     start > merge.greatest.start - 3min AND
     (source_name = "any" OR in.zone_src IN source) AND
     (dest_name = "any" OR in.zone_dst IN dest) AND
-    -- Exclude netflow traffic
-    NOT is_netflow
+    ip_external IS NULL -- Exclude netflow traffic
   SELECT
     min start, max stop,
     (start // 60) * 60 AS start,

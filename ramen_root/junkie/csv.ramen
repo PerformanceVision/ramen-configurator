@@ -107,7 +107,7 @@ AS
     (capture_end / 1e6) {seconds} AS stop,
     COALESCE(ip(ip4_client), ip(u128(ip6_client)), 0.0.0.0) AS ip_client,
     COALESCE(ip(ip4_server), ip(u128(ip6_server)), 0.0.0.0) AS ip_server,
-    COALESCE(ip(ip4_external), ip(u128(ip6_external)), 0.0.0.0) AS ip_external,
+    IF ip4_external IS NULL THEN ip6_external AS ip_external,
     eth(mac_client) AS mac_client,
     eth(mac_server) AS mac_server,
     (ct_sum / 1e6) {seconds} AS ct_sum,
@@ -127,12 +127,6 @@ AS
     (dtt_sum_server / 1e6) {seconds} AS dtt_sum_server,
     (dtt_square_sum_server / 1e12) {seconds^2} AS dtt_square_sum_server,
     -- Also fix NULL counters:
-    retrans_traffic_bytes_client IS NULL AND
-    retrans_traffic_bytes_server IS NULL AND
-    syn_count_client IS NULL AND
-    fin_count_client IS NULL AND
-    fin_count_server IS NULL -- etc...
-      AS is_netflow,
     COALESCE(ct_count, 0) AS ct_count,
     COALESCE(close_count, 0) AS close_count,
     COALESCE(rt_count_server, 0) AS rt_count_server,
@@ -194,7 +188,7 @@ DEFINE 'c2s tcp' AS
     timeout_count AS timeouts, close_count AS closes,
     ct_count AS connections, ct_sum AS connections_time,
     ct_square_sum AS connections_time2, syn_count_client AS syns,
-    dcerpc_uuid, is_netflow
+    dcerpc_uuid
   WHERE traffic_packets_client > 0;
 
 DEFINE 's2c tcp' AS
@@ -234,10 +228,9 @@ DEFINE 's2c tcp' AS
     timeout_count AS timeouts, close_count AS closes,
     ct_count AS connections, ct_sum AS connections_time,
     ct_square_sum AS connections_time2, syn_count_client AS syns,
-    dcerpc_uuid, is_netflow
+    dcerpc_uuid
   WHERE traffic_packets_server > 0;
 
--- FIXME: how do we know if is_netflow?
 DEFINE udp_raw AS
   READ AND DELETE IF csv_delete
        FILES csv_prefix || "udp_v29.*csv" || (IF csv_compressed THEN ".lz4" ELSE "")
@@ -288,7 +281,7 @@ AS
     (capture_end / 1e6) {seconds} AS stop,
     COALESCE(ip(ip4_client), ip(u128(ip6_client)), 0.0.0.0) AS ip_client,
     COALESCE(ip(ip4_server), ip(u128(ip6_server)), 0.0.0.0) AS ip_server,
-    COALESCE(ip(ip4_external), ip(u128(ip6_external)), 0.0.0.0) AS ip_external,
+    IF ip4_external IS NULL THEN ip6_external AS ip_external,
     eth(mac_client) AS mac_client,
     eth(mac_server) AS mac_server,
     -- Also extend it to have some of the same measures as in TCP:
@@ -408,7 +401,7 @@ AS
     (capture_end / 1e6) {seconds} AS stop,
     COALESCE(ip(ip4_client), ip(u128(ip6_client)), 0.0.0.0) AS ip_client,
     COALESCE(ip(ip4_server), ip(u128(ip6_server)), 0.0.0.0) AS ip_server,
-    COALESCE(ip(ip4_external), ip(u128(ip6_external)), 0.0.0.0) AS ip_external,
+    IF ip4_external IS NULL THEN ip6_external AS ip_external,
     eth(mac_client) AS mac_client,
     eth(mac_server) AS mac_server,
     COALESCE(ip(error_ip4_client), ip(u128(error_ip6_client)), 0.0.0.0) AS error_ip_client,

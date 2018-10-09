@@ -112,8 +112,7 @@ DEFINE averages AS
             sum_dtt_count_server) AS sdtt_stddev
   WHERE
     application = service_id AND
-    -- Exclude netflow
-    NOT is_netflow
+    ip_external IS NULL -- Exclude netflow
   GROUP BY start // u32(avg_window)
   COMMIT AFTER
     in.start > out.start + 2 * avg_window;
