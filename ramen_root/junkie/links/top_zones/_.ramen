@@ -4,7 +4,7 @@
 -- ones with the most distinct individual host-host pairings (approximate).
 
 PARAMETERS
-  top_size DEFAULT TO 20,
+  top_size DEFAULT TO 100,
   top_duration DEFAULT TO 1h,
   obs_window DEFAULT TO 1min,
   false_pos_rate DEFAULT TO 0.1;
@@ -94,8 +94,10 @@ DEFINE degraded AS
       COALESCE(vlan_1, vlan_2, 0), ip_1, ip_2
     ) AS is_new_hosts_pair,
     -- Nullifies the zones if not important:
-    IS zone_1, zone_2 IN TOP top_size BY u32(is_new_hosts_pair)
-      IN THE LAST top_duration AT TIME start AS _important,
+    IS zone_1, zone_2 IN TOP top_size OVER top_size*5
+      BY u32(is_new_hosts_pair)
+      IN THE LAST top_duration
+      AT TIME start AS _important,
     IF _important THEN zone_1 ELSE NULL AS zone_1,
     IF _important THEN zone_2 ELSE NULL AS zone_2;
 

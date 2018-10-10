@@ -4,7 +4,7 @@
 -- (ie. CSV file, not protostack, although that might be worth a try).
 
 PARAMETERS
-  top_size DEFAULT TO 20,
+  top_size DEFAULT TO 100,
   top_duration DEFAULT TO 1h,
   obs_window DEFAULT TO 1min,
   false_pos_rate DEFAULT TO 0.1;
@@ -64,8 +64,10 @@ DEFINE degraded AS
       vlan, ip_server, port_server, protocol, ip_client
     ) AS is_new_client,
     -- nullifies the service identity if not important:
-    IS vlan, ip_server, port_server, protocol IN TOP top_size BY u32(is_new_client)
-      IN THE LAST top_duration AT TIME start AS _important,
+    IS vlan, ip_server, port_server, protocol IN TOP top_size OVER top_size*5
+      BY u32(is_new_client)
+      IN THE LAST top_duration
+      AT TIME start AS _important,
     -- Note: This would fail to typecheck with the internal typechecker
     -- without the casts around the NULLs because of a bug in CASE/NULL:
     -- NULL is not constrained and will eventually be assigned the bool type.
