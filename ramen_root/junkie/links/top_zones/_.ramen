@@ -96,8 +96,8 @@ DEFINE degraded AS
     -- Nullifies the zones if not important:
     IS zone_1, zone_2 IN TOP top_size OVER top_size*5
       BY u32(is_new_hosts_pair)
-      IN THE LAST top_duration
-      AT TIME start AS _important,
+      AT TIME start FOR THE LAST top_duration
+      AS _important,
     IF _important THEN zone_1 ELSE NULL AS zone_1,
     IF _important THEN zone_2 ELSE NULL AS zone_2;
 

@@ -12,7 +12,7 @@ DEFINE icmp_degraded AS
   SELECT
     start, stop,
     IS icmp_type, icmp_code, error_ip_server, error_port_server IN TOP top_size
-      IN THE LAST top_duration AT TIME start AS _important,
+      AT TIME start FOR THE LAST top_duration AS _important,
     -- degrade the key of not important:
     icmp_type, icmp_code,
     IF _important THEN error_ip_server AS error_ip_server,
@@ -42,13 +42,13 @@ DEFINE tcp_degraded AS
   SELECT
     start, stop,
     (IS ip_server IN TOP top_size BY zero_window_count_server
-      IN THE LAST top_duration AT TIME start) OR
+      AT TIME start FOR THE LAST top_duration) OR
     (IS ip_server IN TOP top_size BY (dupack_count_client + dupack_count_server)
-      IN THE LAST top_duration AT TIME start) OR
+      AT TIME start FOR THE LAST top_duration) OR
     (IS ip_server IN TOP top_size BY (retrans_traffic_bytes_client + retrans_traffic_bytes_server)
-      IN THE LAST top_duration AT TIME start) OR
+      AT TIME start FOR THE LAST top_duration) OR
     (IS ip_server IN TOP top_size BY (rst_count_server + timeout_count)
-      IN THE LAST top_duration AT TIME start)
+      AT TIME start FOR THE LAST top_duration)
       AS _important,
     -- The data
     traffic_bytes_client, traffic_bytes_server,

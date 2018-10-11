@@ -26,7 +26,7 @@ DEFINE new_triplets AS
     -- We could do better than that and look at RST but we do not have that for
     -- TCP - wait for https://github.com/rixed/ramen/issues/50
     traffic_packets_client + traffic_packets_server AS num_packets,
-    IS ip_client, ip_server IN TOP top_size OVER top_max_size IN THE LAST 1h
+    IS ip_client, ip_server IN TOP top_size OVER top_max_size FOR THE LAST 1h
       AS is_important;
 
 DEFINE 'top port scans'
@@ -63,7 +63,7 @@ DEFINE new_pairs AS
     start, stop,
     traffic_packets_client + traffic_packets_server AS num_packets,
     ip_client,
-    IS ip_client IN TOP top_size OVER top_max_size IN THE LAST 1h
+    IS ip_client IN TOP top_size OVER top_max_size FOR THE LAST 1h
       AS is_important;
 
 DEFINE 'top ip scans'
