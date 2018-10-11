@@ -119,10 +119,11 @@ AS
   SELECT
     (start // obs_window) * obs_window AS start,
     out.start + obs_window AS stop,
-    application, protocol, success,
-    SUM count AS count,
+    application, protocol,
+    success DOC "Does the response indicate success?",
+    SUM count AS count "Number of transactions."
     -- TODO: nb_buckets
-    HISTOGRAM(stop - start, 0, 30, 20) AS response_times
+    --HISTOGRAM(stop - start, 0, 30, 20) AS response_times
   -- Since we order the tuple according chronologically at input:
   COMMIT AFTER in.start > out.start + obs_window
   FACTORS application, protocol, success;

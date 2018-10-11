@@ -105,11 +105,12 @@ AS
     sum payload_packets_server AS packets_with_tcp_payload_from_server,
 
     -- Response Times
-    sum rt_sum_server / sum rt_count_server AS avg_response_time,
+    sum rt_sum_server / sum rt_count_server AS avg_response_time
+      "Average response time.",
     -- Also try to retain an idea of what the min/max had been:
     rt_sum_server / rt_count_server AS _avg_response_time,
-    min _avg_response_time,
-    max _avg_response_time,
+    min _avg_response_time DOC "Approximate minimum response time.",
+    max _avg_response_time DOC "Approximate maximum response time.",
     -- Also some percentiles (of the avgs!):
     90th percentile (sample(1000, _avg_response_time)) as avg_response_time_90th
       "Approximate 90th percentile of response times.",
@@ -120,45 +121,31 @@ AS
 
     -- RTT from client
     sum rtt_sum_client / sum rtt_count_client
-      AS avg_rtt_from_client,
-    -- Also try to retain an idea of what the min/max had been:
-    rtt_sum_client / rtt_count_client AS _avg_rtt_from_client,
-    min _avg_rtt_from_client,
-    max _avg_rtt_from_client,
+      AS avg_rtt_from_client "Average client→server→client round trip time.",
     -- RTT from server
     sum rtt_sum_server / sum rtt_count_server
-      AS avg_rtt_from_server,
-    -- Also try to retain an idea of what the min/max had been:
-    rtt_sum_server / rtt_count_server AS _avg_rtt_from_server,
-    min _avg_rtt_from_server,
-    max _avg_rtt_from_server,
+      AS avg_rtt_from_server "Average server→client→server round trip time.",
 
-    -- RR: percentage of retransmitted packets over packets with payload
-    100 * sum rd_count_client / sum packets_with_tcp_payload_from_client
-        AS avg_rr_from_client,
-    -- Again, try to retain an idea of the min/max measured:
-    100 * rd_count_client / packets_with_tcp_payload_from_client
-      AS _avg_rr_from_client,
-    min _avg_rr_from_client,
-    max _avg_rr_from_client,
+    -- RR: ratio of retransmitted packets over packets with payload
+    sum rd_count_client / sum packets_with_tcp_payload_from_client
+      AS avg_rr_from_client
+      "Ratio of retransmitted packets over packets with payload, from clients.",
     -- RR: server -> client
-    100 * sum rd_count_server / sum packets_with_tcp_payload_from_server
-        AS avg_rr_from_server,
-    -- Again, try to retain an idea of the max measured:
-    100 * rd_count_server / packets_with_tcp_payload_from_server
-      AS _avg_rr_from_server,
-    min _avg_rr_from_server,
-    max _avg_rr_from_server,
+    sum rd_count_server / sum packets_with_tcp_payload_from_server
+      AS avg_rr_from_server
+      "Ratio of retransmitted packets over packets with payload, from servers.",
 
     -- Connections
-    sum syns AS syns,
-    sum connections AS connections,
-    syns / connections AS syns_per_connections,
+    sum syns / obs_window AS syns "SYN flags per second.",
+    sum connections / obs_window AS connections "Connections per second.",
+    syns / connections AS syns_per_connections "Ratio of SYNs per connection.",
 
     -- 0 window events
-    sum zero_window_count_server AS zero_windows,
+    sum zero_window_count_server / obs_window AS zero_windows
+      "0-window events per second.",
     out.zero_windows / packets_with_tcp_payload_from_server
       AS zero_windows_per_pauyload_packets
+      "Ratio of 0-window events per packets with payload."
 
   COMMIT AFTER in.start > out.start + obs_window * 1.3
   FACTORS vlan, port, protocol;

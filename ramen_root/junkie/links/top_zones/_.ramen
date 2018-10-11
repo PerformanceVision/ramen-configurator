@@ -110,8 +110,8 @@ AS
   GROUP BY zone_1, zone_2, start // obs_window
   SELECT
     -- Zone info
-    zone_1,
-    zone_2,
+    zone_1 DOC "First zone (down)",
+    zone_2 DOC "Second zone (up)",
     sum u32(is_new_hosts_pair) * (1 + false_pos_rate) AS host_pairs
       "Approximate number of active connections using that link.",
 
@@ -138,31 +138,16 @@ AS
     -- RTT 1 -> 2 (in seconds)
     sum rtt_sum_1 / sum rtt_count_1 AS avg_rtt_1
       "Average round-trip time (up then down).",
-    -- Also try to retain an idea of what the measured max avg had been:
-    rtt_sum_1 / rtt_count_1 AS _avg_rtt_1,
-    min _avg_rtt_1,
-    max _avg_rtt_1,
     -- RTT 2 -> 1
     sum rtt_sum_2 / sum rtt_count_2 AS avg_rtt_2
       "Average round-trip time (down then up).",
-    rtt_sum_2 / rtt_count_2 AS _avg_rtt_2,
-    min _avg_rtt_2,
-    max _avg_rtt_2,
 
     -- RR: percentage of retransmitted packets over packets with payload
-    100 * sum rd_count_1 / sum packets_with_payload_1 AS avg_rr_1
-      "Percentage of retransmitted packets over packets with payload (uplink).",
-    -- Again, try to retain an idea of the max measured:
-    100 * rd_count_1 / packets_with_payload_1 AS _avg_rr_1,
-    min _avg_rr_1,
-    max _avg_rr_1,
+    sum rd_count_1 / sum packets_with_payload_1 AS avg_rr_1
+      "Ratio of retransmitted packets over packets with payload (uplink).",
     -- RR 2 -> 1
-    100 * sum rd_count_2 / sum packets_with_payload_2 AS avg_rr_2
-      "Percentage of retransmitted packets over packets with payload (downlink).",
-    -- Again, try to retain an idea of the max measured:
-    100 * rd_count_2 / packets_with_payload_2 AS _avg_rr_2,
-    min _avg_rr_2,
-    max _avg_rr_2,
+    sum rd_count_2 / sum packets_with_payload_2 AS avg_rr_2
+      "Ratio of retransmitted packets over packets with payload (downlink).",
 
     -- Everything we can aggregate by zone:
     max mtu_1 DOC "Maximum observed MTU (uplink).",

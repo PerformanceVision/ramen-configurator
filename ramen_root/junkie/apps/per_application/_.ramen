@@ -103,8 +103,8 @@ AS
     _sum_rd_count_client / avg_window AS crd_per_sec
       "Measured retransmission delays per second.",
     IF _sum_rd_count_client = 0 THEN 0 ELSE
-      _sum_rd_sum_client / _sum_rd_count_client AS crd_avg,
-      "Average retransmission delay."
+      _sum_rd_sum_client / _sum_rd_count_client AS crd_avg
+      "Average retransmission delay.",
     IF _sum_rd_count_client = 0 THEN 0 ELSE
       sqrt ((sum rd_square_sum_client - _sum_rd_sum_client^2) /
             _sum_rd_count_client) AS crd_stddev
@@ -345,7 +345,7 @@ AS
     95th percentile (sample(1000, _sdtt)) AS sdtt_95th
       "Approximate 95th percentile of server DTT.",
     99th percentile (sample(1000, _sdtt)) AS sdtt_99th
-      "Approximate 99th percentile of server DTT.",
+      "Approximate 99th percentile of server DTT."
     --HISTOGRAM(_sdtt, 0s, 1min, 20) AS sdtt_distribution
   GROUP BY start // u32(avg_window), application
   COMMIT AFTER
@@ -584,7 +584,7 @@ AS
     95th percentile (sample(1000, _sdtt)) AS sdtt_95th
       "Approximate 95th percentile of server DTT.",
     99th percentile (sample(1000, _sdtt)) AS sdtt_99th
-      "Approximate 99th percentile of server DTT.",
+      "Approximate 99th percentile of server DTT."
     --HISTOGRAM(_sdtt, 0s, 1min, 20) AS sdtt_distribution
   GROUP BY start // u32(avg_window), application
   COMMIT AFTER
@@ -649,7 +649,7 @@ AS
     95th percentile (sample(1000, _sdtt)) AS sdtt_95th
       "Approximate 95th percentile of server DTT.",
     99th percentile (sample(1000, _sdtt)) AS sdtt_99th
-      "Approximate 99th percentile of server DTT.",
+      "Approximate 99th percentile of server DTT."
     --HISTOGRAM(_sdtt, 0s, 1min, 20) AS sdtt_distribution
   GROUP BY start // u32(avg_window), application
   COMMIT AFTER
