@@ -1,3 +1,5 @@
+-- vim: ft=sql expandtab
+
 PARAMETERS
   csv_prefix DEFAULTS TO "/srv/nova/ramen/*.*.",
   csv_compressed DEFAULTS TO false,
@@ -34,11 +36,7 @@ DEFINE tcp_raw AS
      mtu_client u32? {bytes},
      mtu_server u32? {bytes},
      captured_pcap string?,
-     -- Note: application is actually not nullable, but DNS has no application, and we
-     -- want to select from all metrics in protocols/transactions, and Ramen currently
-     -- does not permit to select fields with diferent nullability (see
-     -- https://github.com/rixed/ramen/issues/481)
-     application u32?,
+     application u32,
      protostack string?,
      uuid string?,
      traffic_bytes_client u64 {bytes},  -- 30
@@ -263,7 +261,7 @@ DEFINE udp_raw AS
      diffserv_server u8,
      mtu_client u32? {bytes},
      mtu_server u32? {bytes},
-     application u32?,
+     application u32,
      protostack string?,
      traffic_bytes_client u64 {bytes},
      traffic_bytes_server u64 {bytes},
@@ -375,7 +373,7 @@ DEFINE icmp_raw AS
      diffserv_server u8,
      mtu_client u32? {bytes},           -- 20
      mtu_server u32? {bytes},
-     application u32?,
+     application u32,
      protostack string?,
      traffic_bytes_client u64 {bytes},
      traffic_bytes_server u64 {bytes},
@@ -490,7 +488,7 @@ DEFINE 'other-ip_raw' AS
      mtu_client u32? {bytes},
      mtu_server u32? {bytes},
      ip_protocol u8,                    -- 20
-     application u32?,
+     application u32,
      protostack string?,
      traffic_bytes_client u64 {bytes},
      traffic_bytes_server u64 {bytes},
@@ -582,7 +580,7 @@ DEFINE 'non-ip_raw' AS
      mtu_client u32? {bytes},
      mtu_server u32? {bytes},
      eth_type u16,
-     application u32?,
+     application u32,
      protostack string?,
      traffic_bytes_client u64 {bytes},
      traffic_bytes_server u64 {bytes},
@@ -696,8 +694,9 @@ AS
     eth(mac_server) AS mac_server,
     (rt_sum_server / 1e6) {seconds} AS rt_sum_server,
     (rt_square_sum_server / 1e12) {seconds^2} AS rt_square_sum_server,
-    -- For some reason DNS is the only CSV with no application:
-    u32(NULL) AS application,
+    -- For some reason DNS is the only CSV with no application.
+    -- 0 is the special "N.C." application:
+    0u32 AS application,
     *;
 
 DEFINE http_raw AS
@@ -776,7 +775,7 @@ DEFINE http_raw AS
      dtt_square_sum_client u128,
      dtt_sum_server u64,                -- 70
      dtt_square_sum_server u128,
-     application u32?)
+     application u32)
   EVENT STARTING AT capture_begin * 1e-6
     AND STOPPING AT capture_end * 1e-6;
 
@@ -831,7 +830,7 @@ DEFINE citrix_raw AS
      ip6_server i128?,
      port_client u16,
      port_server u16,
-     application u32?,
+     application u32,
      protostack string?,
      connection_uuid string?,           -- 20
      channel_id u8?,
@@ -899,7 +898,7 @@ DEFINE citrix_chanless_raw AS
      ip6_server i128?,
      port_client u16,
      port_server u16,
-     application u32?,
+     application u32,
      protostack string?,
      connection_uuid string?,           -- 20
      module_name string?,
@@ -1019,7 +1018,7 @@ DEFINE smb_raw AS
      dtt_count_server u32 {packets},
      dtt_sum_server u64,
      dtt_square_sum_server u128,
-     application u32?)
+     application u32)
   EVENT STARTING AT capture_begin * 1e-6
     AND STOPPING AT capture_end * 1e-6;
 
@@ -1098,7 +1097,7 @@ DEFINE sql_raw AS
      dtt_count_server u32 {packets},
      dtt_sum_server u64,
      dtt_square_sum_server u128,
-     application u32?)
+     application u32)
   EVENT STARTING AT capture_begin * 1e-6
     AND STOPPING AT capture_end * 1e-6;
 
@@ -1149,7 +1148,7 @@ DEFINE voip_raw AS
      port_client u16,
      port_server u16,
      capture_file string?,
-     application u32?,
+     application u32,
      protostack string?,                -- 20
      connection_uuid string?,
      ip_protocol u8,

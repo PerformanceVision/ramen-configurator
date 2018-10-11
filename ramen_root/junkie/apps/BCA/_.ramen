@@ -111,7 +111,7 @@ DEFINE averages AS
       sqrt ((sum dtt_square_sum_server - _sum_dtt_sum_server^2) /
             sum_dtt_count_server) AS sdtt_stddev
   WHERE
-    COALESCE(application = service_id, false) AND
+    application = service_id AND
     ip_external IS NULL -- Exclude netflow
   GROUP BY start // u32(avg_window)
   COMMIT AFTER
