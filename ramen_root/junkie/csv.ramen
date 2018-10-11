@@ -1233,6 +1233,7 @@ AS
     eth(caller_mac) AS mac_caller,
     COALESCE(ip(ip4_callee), ip(u128(ip6_callee)), 0.0.0.0) AS ip_callee,
     eth(callee_mac) AS mac_callee,
+    (rtp_duration / 1e6) {seconds} AS rtp_duration,
     (rt_sum_server / 1e6) {seconds} AS rt_sum_server,
     (rt_square_sum_server / 1e12) {seconds^2} AS rt_square_sum_server,
     (jitter_sum_caller / 1e6) {seconds} AS jitter_sum_caller,

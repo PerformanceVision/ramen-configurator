@@ -1,3 +1,5 @@
+-- vim: ft=sql expandtab
+
 PARAMETERS
   false_pos_rate DEFAULT TO 0.1, -- 10% of false positives
   max_ports DEFAULT TO 50,
