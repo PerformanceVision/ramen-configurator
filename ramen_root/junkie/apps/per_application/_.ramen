@@ -1,0 +1,568 @@
+-- vim: ft=sql expandtab
+
+-- For every CSV we have with an application, resample it and group by application.
+
+PARAMETERS
+  avg_window {seconds} DEFAULTS TO 60.0;
+
+DEFINE tcp AS
+  FROM ../../../csv/tcp
+  SELECT
+    -- Time
+    (start // u32(avg_window)) * u32(avg_window) AS start,
+    out.start + avg_window AS stop,
+    application,
+    -- Volumes
+    sum traffic_bytes_client / avg_window AS c2s_bytes_per_secs,
+    sum traffic_bytes_server / avg_window AS s2c_bytes_per_secs,
+    sum traffic_packets_client / avg_window AS c2s_packets_per_secs,
+    sum traffic_packets_server / avg_window AS s2c_packets_per_secs,
+    -- Retransmissions
+    sum retrans_traffic_bytes_client / avg_window
+      AS c2s_retrans_bytes_per_secs,
+    sum retrans_traffic_bytes_server / avg_window
+      AS s2c_retrans_bytes_per_secs,
+    -- TCP flags
+    sum syn_count_client / avg_window AS c2s_syns_per_secs,
+    sum fin_count_client / avg_window AS c2s_fins_per_secs,
+    sum fin_count_server / avg_window AS s2c_fins_per_secs,
+    sum rst_count_client / avg_window AS c2s_rsts_per_secs,
+    sum rst_count_server / avg_window AS s2c_rsts_per_secs,
+    sum close_count / avg_window AS close_per_secs,
+    -- TCP issues
+    sum dupack_count_client / avg_window AS c2s_dupacks_per_secs,
+    sum dupack_count_server / avg_window AS s2c_dupacks_per_secs,
+    sum zero_window_count_client / avg_window AS c2s_0wins_per_secs,
+    sum zero_window_count_server / avg_window AS s2c_0wins_per_secs,
+    -- Average Connection Time
+    sum ct_count,
+    sum ct_sum AS _sum_ct_sum,
+    sum_ct_count / avg_window AS ct_per_secs,
+    IF sum_ct_count = 0 THEN 0 ELSE
+      _sum_ct_sum / sum_ct_count AS ct_avg,
+    IF sum_ct_count = 0 THEN 0 ELSE
+      sqrt (((sum ct_square_sum - _sum_ct_sum^2) / sum_ct_count)) AS ct_stddev,
+    -- Average Server Response Time
+    sum rt_count_server,
+    sum rt_sum_server AS _sum_rt_sum_server,
+    sum_rt_count_server / avg_window AS srt_per_secs,
+    IF sum_rt_count_server = 0 THEN 0 ELSE
+      _sum_rt_sum_server / sum_rt_count_server AS srt_avg,
+    IF sum_rt_count_server = 0 THEN 0 ELSE
+      sqrt ((sum rt_square_sum_server - _sum_rt_sum_server^2) /
+            sum_rt_count_server) AS srt_stddev,
+    -- Average Round Trip Time CSC
+    sum rtt_count_server,
+    sum rtt_sum_server AS _sum_rtt_sum_server,
+    sum_rtt_count_server / avg_window AS crtt_per_secs,
+    IF sum_rtt_count_server = 0 THEN 0 ELSE
+      _sum_rtt_sum_server / sum_rtt_count_server AS crtt_avg,
+    IF sum_rtt_count_server = 0 THEN 0 ELSE
+      sqrt ((sum rtt_square_sum_server - _sum_rtt_sum_server^2) /
+            sum_rtt_count_server) AS crtt_stddev,
+    -- Average Round Trip Time SCS
+    sum rtt_count_client,
+    sum rtt_sum_client AS _sum_rtt_sum_client,
+    sum_rtt_count_client / avg_window AS srtt_per_secs,
+    IF sum_rtt_count_client = 0 THEN 0 ELSE
+      _sum_rtt_sum_client / sum_rtt_count_client AS srtt_avg,
+    IF sum_rtt_count_client = 0 THEN 0 ELSE
+      sqrt ((sum rtt_square_sum_client - _sum_rtt_sum_client^2) /
+            sum_rtt_count_client) AS srtt_stddev,
+    -- Average Retransmition Delay C2S
+    sum rd_count_client,
+    sum rd_sum_client AS _sum_rd_sum_client,
+    sum_rd_count_client / avg_window AS crd_per_secs,
+    IF sum_rd_count_client = 0 THEN 0 ELSE
+      _sum_rd_sum_client / sum_rd_count_client AS crd_avg,
+    IF sum_rd_count_client = 0 THEN 0 ELSE
+      sqrt ((sum rd_square_sum_client - _sum_rd_sum_client^2) /
+            sum_rd_count_client) AS crd_stddev,
+    -- Average Retransmition Delay S2C
+    sum rd_count_server,
+    sum rd_sum_server AS _sum_rd_sum_server,
+    sum_rd_count_server / avg_window AS srd_per_secs,
+    IF sum_rd_count_server = 0 THEN 0 ELSE
+      _sum_rd_sum_server / sum_rd_count_server AS srd_avg,
+    IF sum_rd_count_server = 0 THEN 0 ELSE
+      sqrt ((sum rd_square_sum_server - _sum_rd_sum_server^2) /
+            sum_rd_count_server) AS srd_stddev,
+    -- Average Data Transfer Time C2S
+    sum dtt_count_client,
+    sum dtt_sum_client AS _sum_dtt_sum_client,
+    sum_dtt_count_client / avg_window AS cdtt_per_secs,
+    IF sum_dtt_count_client = 0 THEN 0 ELSE
+      _sum_dtt_sum_client / sum_dtt_count_client AS cdtt_avg,
+    IF sum_dtt_count_client = 0 THEN 0 ELSE
+      sqrt ((sum dtt_square_sum_client - _sum_dtt_sum_client^2) /
+            sum_dtt_count_client) AS cdtt_stddev,
+    -- Average Data Transfer Time S2C
+    sum dtt_count_server,
+    sum dtt_sum_server AS _sum_dtt_sum_server,
+    sum_dtt_count_server / avg_window AS sdtt_per_secs,
+    IF sum_dtt_count_server = 0 THEN 0 ELSE
+      _sum_dtt_sum_server / sum_dtt_count_server AS sdtt_avg,
+    IF sum_dtt_count_server = 0 THEN 0 ELSE
+      sqrt ((sum dtt_square_sum_server - _sum_dtt_sum_server^2) /
+            sum_dtt_count_server) AS sdtt_stddev
+  WHERE
+    ip_external IS NULL -- Exclude netflow
+  GROUP BY start // u32(avg_window), application
+  COMMIT AFTER
+    in.start > out.start + 2 * avg_window
+  FACTOR application;
+
+DEFINE udp AS
+  FROM ../../../csv/udp
+  SELECT
+    -- Time
+    (start // u32(avg_window)) * u32(avg_window) AS start,
+    out.start + avg_window AS stop,
+    application,
+    -- Volumes
+    sum traffic_bytes_client / avg_window AS c2s_bytes_per_secs,
+    sum traffic_bytes_server / avg_window AS s2c_bytes_per_secs,
+    sum traffic_packets_client / avg_window AS c2s_packets_per_secs,
+    sum traffic_packets_server / avg_window AS s2c_packets_per_secs
+  WHERE
+    ip_external IS NULL -- Exclude netflow
+  GROUP BY start // u32(avg_window), application
+  COMMIT AFTER
+    in.start > out.start + 2 * avg_window
+  FACTOR application;
+
+DEFINE icmp AS
+  FROM ../../../csv/icmp
+  SELECT
+    -- Time
+    (start // u32(avg_window)) * u32(avg_window) AS start,
+    out.start + avg_window AS stop,
+    application,
+    -- Volumes
+    sum traffic_bytes_client / avg_window AS c2s_bytes_per_secs,
+    sum traffic_bytes_server / avg_window AS s2c_bytes_per_secs,
+    sum traffic_packets_client / avg_window AS c2s_packets_per_secs,
+    sum traffic_packets_server / avg_window AS s2c_packets_per_secs,
+    -- Errors
+    -- As soon as we handle factors in set-alerts (ie. either select one value or
+    -- sum all values or take the min or max) then also group by icmp_type and code.
+    sum u32(error_ip4_server is not null OR error_ip6_server is not null OR
+            error_port_server is not null) AS error_count
+  GROUP BY start // u32(avg_window), application
+  COMMIT AFTER
+    in.start > out.start + 2 * avg_window
+  FACTOR application;
+
+DEFINE 'other-ip' AS
+  FROM '../../../csv/other-ip'
+  SELECT
+    -- Time
+    (start // u32(avg_window)) * u32(avg_window) AS start,
+    out.start + avg_window AS stop,
+    application,
+    -- Volumes
+    sum traffic_bytes_client / avg_window AS c2s_bytes_per_secs,
+    sum traffic_bytes_server / avg_window AS s2c_bytes_per_secs,
+    sum traffic_packets_client / avg_window AS c2s_packets_per_secs,
+    sum traffic_packets_server / avg_window AS s2c_packets_per_secs
+  GROUP BY start // u32(avg_window), application
+  COMMIT AFTER
+    in.start > out.start + 2 * avg_window
+  FACTOR application;
+
+DEFINE 'non-ip' AS
+  FROM '../../../csv/non-ip'
+  SELECT
+    -- Time
+    (start // u32(avg_window)) * u32(avg_window) AS start,
+    out.start + avg_window AS stop,
+    application,
+    -- Volumes
+    sum traffic_bytes_client / avg_window AS c2s_bytes_per_secs,
+    sum traffic_bytes_server / avg_window AS s2c_bytes_per_secs,
+    sum traffic_packets_client / avg_window AS c2s_packets_per_secs,
+    sum traffic_packets_server / avg_window AS s2c_packets_per_secs
+  GROUP BY start // u32(avg_window), application
+  COMMIT AFTER
+    in.start > out.start + 2 * avg_window
+  FACTOR application;
+
+DEFINE http AS
+  FROM ../../../csv/http
+  SELECT
+    -- Time
+    (start // u32(avg_window)) * u32(avg_window) AS start,
+    out.start + avg_window AS stop,
+    application,
+    -- Volumes
+    sum 1 AS _count,
+    sum u32(timeouted) / _count AS timeout_ratio,
+    sum u32(compressed) / _count AS compressed_ratio,
+    sum u32(chunked_encoding) / _count AS chunked_encoded_ratio,
+    sum u32(not contributed) / avg_window AS pages_per_secs,
+    sum query_headers / avg_window AS query_header_bytes_per_secs,
+    sum query_payload / avg_window AS query_payload_bytes_per_secs,
+    sum query_pkts / avg_window AS query_pkts_per_secs,
+    sum query_content_length / avg_window AS query_content_bytes_per_secs,
+    sum resp_headers / avg_window AS resp_header_bytes_per_secs,
+    sum resp_payload / avg_window AS resp_payload_bytes_per_secs,
+    sum resp_pkts / avg_window AS resp_pkts_per_secs,
+    sum resp_content_length / avg_window AS resp_content_bytes_per_secs,
+    -- These redundant metrics make me nervous:
+    sum tot_volume_query / avg_window AS query_bytes_per_secs,
+    sum tot_volume_response / avg_window AS resp_bytes_per_secs,
+    -- Status:
+    _count / avg_window AS hits_per_secs,
+    -- tot_count = number of sub-hits in a page, 0 when not a page
+    sum u32(tot_count > 0) AS _num_pages,
+    sum tot_count / _num_pages AS avg_hits_per_page,
+    sum tot_errors / _count AS error_ratio,
+    -- Also count separately the number of 1xx, 2xx, 3xx, 4xx and 5xx:
+    sum u32(resp_code >= 100 AND resp_code < 200) / _count AS '1xx_ratio',
+    sum u32(resp_code >= 200 AND resp_code < 300) / _count AS '2xx_ratio',
+    sum u32(resp_code >= 300 AND resp_code < 400) / _count AS '3xx_ratio',
+    sum u32(resp_code >= 400 AND resp_code < 500) / _count AS '4xx_ratio',
+    sum u32(resp_code >= 500 AND resp_code < 600) / _count AS '5xx_ratio',
+    -- Timings:
+    -- Client DTT:
+    query_end_ts - query_begin_ts AS _cdtt,
+    min _cdtt, max _cdtt, avg _cdtt,
+    90th percentile (sample(1000, _cdtt)) AS cdtt_90th,
+    95th percentile (sample(1000, _cdtt)) AS cdtt_95th,
+    99th percentile (sample(1000, _cdtt)) AS cdtt_99th,
+    HISTOGRAM(_cdtt, 0s, 1min, 20) AS cdtt_distribution,
+    -- Response time:
+    resp_begin_ts - query_end_ts AS _rt,
+    min _rt, max _rt, avg _rt,
+    90th percentile (sample(1000, _rt)) AS rt_90th,
+    95th percentile (sample(1000, _rt)) AS rt_95th,
+    99th percentile (sample(1000, _rt)) AS rt_99th,
+    HISTOGRAM(_rt, 0s, 1min, 20) AS rt_distribution,
+    -- Server DTT:
+    resp_end_ts - resp_begin_ts AS _sdtt,
+    min _sdtt, max _sdtt, avg _sdtt,
+    90th percentile (sample(1000, _sdtt)) AS sdtt_90th,
+    95th percentile (sample(1000, _sdtt)) AS sdtt_95th,
+    99th percentile (sample(1000, _sdtt)) AS sdtt_99th,
+    HISTOGRAM(_sdtt, 0s, 1min, 20) AS sdtt_distribution
+  GROUP BY start // u32(avg_window), application
+  COMMIT AFTER
+    in.start > out.start + 2 * avg_window
+  FACTOR application;
+
+DEFINE citrix AS
+  FROM ../../../csv/citrix
+  SELECT
+    -- Time
+    (start // u32(avg_window)) * u32(avg_window) AS start,
+    out.start + avg_window AS stop,
+    application,
+    -- Volumes:
+    sum pdus_client AS _sum_pdus_client,
+    _sum_pdus_client / avg_window AS pdus_client_per_secs,
+    sum pdus_server AS _sum_pdus_server,
+    _sum_pdus_server / avg_window AS pdus_server_per_secs,
+    sum nb_compressed_client / _sum_pdus_client AS compressed_client_ratio,
+    sum nb_compressed_server / _sum_pdus_server AS compressed_server_ratio,
+    sum payloads_client / avg_window AS payloads_client_bytes_per_secs,
+    sum payloads_server / avg_window AS payloads_server_bytes_per_secs,
+    -- Timings:
+    -- Average Response Times:
+    sum rt_count_server,
+    sum rt_sum_server AS _sum_rt_sum_server,
+    sum_rt_count_server / avg_window AS srt_per_secs,
+    IF sum_rt_count_server = 0 THEN 0 ELSE
+      _sum_rt_sum_server / sum_rt_count_server AS srt_avg,
+    IF sum_rt_count_server = 0 THEN 0 ELSE
+      sqrt ((sum rt_square_sum_server - _sum_rt_sum_server^2) /
+            sum_rt_count_server) AS srt_stddev,
+    -- Average Data Transfer Time C2S
+    sum dtt_count_client,
+    sum dtt_sum_client AS _sum_dtt_sum_client,
+    sum_dtt_count_client / avg_window AS cdtt_per_secs,
+    IF sum_dtt_count_client = 0 THEN 0 ELSE
+      _sum_dtt_sum_client / sum_dtt_count_client AS cdtt_avg,
+    IF sum_dtt_count_client = 0 THEN 0 ELSE
+      sqrt ((sum dtt_square_sum_client - _sum_dtt_sum_client^2) /
+            sum_dtt_count_client) AS cdtt_stddev,
+    -- Average Data Transfer Time S2C
+    sum dtt_count_server,
+    sum dtt_sum_server AS _sum_dtt_sum_server,
+    sum_dtt_count_server / avg_window AS sdtt_per_secs,
+    IF sum_dtt_count_server = 0 THEN 0 ELSE
+      _sum_dtt_sum_server / sum_dtt_count_server AS sdtt_avg,
+    IF sum_dtt_count_server = 0 THEN 0 ELSE
+      sqrt ((sum dtt_square_sum_server - _sum_dtt_sum_server^2) /
+            sum_dtt_count_server) AS sdtt_stddev
+  GROUP BY start // u32(avg_window), application
+  COMMIT AFTER
+    in.start > out.start + 2 * avg_window
+  FACTOR application;
+
+DEFINE citrix_chanless AS
+  FROM ../../../csv/citrix_chanless
+  SELECT
+    -- Time
+    (start // u32(avg_window)) * u32(avg_window) AS start,
+    out.start + avg_window AS stop,
+    application,
+    -- Volumes:
+    sum pdus_client / avg_window AS pdus_client_per_secs,
+    sum pdus_server / avg_window AS pdus_server_per_secs,
+    sum pdus_cgp_client / avg_window AS pdus_cgp_client_per_secs,
+    sum pdus_cgp_server / avg_window AS pdus_cgp_server_per_secs,
+    sum nb_keep_alives_client / avg_window AS client_keep_alives_per_secs,
+    sum nb_keep_alives_server / avg_window AS server_keep_alives_per_secs,
+    sum payloads_client / avg_window AS payloads_client_bytes_per_secs,
+    sum payloads_server / avg_window AS payloads_server_bytes_per_secs,
+    sum nb_aborts / avg_window AS aborts_per_secs,
+    sum nb_timeouts / avg_window AS timeouts_per_secs,
+    -- Timings:
+    -- Average Response Times:
+    sum rt_count_server,
+    sum rt_sum_server AS _sum_rt_sum_server,
+    sum_rt_count_server / avg_window AS srt_per_secs,
+    IF sum_rt_count_server = 0 THEN 0 ELSE
+      _sum_rt_sum_server / sum_rt_count_server AS srt_avg,
+    IF sum_rt_count_server = 0 THEN 0 ELSE
+      sqrt ((sum rt_square_sum_server - _sum_rt_sum_server^2) /
+            sum_rt_count_server) AS srt_stddev,
+    -- Average Data Transfer Time C2S
+    sum dtt_count_client,
+    sum dtt_sum_client AS _sum_dtt_sum_client,
+    sum_dtt_count_client / avg_window AS cdtt_per_secs,
+    IF sum_dtt_count_client = 0 THEN 0 ELSE
+      _sum_dtt_sum_client / sum_dtt_count_client AS cdtt_avg,
+    IF sum_dtt_count_client = 0 THEN 0 ELSE
+      sqrt ((sum dtt_square_sum_client - _sum_dtt_sum_client^2) /
+            sum_dtt_count_client) AS cdtt_stddev,
+    -- Average Data Transfer Time S2C
+    sum dtt_count_server,
+    sum dtt_sum_server AS _sum_dtt_sum_server,
+    sum_dtt_count_server / avg_window AS sdtt_per_secs,
+    IF sum_dtt_count_server = 0 THEN 0 ELSE
+      _sum_dtt_sum_server / sum_dtt_count_server AS sdtt_avg,
+    IF sum_dtt_count_server = 0 THEN 0 ELSE
+      sqrt ((sum dtt_square_sum_server - _sum_dtt_sum_server^2) /
+            sum_dtt_count_server) AS sdtt_stddev,
+    -- Average Login Time:
+    sum login_time_count,
+    sum login_time_sum AS _sum_login_time_sum,
+    sum_login_time_count / avg_window AS slogin_time_per_secs,
+    IF sum_login_time_count = 0 THEN 0 ELSE
+      _sum_login_time_sum / sum_login_time_count AS slogin_time_avg,
+    IF sum_login_time_count = 0 THEN 0 ELSE
+      sqrt ((sum login_time_square_sum - _sum_login_time_sum^2) /
+            sum_login_time_count) AS slogin_time_stddev,
+    -- Average Launch Time:
+    sum launch_time_count,
+    sum launch_time_sum AS _sum_launch_time_sum,
+    sum_launch_time_count / avg_window AS slaunch_time_per_secs,
+    IF sum_launch_time_count = 0 THEN 0 ELSE
+      _sum_launch_time_sum / sum_launch_time_count AS slaunch_time_avg,
+    IF sum_launch_time_count = 0 THEN 0 ELSE
+      sqrt ((sum launch_time_square_sum - _sum_launch_time_sum^2) /
+            sum_launch_time_count) AS slaunch_time_stddev
+  GROUP BY start // u32(avg_window), application
+  COMMIT AFTER
+    in.start > out.start + 2 * avg_window
+  FACTOR application;
+
+DEFINE smb AS
+  FROM ../../../csv/smb
+  SELECT
+    -- Time
+    (start // u32(avg_window)) * u32(avg_window) AS start,
+    out.start + avg_window AS stop,
+    application,
+    -- Volumes
+    sum 1 AS _count,
+    sum u32(timeouted) / _count AS timeout_ratio,
+    sum u32(is_error) / _count AS error_ratio,
+    sum u32(is_warning) / _count AS warning_ratio,
+    sum query_payload / avg_window AS query_payload_bytes_per_secs,
+    sum query_pkts / avg_window AS query_pkts_per_secs,
+    sum resp_payload / avg_window AS resp_payload_bytes_per_secs,
+    sum resp_pkts / avg_window AS resp_pkts_per_secs,
+    sum meta_read_bytes / avg_window AS meta_read_bytes_per_secs,
+    sum meta_write_bytes / avg_window AS meta_write_bytes_per_secs,
+    sum query_write_bytes / avg_window AS query_write_bytes_per_secs,
+    sum resp_read_bytes / avg_window AS resp_read_bytes_per_secs,
+    sum resp_write_bytes / avg_window AS resp_write_bytes_per_secs,
+    -- Timings:
+    -- Client DTT:
+    query_end_ts - query_begin_ts AS _cdtt,
+    min _cdtt, max _cdtt, avg _cdtt,
+    90th percentile (sample(1000, _cdtt)) AS cdtt_90th,
+    95th percentile (sample(1000, _cdtt)) AS cdtt_95th,
+    99th percentile (sample(1000, _cdtt)) AS cdtt_99th,
+    HISTOGRAM(_cdtt, 0s, 1min, 20) AS cdtt_distribution,
+    -- Response time:
+    resp_begin_ts - query_end_ts AS _rt,
+    min _rt, max _rt, avg _rt,
+    90th percentile (sample(1000, _rt)) AS rt_90th,
+    95th percentile (sample(1000, _rt)) AS rt_95th,
+    99th percentile (sample(1000, _rt)) AS rt_99th,
+    HISTOGRAM(_rt, 0s, 1min, 20) AS rt_distribution,
+    -- Server DTT:
+    resp_end_ts - resp_begin_ts AS _sdtt,
+    min _sdtt, max _sdtt, avg _sdtt,
+    90th percentile (sample(1000, _sdtt)) AS sdtt_90th,
+    95th percentile (sample(1000, _sdtt)) AS sdtt_95th,
+    99th percentile (sample(1000, _sdtt)) AS sdtt_99th,
+    HISTOGRAM(_sdtt, 0s, 1min, 20) AS sdtt_distribution
+  GROUP BY start // u32(avg_window), application
+  COMMIT AFTER
+    in.start > out.start + 2 * avg_window
+  FACTOR application;
+
+DEFINE sql AS
+  FROM ../../../csv/sql
+  SELECT
+    -- Time
+    (start // u32(avg_window)) * u32(avg_window) AS start,
+    out.start + avg_window AS stop,
+    application,
+    -- Volumes
+    sum 1 AS _count,
+    sum u32(timeouted) / _count AS timeout_ratio,
+    sum u32(is_error) / _count AS error_ratio,
+    sum query_payload / avg_window AS query_payload_bytes_per_secs,
+    sum query_pkts / avg_window AS query_pkts_per_secs,
+    sum resp_payload / avg_window AS resp_payload_bytes_per_secs,
+    sum resp_pkts / avg_window AS resp_pkts_per_secs,
+    -- Timings:
+    -- Client DTT:
+    query_end_ts - query_begin_ts AS _cdtt,
+    min _cdtt, max _cdtt, avg _cdtt,
+    90th percentile (sample(1000, _cdtt)) AS cdtt_90th,
+    95th percentile (sample(1000, _cdtt)) AS cdtt_95th,
+    99th percentile (sample(1000, _cdtt)) AS cdtt_99th,
+    HISTOGRAM(_cdtt, 0s, 1min, 20) AS cdtt_distribution,
+    -- Response time:
+    resp_begin_ts - query_end_ts AS _rt,
+    min _rt, max _rt, avg _rt,
+    90th percentile (sample(1000, _rt)) AS rt_90th,
+    95th percentile (sample(1000, _rt)) AS rt_95th,
+    99th percentile (sample(1000, _rt)) AS rt_99th,
+    HISTOGRAM(_rt, 0s, 1min, 20) AS rt_distribution,
+    -- Server DTT:
+    resp_end_ts - resp_begin_ts AS _sdtt,
+    min _sdtt, max _sdtt, avg _sdtt,
+    90th percentile (sample(1000, _sdtt)) AS sdtt_90th,
+    95th percentile (sample(1000, _sdtt)) AS sdtt_95th,
+    99th percentile (sample(1000, _sdtt)) AS sdtt_99th,
+    HISTOGRAM(_sdtt, 0s, 1min, 20) AS sdtt_distribution
+  GROUP BY start // u32(avg_window), application
+  COMMIT AFTER
+    in.start > out.start + 2 * avg_window
+  FACTOR application;
+
+DEFINE voip AS
+  FROM ../../../csv/voip
+  SELECT
+    -- Time
+    (start // u32(avg_window)) * u32(avg_window) AS start,
+    out.start + avg_window AS stop,
+    application,
+    -- Volumes
+    sum 1 AS _count,
+    sum u32(had_voice) / _count AS with_voice_ratio,
+    sum u32(call_direction_is_out) / _count AS outbind_call_ratio,
+    sum sign_bytes_client / avg_window AS client_sign_bytes_per_secs,
+    sum sign_bytes_server / avg_window AS server_sign_bytes_per_secs,
+    sum sign_payload_client / avg_window AS client_sign_payload_per_secs,
+    sum sign_payload_server / avg_window AS server_sign_payload_per_secs,
+    sum rtp_rtcp_bytes_client / avg_window AS client_rtp_rtcp_bytes_per_secs,
+    sum rtp_rtcp_bytes_server / avg_window AS server_rtp_rtcp_bytes_per_secs,
+    sum rtp_rtcp_payload_client / avg_window AS client_rtp_rtcp_payload_per_secs,
+    sum rtp_rtcp_payload_server / avg_window AS server_rtp_rtcp_payload_per_secs,
+    -- Timings
+    -- Average Server Response Time
+    sum rt_count_server,
+    sum rt_sum_server AS _sum_rt_sum_server,
+    sum_rt_count_server / avg_window AS srt_per_secs,
+    IF sum_rt_count_server = 0 THEN 0 ELSE
+      _sum_rt_sum_server / sum_rt_count_server AS srt_avg,
+    IF sum_rt_count_server = 0 THEN 0 ELSE
+      sqrt ((sum rt_square_sum_server - _sum_rt_sum_server^2) /
+            sum_rt_count_server) AS srt_stddev,
+    -- Jitter caller
+    sum jitter_count_caller,
+    sum jitter_sum_caller AS _sum_jitter_sum_caller,
+    sum_jitter_count_caller / avg_window AS caller_jitter_per_secs,
+    IF sum_jitter_count_caller = 0 THEN 0 ELSE
+      _sum_jitter_sum_caller / sum_jitter_count_caller AS caller_jitter,
+    IF sum_jitter_count_caller = 0 THEN 0 ELSE
+      sqrt ((sum jitter_square_sum_caller - _sum_jitter_sum_caller^2) /
+            sum_jitter_count_caller) AS caller_jitter_stddev,
+    -- Jitter callee
+    sum jitter_count_callee,
+    sum jitter_sum_callee AS _sum_jitter_sum_callee,
+    sum_jitter_count_callee / avg_window AS callee_jitter_per_secs,
+    IF sum_jitter_count_callee = 0 THEN 0 ELSE
+      _sum_jitter_sum_callee / sum_jitter_count_callee AS callee_jitter_avg,
+    IF sum_jitter_count_callee = 0 THEN 0 ELSE
+      sqrt ((sum jitter_square_sum_callee - _sum_jitter_sum_callee^2) /
+            sum_jitter_count_callee) AS callee_jitter_stddev,
+    -- RTT CalleeCallerCallee
+    sum rtt_count_caller,
+    sum rtt_sum_caller AS _sum_rtt_sum_caller,
+    sum_rtt_count_caller / avg_window AS caller_rtt_per_secs,
+    IF sum_rtt_count_caller = 0 THEN 0 ELSE
+      _sum_rtt_sum_caller / sum_rtt_count_caller AS caller_rtt_avg,
+    IF sum_rtt_count_caller = 0 THEN 0 ELSE
+      sqrt ((sum rtt_square_sum_caller - _sum_rtt_sum_caller^2) /
+            sum_rtt_count_caller) AS caller_rtt_stddev,
+    -- RTT CallerCalleeCaller
+    sum rtt_count_callee,
+    sum rtt_sum_callee AS _sum_rtt_sum_callee,
+    sum_rtt_count_callee / avg_window AS callee_rtt_per_secs,
+    IF sum_rtt_count_callee = 0 THEN 0 ELSE
+      _sum_rtt_sum_callee / sum_rtt_count_callee AS callee_rtt_avg,
+    IF sum_rtt_count_callee = 0 THEN 0 ELSE
+      sqrt ((sum rtt_square_sum_callee - _sum_rtt_sum_callee^2) /
+            sum_rtt_count_callee) AS callee_rtt_stddev,
+    -- Losses (alt count)
+    sum loss_callee2caller_alt_count / avg_window AS loss_callee2caller_per_secs,
+    sum loss_caller2callee_alt_count / avg_window AS loss_caller2callee_per_secs,
+    -- Signalisation Average RTT CSC
+    sum sign_rtt_count_server,
+    sum sign_rtt_sum_server AS _sum_sign_rtt_sum_server,
+    sum_sign_rtt_count_server / avg_window AS sign_srtt_per_secs,
+    IF sum_sign_rtt_count_server = 0 THEN 0 ELSE
+      _sum_sign_rtt_sum_server / sum_sign_rtt_count_server AS sign_srtt_avg,
+    IF sum_sign_rtt_count_server = 0 THEN 0 ELSE
+      sqrt ((sum sign_rtt_square_sum_server - _sum_sign_rtt_sum_server^2) /
+            sum_sign_rtt_count_server) AS sign_srtt_stddev,
+    -- Signalisation Average RTT SCS
+    sum sign_rtt_count_client,
+    sum sign_rtt_sum_client AS _sum_sign_rtt_sum_client,
+    sum_sign_rtt_count_client / avg_window AS sign_crtt_per_secs,
+    IF sum_sign_rtt_count_client = 0 THEN 0 ELSE
+      _sum_sign_rtt_sum_client / sum_sign_rtt_count_client AS sign_crtt_avg,
+    IF sum_sign_rtt_count_client = 0 THEN 0 ELSE
+      sqrt ((sum sign_rtt_square_sum_client - _sum_sign_rtt_sum_client^2) /
+            sum_sign_rtt_count_client) AS sign_crtt_stddev,
+    -- Signalisation Average Retransmission Delay CSC
+    sum sign_rd_count_server,
+    sum sign_rd_sum_server AS _sum_sign_rd_sum_server,
+    sum_sign_rd_count_server / avg_window AS sign_srd_per_secs,
+    IF sum_sign_rd_count_server = 0 THEN 0 ELSE
+      _sum_sign_rd_sum_server / sum_sign_rd_count_server AS sign_srd_avg,
+    IF sum_sign_rd_count_server = 0 THEN 0 ELSE
+      sqrt ((sum sign_rd_square_sum_server - _sum_sign_rd_sum_server^2) /
+            sum_sign_rd_count_server) AS sign_srd_stddev,
+    -- Signalisation Average Retransmission Delay SCS
+    sum sign_rd_count_client,
+    sum sign_rd_sum_client AS _sum_sign_rd_sum_client,
+    sum_sign_rd_count_client / avg_window AS sign_crd_per_secs,
+    IF sum_sign_rd_count_client = 0 THEN 0 ELSE
+      _sum_sign_rd_sum_client / sum_sign_rd_count_client AS sign_crd_avg,
+    IF sum_sign_rd_count_client = 0 THEN 0 ELSE
+      sqrt ((sum sign_rd_square_sum_client - _sum_sign_rd_sum_client^2) /
+            sum_sign_rd_count_client) AS sign_crd_stddev
+  GROUP BY start // u32(avg_window), application
+  COMMIT AFTER
+    in.start > out.start + 2 * avg_window
+  FACTOR application;
