@@ -38,8 +38,8 @@ DEFINE 'avg traffic' AS
     (start // u32(avg_window)) * u32(avg_window) AS start,
     out.start + avg_window AS stop,
     -- Traffic
-    sum packets_src / avg_window AS packets_per_secs,
-    sum bytes_src / avg_window AS bytes_per_secs,
+    sum packets_src / avg_window AS packets_per_sec,
+    sum bytes_src / avg_window AS bytes_per_sec,
     -- RTT (in seconds)
     sum rtt_count_src AS _sum_rtt_count_src,
     IF _sum_rtt_count_src = 0 THEN 0 ELSE
@@ -61,8 +61,8 @@ DEFINE percentiles AS
     (min_start // obs_window) * obs_window AS start,
     out.start + obs_window AS stop,
     perc percentile (
-      last u32(obs_window / avg_window) bytes_per_secs
-    ) AS bytes_per_secs,
+      last u32(obs_window / avg_window) bytes_per_sec
+    ) AS bytes_per_sec,
     perc percentile (
       last u32(obs_window / avg_window) avg_rtt
     ) AS rtt,
@@ -79,10 +79,10 @@ DEFINE 'traffic too low' AS
   SELECT
     max_start AS start,
     -- Turn NULLs into 0-certainty alert
-    COALESCE (bytes_per_secs, min_bps, 0) AS bytes_per_secs,
+    COALESCE (bytes_per_sec, min_bps, 0) AS bytes_per_sec,
     -- Other case of NULL: no min_bps
     COALESCE (
-      NOT (HYSTERESIS (bytes_per_secs, min_bps*1.1, min_bps)),
+      NOT (HYSTERESIS (bytes_per_sec, min_bps*1.1, min_bps)),
       false) AS firing
   NOTIFY "BCN - Low traffic from ${source_name} to ${dest_name}" WITH
     firing,
@@ -91,7 +91,7 @@ DEFINE 'traffic too low' AS
       AS desc,
     id AS bcn,
     -- those can be null:
-    "${bytes_per_secs}" AS values,
+    "${bytes_per_sec}" AS values,
     "${min_bps}" AS thresholds
   AND KEEP ALL
   AFTER firing != COALESCE(previous.firing, false);
@@ -101,10 +101,10 @@ DEFINE 'traffic too high' AS
   SELECT
     max_start AS start,
     COALESCE (
-      NOT (HYSTERESIS (bytes_per_secs, max_bps*0.9, max_bps)),
+      NOT (HYSTERESIS (bytes_per_sec, max_bps*0.9, max_bps)),
       false) AS firing
   WHERE
-    COALESCE(bytes_per_secs, 0) >= min_for_relevance
+    COALESCE(bytes_per_sec, 0) >= min_for_relevance
   NOTIFY "BCN - High traffic from ${source_name} to ${dest_name}" WITH
     firing,
     1 AS certainty,
@@ -112,7 +112,7 @@ DEFINE 'traffic too high' AS
       AS desc,
     id AS bcn,
     -- those can be null:
-    "${bytes_per_secs}" AS values,
+    "${bytes_per_sec}" AS values,
     "${max_bps}" AS thresholds
   AND KEEP ALL
   AFTER firing != COALESCE(previous.firing, false);
@@ -128,7 +128,7 @@ DEFINE 'round-trip time' AS
       NOT (HYSTERESIS (rtt, max_rtt*0.9, max_rtt)),
       false) AS firing
   WHERE
-    COALESCE(bytes_per_secs, 0) >= min_for_relevance
+    COALESCE(bytes_per_sec, 0) >= min_for_relevance
   NOTIFY "BCN - RTT too high from ${source_name} to ${dest_name}" WITH
     firing,
     1 AS certainty,
@@ -152,7 +152,7 @@ DEFINE retransmissions AS
       NOT (HYSTERESIS (rr, max_rr*0.9, max_rr)),
       false) AS firing
   WHERE
-    COALESCE(bytes_per_secs, 0) >= min_for_relevance
+    COALESCE(bytes_per_sec, 0) >= min_for_relevance
   NOTIFY "BCN - Too many retransmissions from ${source_name} to ${dest_name}" WITH
     firing,
     1 AS certainty,
@@ -179,21 +179,21 @@ DEFINE 'TCP minutely' AS
     min start, max stop,
     (start // 60) * 60 AS start,
     out.start + 60s AS stop,
-    sum packets_src / 60 AS packets_per_secs,
-    sum bytes_src / 60 AS bytes_per_secs,
-    sum payload_src / 60 AS payload_per_secs,
-    sum packets_with_payload_src / 60 AS packets_with_payload_per_secs,
-    sum retrans_bytes_src / 60 AS retrans_bytes_per_secs,
-    sum retrans_payload_src / 60 AS retrans_payload_per_secs,
-    sum fins_src / 60 AS fins_per_secs,
-    sum rsts_src / 60 AS rsts_per_secs,
-    sum timeouts / 60 AS timeouts_per_secs,
-    sum syns / 60 AS syns_per_secs,
-    sum closes / 60 AS closes_per_secs,
+    sum packets_src / 60 AS packets_per_sec,
+    sum bytes_src / 60 AS bytes_per_sec,
+    sum payload_src / 60 AS payload_per_sec,
+    sum packets_with_payload_src / 60 AS packets_with_payload_per_sec,
+    sum retrans_bytes_src / 60 AS retrans_bytes_per_sec,
+    sum retrans_payload_src / 60 AS retrans_payload_per_sec,
+    sum fins_src / 60 AS fins_per_sec,
+    sum rsts_src / 60 AS rsts_per_sec,
+    sum timeouts / 60 AS timeouts_per_sec,
+    sum syns / 60 AS syns_per_sec,
+    sum closes / 60 AS closes_per_sec,
     sum connections AS _sum_connections,
-    _sum_connections / 60 AS connections_per_secs,
-    sum dupacks_src / 60 AS dupacks_per_secs,
-    sum zero_windows_src / 60 AS zero_windows_per_secs,
+    _sum_connections / 60 AS connections_per_sec,
+    sum dupacks_src / 60 AS dupacks_per_sec,
+    sum zero_windows_src / 60 AS zero_windows_per_sec,
     sum rtt_count_src,
     sum rtt_sum_src AS _sum_rtt_sum_src,
     _sum_rtt_sum_src / sum_rtt_count_src AS rtt_avg,
@@ -226,83 +226,83 @@ DEFINE 'TCP minutely: volume predictions' AS
   SELECT
     start,
     start + avg_window AS stop,
-    packets_per_secs,
-    smooth(packets_per_secs) AS pred_0_packets_per_secs,
-    fit(5, packets_per_secs) AS pred_1_packets_per_secs,
-    5-ma(packets_per_secs) AS pred_2_packets_per_secs,
-    lag(packets_per_secs) AS pred_3_packets_per_secs,
-    fit_multi(5, packets_per_secs, bytes_per_secs, packets_with_payload_per_secs) AS pred_4_packets_per_secs,
-    IF packets_per_secs > 10 THEN (abs(pred_4_packets_per_secs - packets_per_secs) /
-       max(abs pred_4_packets_per_secs, abs packets_per_secs) +
-     abs(pred_3_packets_per_secs - packets_per_secs) /
-       max(abs pred_3_packets_per_secs, abs packets_per_secs) +
-     abs(pred_2_packets_per_secs - packets_per_secs) /
-       max(abs pred_2_packets_per_secs, abs packets_per_secs) +
-     abs(pred_1_packets_per_secs - packets_per_secs) /
-       max(abs pred_1_packets_per_secs, abs packets_per_secs) +
-     abs(pred_0_packets_per_secs - packets_per_secs) /
-       max(abs pred_0_packets_per_secs, abs packets_per_secs)) / 5 ELSE 0 AS abnormality_packets_per_secs,
-    bytes_per_secs,
-    smooth(bytes_per_secs) AS pred_0_bytes_per_secs,
-    fit(5, bytes_per_secs) AS pred_1_bytes_per_secs,
-    5-ma(bytes_per_secs) AS pred_2_bytes_per_secs,
-    lag(bytes_per_secs) AS pred_3_bytes_per_secs,
-    fit_multi(5, bytes_per_secs, packets_per_secs, payload_per_secs) AS pred_4_bytes_per_secs,
-    IF bytes_per_secs > 1000 THEN (abs(pred_4_bytes_per_secs - bytes_per_secs) /
-       max(abs pred_4_bytes_per_secs, abs bytes_per_secs) +
-     abs(pred_3_bytes_per_secs - bytes_per_secs) /
-       max(abs pred_3_bytes_per_secs, abs bytes_per_secs) +
-     abs(pred_2_bytes_per_secs - bytes_per_secs) /
-       max(abs pred_2_bytes_per_secs, abs bytes_per_secs) +
-     abs(pred_1_bytes_per_secs - bytes_per_secs) /
-       max(abs pred_1_bytes_per_secs, abs bytes_per_secs) +
-     abs(pred_0_bytes_per_secs - bytes_per_secs) /
-       max(abs pred_0_bytes_per_secs, abs bytes_per_secs)) / 5 ELSE 0 AS abnormality_bytes_per_secs,
-    payload_per_secs,
-    smooth(payload_per_secs) AS pred_0_payload_per_secs,
-    fit(5, payload_per_secs) AS pred_1_payload_per_secs,
-    5-ma(payload_per_secs) AS pred_2_payload_per_secs,
-    lag(payload_per_secs) AS pred_3_payload_per_secs,
-    fit_multi(5, payload_per_secs, bytes_per_secs) AS pred_4_payload_per_secs,
-    IF payload_per_secs > 1000 THEN (abs(pred_4_payload_per_secs - payload_per_secs) /
-       max(abs pred_4_payload_per_secs, abs payload_per_secs) +
-     abs(pred_3_payload_per_secs - payload_per_secs) /
-       max(abs pred_3_payload_per_secs, abs payload_per_secs) +
-     abs(pred_2_payload_per_secs - payload_per_secs) /
-       max(abs pred_2_payload_per_secs, abs payload_per_secs) +
-     abs(pred_1_payload_per_secs - payload_per_secs) /
-       max(abs pred_1_payload_per_secs, abs payload_per_secs) +
-     abs(pred_0_payload_per_secs - payload_per_secs) /
-       max(abs pred_0_payload_per_secs, abs payload_per_secs)) / 5 ELSE 0 AS abnormality_payload_per_secs,
-    packets_with_payload_per_secs,
-    smooth(packets_with_payload_per_secs) AS pred_0_packets_with_payload_per_secs,
-    fit(5, packets_with_payload_per_secs) AS pred_1_packets_with_payload_per_secs,
-    5-ma(packets_with_payload_per_secs) AS pred_2_packets_with_payload_per_secs,
-    lag(packets_with_payload_per_secs) AS pred_3_packets_with_payload_per_secs,
-    fit_multi(5, packets_with_payload_per_secs, packets_per_secs) AS pred_4_packets_with_payload_per_secs,
-    IF packets_with_payload_per_secs > 10 THEN (abs(pred_4_packets_with_payload_per_secs - packets_with_payload_per_secs) /
-       max(abs pred_4_packets_with_payload_per_secs, abs packets_with_payload_per_secs) +
-     abs(pred_3_packets_with_payload_per_secs - packets_with_payload_per_secs) /
-       max(abs pred_3_packets_with_payload_per_secs, abs packets_with_payload_per_secs) +
-     abs(pred_2_packets_with_payload_per_secs - packets_with_payload_per_secs) /
-       max(abs pred_2_packets_with_payload_per_secs, abs packets_with_payload_per_secs) +
-     abs(pred_1_packets_with_payload_per_secs - packets_with_payload_per_secs) /
-       max(abs pred_1_packets_with_payload_per_secs, abs packets_with_payload_per_secs) +
-     abs(pred_0_packets_with_payload_per_secs - packets_with_payload_per_secs) /
-       max(abs pred_0_packets_with_payload_per_secs, abs packets_with_payload_per_secs)) / 5 ELSE 0 AS abnormality_packets_with_payload_per_secs;
+    packets_per_sec,
+    smooth(packets_per_sec) AS pred_0_packets_per_sec,
+    fit(5, packets_per_sec) AS pred_1_packets_per_sec,
+    5-ma(packets_per_sec) AS pred_2_packets_per_sec,
+    lag(packets_per_sec) AS pred_3_packets_per_sec,
+    fit_multi(5, packets_per_sec, bytes_per_sec, packets_with_payload_per_sec) AS pred_4_packets_per_sec,
+    IF packets_per_sec > 10 THEN (abs(pred_4_packets_per_sec - packets_per_sec) /
+       max(abs pred_4_packets_per_sec, abs packets_per_sec) +
+     abs(pred_3_packets_per_sec - packets_per_sec) /
+       max(abs pred_3_packets_per_sec, abs packets_per_sec) +
+     abs(pred_2_packets_per_sec - packets_per_sec) /
+       max(abs pred_2_packets_per_sec, abs packets_per_sec) +
+     abs(pred_1_packets_per_sec - packets_per_sec) /
+       max(abs pred_1_packets_per_sec, abs packets_per_sec) +
+     abs(pred_0_packets_per_sec - packets_per_sec) /
+       max(abs pred_0_packets_per_sec, abs packets_per_sec)) / 5 ELSE 0 AS abnormality_packets_per_sec,
+    bytes_per_sec,
+    smooth(bytes_per_sec) AS pred_0_bytes_per_sec,
+    fit(5, bytes_per_sec) AS pred_1_bytes_per_sec,
+    5-ma(bytes_per_sec) AS pred_2_bytes_per_sec,
+    lag(bytes_per_sec) AS pred_3_bytes_per_sec,
+    fit_multi(5, bytes_per_sec, packets_per_sec, payload_per_sec) AS pred_4_bytes_per_sec,
+    IF bytes_per_sec > 1000 THEN (abs(pred_4_bytes_per_sec - bytes_per_sec) /
+       max(abs pred_4_bytes_per_sec, abs bytes_per_sec) +
+     abs(pred_3_bytes_per_sec - bytes_per_sec) /
+       max(abs pred_3_bytes_per_sec, abs bytes_per_sec) +
+     abs(pred_2_bytes_per_sec - bytes_per_sec) /
+       max(abs pred_2_bytes_per_sec, abs bytes_per_sec) +
+     abs(pred_1_bytes_per_sec - bytes_per_sec) /
+       max(abs pred_1_bytes_per_sec, abs bytes_per_sec) +
+     abs(pred_0_bytes_per_sec - bytes_per_sec) /
+       max(abs pred_0_bytes_per_sec, abs bytes_per_sec)) / 5 ELSE 0 AS abnormality_bytes_per_sec,
+    payload_per_sec,
+    smooth(payload_per_sec) AS pred_0_payload_per_sec,
+    fit(5, payload_per_sec) AS pred_1_payload_per_sec,
+    5-ma(payload_per_sec) AS pred_2_payload_per_sec,
+    lag(payload_per_sec) AS pred_3_payload_per_sec,
+    fit_multi(5, payload_per_sec, bytes_per_sec) AS pred_4_payload_per_sec,
+    IF payload_per_sec > 1000 THEN (abs(pred_4_payload_per_sec - payload_per_sec) /
+       max(abs pred_4_payload_per_sec, abs payload_per_sec) +
+     abs(pred_3_payload_per_sec - payload_per_sec) /
+       max(abs pred_3_payload_per_sec, abs payload_per_sec) +
+     abs(pred_2_payload_per_sec - payload_per_sec) /
+       max(abs pred_2_payload_per_sec, abs payload_per_sec) +
+     abs(pred_1_payload_per_sec - payload_per_sec) /
+       max(abs pred_1_payload_per_sec, abs payload_per_sec) +
+     abs(pred_0_payload_per_sec - payload_per_sec) /
+       max(abs pred_0_payload_per_sec, abs payload_per_sec)) / 5 ELSE 0 AS abnormality_payload_per_sec,
+    packets_with_payload_per_sec,
+    smooth(packets_with_payload_per_sec) AS pred_0_packets_with_payload_per_sec,
+    fit(5, packets_with_payload_per_sec) AS pred_1_packets_with_payload_per_sec,
+    5-ma(packets_with_payload_per_sec) AS pred_2_packets_with_payload_per_sec,
+    lag(packets_with_payload_per_sec) AS pred_3_packets_with_payload_per_sec,
+    fit_multi(5, packets_with_payload_per_sec, packets_per_sec) AS pred_4_packets_with_payload_per_sec,
+    IF packets_with_payload_per_sec > 10 THEN (abs(pred_4_packets_with_payload_per_sec - packets_with_payload_per_sec) /
+       max(abs pred_4_packets_with_payload_per_sec, abs packets_with_payload_per_sec) +
+     abs(pred_3_packets_with_payload_per_sec - packets_with_payload_per_sec) /
+       max(abs pred_3_packets_with_payload_per_sec, abs packets_with_payload_per_sec) +
+     abs(pred_2_packets_with_payload_per_sec - packets_with_payload_per_sec) /
+       max(abs pred_2_packets_with_payload_per_sec, abs packets_with_payload_per_sec) +
+     abs(pred_1_packets_with_payload_per_sec - packets_with_payload_per_sec) /
+       max(abs pred_1_packets_with_payload_per_sec, abs packets_with_payload_per_sec) +
+     abs(pred_0_packets_with_payload_per_sec - packets_with_payload_per_sec) /
+       max(abs pred_0_packets_with_payload_per_sec, abs packets_with_payload_per_sec)) / 5 ELSE 0 AS abnormality_packets_with_payload_per_sec;
 
 DEFINE 'TCP minutely: volume anomalies' AS
   FROM 'TCP minutely: volume predictions'
   SELECT
     start,
-    (abnormality_packets_with_payload_per_secs > 0.75 OR
-     abnormality_payload_per_secs > 0.75 OR
-     abnormality_bytes_per_secs > 0.75 OR
-     abnormality_packets_per_secs > 0.75) AS abnormality,
+    (abnormality_packets_with_payload_per_sec > 0.75 OR
+     abnormality_payload_per_sec > 0.75 OR
+     abnormality_bytes_per_sec > 0.75 OR
+     abnormality_packets_per_sec > 0.75) AS abnormality,
     5-ma float(abnormality) AS _recent_abnormality,
     NOT (HYSTERESIS (_recent_abnormality, 3/5, 4/5)) AS firing
   WHERE
-    bytes_per_secs >= min_for_relevance
+    bytes_per_sec >= min_for_relevance
   NOTIFY "BCN - Anomaly detected" WITH
     firing,
     0.1 * abs(_recent_abnormality - 3/5) AS certainty,
@@ -317,47 +317,47 @@ DEFINE 'TCP minutely: retransmissions predictions' AS
   SELECT
     start,
     start + avg_window AS stop,
-    bytes_per_secs,
-    retrans_bytes_per_secs,
-    smooth(retrans_bytes_per_secs) AS pred_0_retrans_bytes_per_secs,
-    fit(5, retrans_bytes_per_secs) AS pred_1_retrans_bytes_per_secs,
-    5-ma(retrans_bytes_per_secs) AS pred_2_retrans_bytes_per_secs,
-    lag(retrans_bytes_per_secs) AS pred_3_retrans_bytes_per_secs,
-    fit_multi(5, retrans_bytes_per_secs, retrans_payload_per_secs) AS pred_4_retrans_bytes_per_secs,
-    IF retrans_bytes_per_secs > 1000 THEN (abs(pred_4_retrans_bytes_per_secs - retrans_bytes_per_secs) /
-       max(abs pred_4_retrans_bytes_per_secs, abs retrans_bytes_per_secs) +
-     abs(pred_3_retrans_bytes_per_secs - retrans_bytes_per_secs) /
-       max(abs pred_3_retrans_bytes_per_secs, abs retrans_bytes_per_secs) +
-     abs(pred_2_retrans_bytes_per_secs - retrans_bytes_per_secs) /
-       max(abs pred_2_retrans_bytes_per_secs, abs retrans_bytes_per_secs) +
-     abs(pred_1_retrans_bytes_per_secs - retrans_bytes_per_secs) /
-       max(abs pred_1_retrans_bytes_per_secs, abs retrans_bytes_per_secs) +
-     abs(pred_0_retrans_bytes_per_secs - retrans_bytes_per_secs) /
-       max(abs pred_0_retrans_bytes_per_secs, abs retrans_bytes_per_secs)) / 5 ELSE 0 AS abnormality_retrans_bytes_per_secs,
-    dupacks_per_secs,
-    smooth(dupacks_per_secs) AS pred_0_dupacks_per_secs,
-    fit(5, dupacks_per_secs) AS pred_1_dupacks_per_secs,
-    5-ma(dupacks_per_secs) AS pred_2_dupacks_per_secs,
-    lag(dupacks_per_secs) AS pred_3_dupacks_per_secs,
-    IF dupacks_per_secs > 1 THEN (abs(pred_3_dupacks_per_secs - dupacks_per_secs) /
-       max(abs pred_3_dupacks_per_secs, abs dupacks_per_secs) +
-     abs(pred_2_dupacks_per_secs - dupacks_per_secs) /
-       max(abs pred_2_dupacks_per_secs, abs dupacks_per_secs) +
-     abs(pred_1_dupacks_per_secs - dupacks_per_secs) /
-       max(abs pred_1_dupacks_per_secs, abs dupacks_per_secs) +
-     abs(pred_0_dupacks_per_secs - dupacks_per_secs) /
-       max(abs pred_0_dupacks_per_secs, abs dupacks_per_secs)) / 4 ELSE 0 AS abnormality_dupacks_per_secs;
+    bytes_per_sec,
+    retrans_bytes_per_sec,
+    smooth(retrans_bytes_per_sec) AS pred_0_retrans_bytes_per_sec,
+    fit(5, retrans_bytes_per_sec) AS pred_1_retrans_bytes_per_sec,
+    5-ma(retrans_bytes_per_sec) AS pred_2_retrans_bytes_per_sec,
+    lag(retrans_bytes_per_sec) AS pred_3_retrans_bytes_per_sec,
+    fit_multi(5, retrans_bytes_per_sec, retrans_payload_per_sec) AS pred_4_retrans_bytes_per_sec,
+    IF retrans_bytes_per_sec > 1000 THEN (abs(pred_4_retrans_bytes_per_sec - retrans_bytes_per_sec) /
+       max(abs pred_4_retrans_bytes_per_sec, abs retrans_bytes_per_sec) +
+     abs(pred_3_retrans_bytes_per_sec - retrans_bytes_per_sec) /
+       max(abs pred_3_retrans_bytes_per_sec, abs retrans_bytes_per_sec) +
+     abs(pred_2_retrans_bytes_per_sec - retrans_bytes_per_sec) /
+       max(abs pred_2_retrans_bytes_per_sec, abs retrans_bytes_per_sec) +
+     abs(pred_1_retrans_bytes_per_sec - retrans_bytes_per_sec) /
+       max(abs pred_1_retrans_bytes_per_sec, abs retrans_bytes_per_sec) +
+     abs(pred_0_retrans_bytes_per_sec - retrans_bytes_per_sec) /
+       max(abs pred_0_retrans_bytes_per_sec, abs retrans_bytes_per_sec)) / 5 ELSE 0 AS abnormality_retrans_bytes_per_sec,
+    dupacks_per_sec,
+    smooth(dupacks_per_sec) AS pred_0_dupacks_per_sec,
+    fit(5, dupacks_per_sec) AS pred_1_dupacks_per_sec,
+    5-ma(dupacks_per_sec) AS pred_2_dupacks_per_sec,
+    lag(dupacks_per_sec) AS pred_3_dupacks_per_sec,
+    IF dupacks_per_sec > 1 THEN (abs(pred_3_dupacks_per_sec - dupacks_per_sec) /
+       max(abs pred_3_dupacks_per_sec, abs dupacks_per_sec) +
+     abs(pred_2_dupacks_per_sec - dupacks_per_sec) /
+       max(abs pred_2_dupacks_per_sec, abs dupacks_per_sec) +
+     abs(pred_1_dupacks_per_sec - dupacks_per_sec) /
+       max(abs pred_1_dupacks_per_sec, abs dupacks_per_sec) +
+     abs(pred_0_dupacks_per_sec - dupacks_per_sec) /
+       max(abs pred_0_dupacks_per_sec, abs dupacks_per_sec)) / 4 ELSE 0 AS abnormality_dupacks_per_sec;
 
 DEFINE 'TCP minutely: retransmissions anomalies' AS
   FROM 'TCP minutely: retransmissions predictions'
   SELECT
     start,
-    (abnormality_dupacks_per_secs > 0.75 OR
-     abnormality_retrans_bytes_per_secs > 0.75) AS abnormality,
+    (abnormality_dupacks_per_sec > 0.75 OR
+     abnormality_retrans_bytes_per_sec > 0.75) AS abnormality,
     5-ma float(abnormality) AS _recent_abnormality,
     NOT (HYSTERESIS (_recent_abnormality, 3/5, 4/5)) AS firing
   WHERE
-    bytes_per_secs >= min_for_relevance
+    bytes_per_sec >= min_for_relevance
   NOTIFY "BCN - Anomaly detected" WITH
     firing,
     0.1 * abs(_recent_abnormality - 3/5) AS certainty,
@@ -372,74 +372,74 @@ DEFINE 'TCP minutely: connections predictions' AS
   SELECT
     start,
     start + avg_window AS stop,
-    bytes_per_secs,
-    fins_per_secs,
-    smooth(fins_per_secs) AS pred_0_fins_per_secs,
-    fit(5, fins_per_secs) AS pred_1_fins_per_secs,
-    5-ma(fins_per_secs) AS pred_2_fins_per_secs,
-    lag(fins_per_secs) AS pred_3_fins_per_secs,
-    fit_multi(5, fins_per_secs, packets_per_secs) AS pred_4_fins_per_secs,
-    IF fins_per_secs > 1 THEN (abs(pred_4_fins_per_secs - fins_per_secs) /
-       max(abs pred_4_fins_per_secs, abs fins_per_secs) +
-     abs(pred_3_fins_per_secs - fins_per_secs) /
-       max(abs pred_3_fins_per_secs, abs fins_per_secs) +
-     abs(pred_2_fins_per_secs - fins_per_secs) /
-       max(abs pred_2_fins_per_secs, abs fins_per_secs) +
-     abs(pred_1_fins_per_secs - fins_per_secs) /
-       max(abs pred_1_fins_per_secs, abs fins_per_secs) +
-     abs(pred_0_fins_per_secs - fins_per_secs) /
-       max(abs pred_0_fins_per_secs, abs fins_per_secs)) / 5 ELSE 0 AS abnormality_fins_per_secs,
-    rsts_per_secs,
-    smooth(rsts_per_secs) AS pred_0_rsts_per_secs,
-    fit(5, rsts_per_secs) AS pred_1_rsts_per_secs,
-    5-ma(rsts_per_secs) AS pred_2_rsts_per_secs,
-    lag(rsts_per_secs) AS pred_3_rsts_per_secs,
-    fit_multi(5, rsts_per_secs, packets_per_secs) AS pred_4_rsts_per_secs,
-    IF rsts_per_secs > 1 THEN (abs(pred_4_rsts_per_secs - rsts_per_secs) /
-       max(abs pred_4_rsts_per_secs, abs rsts_per_secs) +
-     abs(pred_3_rsts_per_secs - rsts_per_secs) /
-       max(abs pred_3_rsts_per_secs, abs rsts_per_secs) +
-     abs(pred_2_rsts_per_secs - rsts_per_secs) /
-       max(abs pred_2_rsts_per_secs, abs rsts_per_secs) +
-     abs(pred_1_rsts_per_secs - rsts_per_secs) /
-       max(abs pred_1_rsts_per_secs, abs rsts_per_secs) +
-     abs(pred_0_rsts_per_secs - rsts_per_secs) /
-       max(abs pred_0_rsts_per_secs, abs rsts_per_secs)) / 5 ELSE 0 AS abnormality_rsts_per_secs,
-    syns_per_secs,
-    smooth(syns_per_secs) AS pred_0_syns_per_secs,
-    fit(5, syns_per_secs) AS pred_1_syns_per_secs,
-    5-ma(syns_per_secs) AS pred_2_syns_per_secs,
-    lag(syns_per_secs) AS pred_3_syns_per_secs,
-    fit_multi(5, syns_per_secs, packets_per_secs) AS pred_4_syns_per_secs,
-    IF syns_per_secs > 1 THEN (abs(pred_4_syns_per_secs - syns_per_secs) /
-       max(abs pred_4_syns_per_secs, abs syns_per_secs) +
-     abs(pred_3_syns_per_secs - syns_per_secs) /
-       max(abs pred_3_syns_per_secs, abs syns_per_secs) +
-     abs(pred_2_syns_per_secs - syns_per_secs) /
-       max(abs pred_2_syns_per_secs, abs syns_per_secs) +
-     abs(pred_1_syns_per_secs - syns_per_secs) /
-       max(abs pred_1_syns_per_secs, abs syns_per_secs) +
-     abs(pred_0_syns_per_secs - syns_per_secs) /
-       max(abs pred_0_syns_per_secs, abs syns_per_secs)) / 5 ELSE 0 AS abnormality_syns_per_secs,
-    connections_per_secs,
-    smooth(connections_per_secs) AS pred_0_connections_per_secs,
-    fit(5, connections_per_secs) AS pred_1_connections_per_secs,
-    5-ma(connections_per_secs) AS pred_2_connections_per_secs,
-    lag(connections_per_secs) AS pred_3_connections_per_secs,
-    IF connections_per_secs > 1 THEN (abs(pred_3_connections_per_secs - connections_per_secs) /
-       max(abs pred_3_connections_per_secs, abs connections_per_secs) +
-     abs(pred_2_connections_per_secs - connections_per_secs) /
-       max(abs pred_2_connections_per_secs, abs connections_per_secs) +
-     abs(pred_1_connections_per_secs - connections_per_secs) /
-       max(abs pred_1_connections_per_secs, abs connections_per_secs) +
-     abs(pred_0_connections_per_secs - connections_per_secs) /
-       max(abs pred_0_connections_per_secs, abs connections_per_secs)) / 4 ELSE 0 AS abnormality_connections_per_secs,
+    bytes_per_sec,
+    fins_per_sec,
+    smooth(fins_per_sec) AS pred_0_fins_per_sec,
+    fit(5, fins_per_sec) AS pred_1_fins_per_sec,
+    5-ma(fins_per_sec) AS pred_2_fins_per_sec,
+    lag(fins_per_sec) AS pred_3_fins_per_sec,
+    fit_multi(5, fins_per_sec, packets_per_sec) AS pred_4_fins_per_sec,
+    IF fins_per_sec > 1 THEN (abs(pred_4_fins_per_sec - fins_per_sec) /
+       max(abs pred_4_fins_per_sec, abs fins_per_sec) +
+     abs(pred_3_fins_per_sec - fins_per_sec) /
+       max(abs pred_3_fins_per_sec, abs fins_per_sec) +
+     abs(pred_2_fins_per_sec - fins_per_sec) /
+       max(abs pred_2_fins_per_sec, abs fins_per_sec) +
+     abs(pred_1_fins_per_sec - fins_per_sec) /
+       max(abs pred_1_fins_per_sec, abs fins_per_sec) +
+     abs(pred_0_fins_per_sec - fins_per_sec) /
+       max(abs pred_0_fins_per_sec, abs fins_per_sec)) / 5 ELSE 0 AS abnormality_fins_per_sec,
+    rsts_per_sec,
+    smooth(rsts_per_sec) AS pred_0_rsts_per_sec,
+    fit(5, rsts_per_sec) AS pred_1_rsts_per_sec,
+    5-ma(rsts_per_sec) AS pred_2_rsts_per_sec,
+    lag(rsts_per_sec) AS pred_3_rsts_per_sec,
+    fit_multi(5, rsts_per_sec, packets_per_sec) AS pred_4_rsts_per_sec,
+    IF rsts_per_sec > 1 THEN (abs(pred_4_rsts_per_sec - rsts_per_sec) /
+       max(abs pred_4_rsts_per_sec, abs rsts_per_sec) +
+     abs(pred_3_rsts_per_sec - rsts_per_sec) /
+       max(abs pred_3_rsts_per_sec, abs rsts_per_sec) +
+     abs(pred_2_rsts_per_sec - rsts_per_sec) /
+       max(abs pred_2_rsts_per_sec, abs rsts_per_sec) +
+     abs(pred_1_rsts_per_sec - rsts_per_sec) /
+       max(abs pred_1_rsts_per_sec, abs rsts_per_sec) +
+     abs(pred_0_rsts_per_sec - rsts_per_sec) /
+       max(abs pred_0_rsts_per_sec, abs rsts_per_sec)) / 5 ELSE 0 AS abnormality_rsts_per_sec,
+    syns_per_sec,
+    smooth(syns_per_sec) AS pred_0_syns_per_sec,
+    fit(5, syns_per_sec) AS pred_1_syns_per_sec,
+    5-ma(syns_per_sec) AS pred_2_syns_per_sec,
+    lag(syns_per_sec) AS pred_3_syns_per_sec,
+    fit_multi(5, syns_per_sec, packets_per_sec) AS pred_4_syns_per_sec,
+    IF syns_per_sec > 1 THEN (abs(pred_4_syns_per_sec - syns_per_sec) /
+       max(abs pred_4_syns_per_sec, abs syns_per_sec) +
+     abs(pred_3_syns_per_sec - syns_per_sec) /
+       max(abs pred_3_syns_per_sec, abs syns_per_sec) +
+     abs(pred_2_syns_per_sec - syns_per_sec) /
+       max(abs pred_2_syns_per_sec, abs syns_per_sec) +
+     abs(pred_1_syns_per_sec - syns_per_sec) /
+       max(abs pred_1_syns_per_sec, abs syns_per_sec) +
+     abs(pred_0_syns_per_sec - syns_per_sec) /
+       max(abs pred_0_syns_per_sec, abs syns_per_sec)) / 5 ELSE 0 AS abnormality_syns_per_sec,
+    connections_per_sec,
+    smooth(connections_per_sec) AS pred_0_connections_per_sec,
+    fit(5, connections_per_sec) AS pred_1_connections_per_sec,
+    5-ma(connections_per_sec) AS pred_2_connections_per_sec,
+    lag(connections_per_sec) AS pred_3_connections_per_sec,
+    IF connections_per_sec > 1 THEN (abs(pred_3_connections_per_sec - connections_per_sec) /
+       max(abs pred_3_connections_per_sec, abs connections_per_sec) +
+     abs(pred_2_connections_per_sec - connections_per_sec) /
+       max(abs pred_2_connections_per_sec, abs connections_per_sec) +
+     abs(pred_1_connections_per_sec - connections_per_sec) /
+       max(abs pred_1_connections_per_sec, abs connections_per_sec) +
+     abs(pred_0_connections_per_sec - connections_per_sec) /
+       max(abs pred_0_connections_per_sec, abs connections_per_sec)) / 4 ELSE 0 AS abnormality_connections_per_sec,
     connection_time_avg,
     smooth(connection_time_avg) AS pred_0_connection_time_avg,
     fit(5, connection_time_avg) AS pred_1_connection_time_avg,
     5-ma(connection_time_avg) AS pred_2_connection_time_avg,
     lag(connection_time_avg) AS pred_3_connection_time_avg,
-    IF connections_per_secs > 1 THEN (abs(pred_3_connection_time_avg - connection_time_avg) /
+    IF connections_per_sec > 1 THEN (abs(pred_3_connection_time_avg - connection_time_avg) /
        max(abs pred_3_connection_time_avg, abs connection_time_avg) +
      abs(pred_2_connection_time_avg - connection_time_avg) /
        max(abs pred_2_connection_time_avg, abs connection_time_avg) +
@@ -453,14 +453,14 @@ DEFINE 'TCP minutely: connections anomalies' AS
   SELECT
     start,
     (abnormality_connection_time_avg > 0.75 OR
-     abnormality_connections_per_secs > 0.75 OR
-     abnormality_syns_per_secs > 0.75 OR
-     abnormality_rsts_per_secs > 0.75 OR
-     abnormality_fins_per_secs > 0.75) AS abnormality,
+     abnormality_connections_per_sec > 0.75 OR
+     abnormality_syns_per_sec > 0.75 OR
+     abnormality_rsts_per_sec > 0.75 OR
+     abnormality_fins_per_sec > 0.75) AS abnormality,
     5-ma float(abnormality) AS _recent_abnormality,
     NOT (HYSTERESIS (_recent_abnormality, 3/5, 4/5)) AS firing
   WHERE
-    bytes_per_secs >= min_for_relevance
+    bytes_per_sec >= min_for_relevance
   NOTIFY "BCN - Anomaly detected" WITH
     firing,
     0.1 * abs(_recent_abnormality - 3/5) AS certainty,
@@ -476,30 +476,30 @@ DEFINE 'TCP minutely: 0-windows predictions' AS
   SELECT
     start,
     start + avg_window AS stop,
-    bytes_per_secs,
-    zero_windows_per_secs,
-    smooth(zero_windows_per_secs) AS pred_0_zero_windows_per_secs,
-    fit(5, zero_windows_per_secs) AS pred_1_zero_windows_per_secs,
-    5-ma(zero_windows_per_secs) AS pred_2_zero_windows_per_secs,
-    lag(zero_windows_per_secs) AS pred_3_zero_windows_per_secs,
-    IF zero_windows_per_secs > 1 THEN (abs(pred_3_zero_windows_per_secs - zero_windows_per_secs) /
-       max(abs pred_3_zero_windows_per_secs, abs zero_windows_per_secs) +
-     abs(pred_2_zero_windows_per_secs - zero_windows_per_secs) /
-       max(abs pred_2_zero_windows_per_secs, abs zero_windows_per_secs) +
-     abs(pred_1_zero_windows_per_secs - zero_windows_per_secs) /
-       max(abs pred_1_zero_windows_per_secs, abs zero_windows_per_secs) +
-     abs(pred_0_zero_windows_per_secs - zero_windows_per_secs) /
-       max(abs pred_0_zero_windows_per_secs, abs zero_windows_per_secs)) / 4 ELSE 0 AS abnormality_zero_windows_per_secs;
+    bytes_per_sec,
+    zero_windows_per_sec,
+    smooth(zero_windows_per_sec) AS pred_0_zero_windows_per_sec,
+    fit(5, zero_windows_per_sec) AS pred_1_zero_windows_per_sec,
+    5-ma(zero_windows_per_sec) AS pred_2_zero_windows_per_sec,
+    lag(zero_windows_per_sec) AS pred_3_zero_windows_per_sec,
+    IF zero_windows_per_sec > 1 THEN (abs(pred_3_zero_windows_per_sec - zero_windows_per_sec) /
+       max(abs pred_3_zero_windows_per_sec, abs zero_windows_per_sec) +
+     abs(pred_2_zero_windows_per_sec - zero_windows_per_sec) /
+       max(abs pred_2_zero_windows_per_sec, abs zero_windows_per_sec) +
+     abs(pred_1_zero_windows_per_sec - zero_windows_per_sec) /
+       max(abs pred_1_zero_windows_per_sec, abs zero_windows_per_sec) +
+     abs(pred_0_zero_windows_per_sec - zero_windows_per_sec) /
+       max(abs pred_0_zero_windows_per_sec, abs zero_windows_per_sec)) / 4 ELSE 0 AS abnormality_zero_windows_per_sec;
 
 DEFINE 'TCP minutely: 0-windows anomalies' AS
   FROM 'TCP minutely: 0-windows predictions'
   SELECT
     start,
-    (abnormality_zero_windows_per_secs > 0.75) AS abnormality,
+    (abnormality_zero_windows_per_sec > 0.75) AS abnormality,
     5-ma float(abnormality) AS _recent_abnormality,
     NOT (HYSTERESIS (_recent_abnormality, 3/5, 4/5)) AS firing
   WHERE
-    bytes_per_secs >= min_for_relevance
+    bytes_per_sec >= min_for_relevance
   NOTIFY "BCN - Anomaly detected" WITH
     firing,
     0.1 * abs(_recent_abnormality - 3/5) AS certainty,
@@ -515,7 +515,7 @@ DEFINE 'TCP minutely: RTT predictions' AS
   SELECT
     start,
     start + avg_window AS stop,
-    bytes_per_secs,
+    bytes_per_sec,
     rtt_avg,
     smooth(rtt_avg) AS pred_0_rtt_avg,
     fit(5, rtt_avg) AS pred_1_rtt_avg,
@@ -538,7 +538,7 @@ DEFINE 'TCP minutely: RTT anomalies' AS
     5-ma float(abnormality) AS _recent_abnormality,
     NOT (HYSTERESIS (_recent_abnormality, 3/5, 4/5)) AS firing
   WHERE
-    bytes_per_secs >= min_for_relevance
+    bytes_per_sec >= min_for_relevance
   NOTIFY "BCN - Anomaly deteted" WITH
     firing,
     0.1 * abs(_recent_abnormality - 3/5) AS certainty,
@@ -554,7 +554,7 @@ DEFINE 'TCP minutely: RD predictions' AS
   SELECT
     start,
     start + avg_window AS stop,
-    bytes_per_secs,
+    bytes_per_sec,
     rd_avg,
     smooth(rd_avg) AS pred_0_rd_avg,
     fit(5, rd_avg) AS pred_1_rd_avg,
@@ -577,7 +577,7 @@ DEFINE 'TCP minutely: RD anomalies' AS
     5-ma float(abnormality) AS _recent_abnormality,
     NOT (HYSTERESIS (_recent_abnormality, 3/5, 4/5)) AS firing
   WHERE
-    bytes_per_secs >= min_for_relevance
+    bytes_per_sec >= min_for_relevance
   NOTIFY "BCN - Anomaly detected" WITH
     firing,
     0.1 * abs(_recent_abnormality - 3/5) AS certainty,
@@ -593,7 +593,7 @@ DEFINE 'TCP minutely: DTT predictions' AS
   SELECT
     start,
     start + avg_window AS stop,
-    bytes_per_secs,
+    bytes_per_sec,
     dtt_avg,
     smooth(dtt_avg) AS pred_0_dtt_avg,
     fit(5, dtt_avg) AS pred_1_dtt_avg,
@@ -616,7 +616,7 @@ DEFINE 'TCP minutely: DTT anomalies' AS
     5-ma float(abnormality) AS _recent_abnormality,
     NOT (HYSTERESIS (_recent_abnormality, 3/5, 4/5)) AS firing
   WHERE
-    bytes_per_secs >= min_for_relevance
+    bytes_per_sec >= min_for_relevance
   NOTIFY "BCN - Anomaly detected" WITH
     firing,
     0.1 * abs(_recent_abnormality - 3/5) AS certainty,

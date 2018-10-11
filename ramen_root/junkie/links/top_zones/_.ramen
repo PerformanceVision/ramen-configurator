@@ -121,18 +121,18 @@ AS
     out.start + obs_window AS stop,
 
     -- Volumetry 1 -> 2
-    sum packets_1 / obs_window AS packets_per_secs_1
+    sum packets_1 / obs_window AS packets_per_sec_1
       "Packets per seconds (uplink).",
-    sum bytes_1 / obs_window AS bytes_per_secs_1
+    sum bytes_1 / obs_window AS bytes_per_sec_1
       "Bytes per seconds (uplink).",
-    sum payload_1 / obs_window AS payload_bytes_per_secs_1
+    sum payload_1 / obs_window AS payload_bytes_per_sec_1
       "Payload per seconds (uplink).",
     -- Volumetry 2 -> 1
-    sum packets_2 / obs_window AS packets_per_secs_2
+    sum packets_2 / obs_window AS packets_per_sec_2
       "Packets per seconds (downlink).",
-    sum bytes_2 / obs_window AS bytes_per_secs_2
+    sum bytes_2 / obs_window AS bytes_per_sec_2
       "Bytes per seconds (downlink).",
-    sum payload_2 / obs_window AS payload_bytes_per_secs_2
+    sum payload_2 / obs_window AS payload_bytes_per_sec_2
       "Payload per seconds (downlink).",
 
     -- RTT 1 -> 2 (in seconds)
