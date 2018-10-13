@@ -53,7 +53,7 @@ let run_file debug ramen_cmd root_dir persist_dir no_ext params =
       Set.String.add as_ rs
     ) params Set.String.empty)
 
-(* Return the list of everything under junkie/.
+(* Return the list of everything under sniffer/.
  * TODO: configurator should have its own namespace ("configurator/"?) that's
  * non editable (by convention) to the user (or API), so that we can freely
  * kill programs in there. *)
@@ -85,7 +85,7 @@ let kill ramen_cmd persist_dir prog =
 let sync_programs db debug ramen_cmd root_dir persist_dir uncompress
                   csv_prefix csv_delete with_bcns with_bcas =
   let no_params = Hashtbl.create 0 in
-  let old_running = get_running ramen_cmd persist_dir "junkie/*" in
+  let old_running = get_running ramen_cmd persist_dir "sniffer/*" in
   let new_running = ref Set.String.empty in
   let comp n p =
     let rs = run_file debug ramen_cmd root_dir persist_dir n p in
@@ -98,15 +98,15 @@ let sync_programs db debug ramen_cmd root_dir persist_dir uncompress
         "csv_delete", string_of_bool csv_delete ;
         "csv_compressed", string_of_bool uncompress ] ;
     h in
-  comp "junkie/csv" params ;
+  comp "sniffer/csv" params ;
   let aggr_times =
     Hashtbl.of_list [ "1min",  [ "obs_window", "60" ] ;
                       "1hour", [ "obs_window", "3600" ] ] in
-  comp "junkie/links/top_zones/_" aggr_times ;
-  comp "junkie/apps/top_servers/_" aggr_times ;
-  comp "junkie/apps/per_application/_" aggr_times ;
-  comp "junkie/protocols/transactions/_" aggr_times ;
-  comp "junkie/protocols/top_errors/_" aggr_times ;
+  comp "sniffer/links/top_zones/_" aggr_times ;
+  comp "sniffer/apps/top_servers/_" aggr_times ;
+  comp "sniffer/apps/per_application/_" aggr_times ;
+  comp "sniffer/protocols/transactions/_" aggr_times ;
+  comp "sniffer/protocols/top_errors/_" aggr_times ;
   let bcns, bcas = Conf_of_sqlite.get_bcs db in
   let bcns = List.take with_bcns bcns
   and bcas = List.take with_bcas bcas in
@@ -138,7 +138,7 @@ let sync_programs db debug ramen_cmd root_dir persist_dir uncompress
       ] |>
       Hashtbl.add params uniq_name
     ) bcns ;
-    comp "junkie/links/BCN/_" params
+    comp "sniffer/links/BCN/_" params
   ) ;
   if bcas <> [] then (
     let params = Hashtbl.create 5 in
@@ -156,12 +156,12 @@ let sync_programs db debug ramen_cmd root_dir persist_dir uncompress
       ] |>
       Hashtbl.add params uniq_name
     ) bcas ;
-    comp "junkie/apps/BCA/_" params
+    comp "sniffer/apps/BCA/_" params
   ) ;
   (* Several bad behavior detectors, regrouped in a "Security" namespace:
    *)
-  comp "junkie/security/DDoS" no_params ;
-  comp "junkie/security/scans" no_params ;
+  comp "sniffer/security/DDoS" no_params ;
+  comp "sniffer/security/scans" no_params ;
   !logger.debug "Old: %a" (Set.String.print String.print) old_running ;
   !logger.debug "New: %a" (Set.String.print String.print) !new_running ;
   let to_kill = Set.String.diff old_running !new_running in

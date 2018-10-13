@@ -76,11 +76,11 @@ AS
   SELECT
     (start // 60) * 60 AS start,
     out.start + 60s AS stop,
-    sum 1 AS running "Total number of running worker.",
+    sum 1 {processes} AS running "Total number of running worker.",
     -- Given data arrive only every minute in the test lab (and some datasets
     -- are frequently missed), let's call "active" any operation that had
     -- output anything for the last *3* minutes:
-    sum u32(COALESCE(last_out_age <= 3min, false)) AS active
+    sum u32(COALESCE(last_out_age <= 3min, false)) {processes} AS active
       "Number of workers that have produced at least a tuple in the last 3 minutes.",
     sum COALESCE(out_per_sec, 0) AS tot_out_per_sec
       "Number of produced tuples by all workers so far.",

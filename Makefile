@@ -16,16 +16,16 @@ PACKAGES = \
 
 RAMEN_SOURCES = \
 	ramen_root/internal/monitoring/meta.ramen \
-	ramen_root/junkie/csv.ramen \
-	ramen_root/junkie/security/scans.ramen \
-	ramen_root/junkie/security/DDoS.ramen \
-	ramen_root/junkie/links/top_zones/_.ramen \
-	ramen_root/junkie/links/BCN/_.ramen \
-	ramen_root/junkie/apps/BCA/_.ramen \
-	ramen_root/junkie/apps/top_servers/_.ramen \
-	ramen_root/junkie/apps/per_application/_.ramen \
-	ramen_root/junkie/protocols/transactions/_.ramen \
-	ramen_root/junkie/protocols/top_errors/_.ramen
+	ramen_root/sniffer/csv.ramen \
+	ramen_root/sniffer/security/scans.ramen \
+	ramen_root/sniffer/security/DDoS.ramen \
+	ramen_root/sniffer/links/top_zones/_.ramen \
+	ramen_root/sniffer/links/BCN/_.ramen \
+	ramen_root/sniffer/apps/BCA/_.ramen \
+	ramen_root/sniffer/apps/top_servers/_.ramen \
+	ramen_root/sniffer/apps/per_application/_.ramen \
+	ramen_root/sniffer/protocols/transactions/_.ramen \
+	ramen_root/sniffer/protocols/top_errors/_.ramen
 
 INSTALLED_BIN = src/ramen_configurator
 INSTALLED_WORKERS = $(RAMEN_SOURCES:.ramen=.x)
@@ -65,15 +65,15 @@ CONFIGURATOR_SOURCES = \
 FINDCSV_SOURCES = \
 	src/RamenLog.ml src/RamenHelpers.ml src/findcsv.ml
 
-ramen_root/junkie/security/scans.x: ramen_root/junkie/csv.x
-ramen_root/junkie/security/DDoS.x: ramen_root/junkie/csv.x
-ramen_root/junkie/links/BCN/_.x: ramen_root/junkie/csv.x
-ramen_root/junkie/links/top_zones/_.x: ramen_root/junkie/csv.x
-ramen_root/junkie/apps/BCA/_.x: ramen_root/junkie/csv.x
-ramen_root/junkie/apps/top_servers/_.x: ramen_root/junkie/csv.x
-ramen_root/junkie/apps/per_application/_.x: ramen_root/junkie/csv.x
-ramen_root/junkie/protocols/transactions/_.x: ramen_root/junkie/csv.x
-ramen_root/junkie/protocols/top_errors/_.x: ramen_root/junkie/csv.x
+ramen_root/sniffer/security/scans.x: ramen_root/sniffer/csv.x
+ramen_root/sniffer/security/DDoS.x: ramen_root/sniffer/csv.x
+ramen_root/sniffer/links/BCN/_.x: ramen_root/sniffer/csv.x
+ramen_root/sniffer/links/top_zones/_.x: ramen_root/sniffer/csv.x
+ramen_root/sniffer/apps/BCA/_.x: ramen_root/sniffer/csv.x
+ramen_root/sniffer/apps/top_servers/_.x: ramen_root/sniffer/csv.x
+ramen_root/sniffer/apps/per_application/_.x: ramen_root/sniffer/csv.x
+ramen_root/sniffer/protocols/transactions/_.x: ramen_root/sniffer/csv.x
+ramen_root/sniffer/protocols/top_errors/_.x: ramen_root/sniffer/csv.x
 
 SOURCES = $(CONFIGURATOR_SOURCES) $(FINDCSV_SOURCES)
 
