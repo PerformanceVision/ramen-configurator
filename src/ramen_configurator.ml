@@ -82,8 +82,8 @@ let kill ramen_cmd persist_dir prog =
       (shell_quote prog) |>
     run_cmd |> ignore
 
-let sync_programs db debug ramen_cmd root_dir persist_dir uncompress
-                  csv_prefix csv_delete with_bcns with_bcas =
+let sync_programs debug ramen_cmd root_dir persist_dir uncompress
+                  csv_prefix csv_delete =
   let no_params = Hashtbl.create 0 in
   let old_running = get_running ramen_cmd persist_dir "sniffer/*" in
   let new_running = ref Set.String.empty in
@@ -108,57 +108,7 @@ let sync_programs db debug ramen_cmd root_dir persist_dir uncompress
   comp "sniffer/apps/per_application/_" aggr_times ;
   comp "sniffer/protocols/transactions/_" aggr_times ;
   comp "sniffer/protocols/top_errors/_" aggr_times ;
-  let bcns, bcas = Conf_of_sqlite.get_bcs db in
-  let bcns = List.take with_bcns bcns
-  and bcas = List.take with_bcas bcas in
   let open Conf_of_sqlite in
-  if bcns <> [] then (
-    let or_null f = function
-      | None -> "NULL"
-      | Some v -> f v in
-    let params = Hashtbl.create 5 in
-    List.iter (fun bcn ->
-      let uniq_name = bcn.BCN.source_name ^" → "^ bcn.dest_name in
-      (* Empty vectors are prohibited for now, so just remove them
-       * and let the code deal with the default value (which is non
-       * empty but unused in that actual case) *)
-      List.filter ((<>) "[]" % snd) BCN.[
-        "id", string_of_int bcn.id ;
-        "min_bps", or_null string_of_int bcn.min_bps ;
-        "max_bps", or_null string_of_int bcn.max_bps ;
-        "max_rtt", or_null string_of_float bcn.max_rtt ;
-        "max_rr", or_null string_of_float bcn.max_rr ;
-        "avg_window", string_of_float bcn.avg_window ;
-        "obs_window", string_of_float bcn.obs_window ;
-        "perc", string_of_float bcn.percentile ;
-        "min_for_relevance", string_of_int bcn.min_for_relevance ;
-        "source", IO.to_string (vector_print Int.print) bcn.source ;
-        "source_name", dquote bcn.source_name ;
-        "dest", IO.to_string (vector_print Int.print) bcn.dest ;
-        "dest_name", dquote bcn.dest_name
-      ] |>
-      Hashtbl.add params uniq_name
-    ) bcns ;
-    comp "sniffer/links/BCN/_" params
-  ) ;
-  if bcas <> [] then (
-    let params = Hashtbl.create 5 in
-    List.iter (fun bca ->
-      let uniq_name = bca.BCA.name in
-      BCA.[
-        "id", string_of_int bca.id ;
-        "service_id", string_of_int bca.service_id ;
-        "name", dquote bca.name ;
-        "max_eurt", string_of_float bca.max_eurt ;
-        "avg_window", string_of_float bca.avg_window ;
-        "obs_window", string_of_float bca.obs_window ;
-        "perc", string_of_float bca.percentile ;
-        "min_handshake_count", string_of_int bca.min_srt_count
-      ] |>
-      Hashtbl.add params uniq_name
-    ) bcas ;
-    comp "sniffer/apps/BCA/_" params
-  ) ;
   (* Several bad behavior detectors, regrouped in a "Security" namespace:
    *)
   comp "sniffer/security/DDoS" no_params ;
@@ -259,15 +209,15 @@ let sync_notif_conf =
 
 let start debug monitor ramen_cmd root_dir persist_dir db_name
           uncompress csv_prefix csv_delete
-          with_bcns with_bcas alert_internal
+          alert_internal
           notif_conf_file dry_run_ =
   logger := make_logger debug ;
   dry_run := dry_run_ ;
   let open Conf_of_sqlite in
   let db = get_db db_name in
   let update_bcs () =
-    sync_programs db debug ramen_cmd root_dir persist_dir uncompress
-                  csv_prefix csv_delete with_bcns with_bcas
+    sync_programs debug ramen_cmd root_dir persist_dir uncompress
+                  csv_prefix csv_delete
   and update_notif_conf () =
     if notif_conf_file <> "" then
       sync_notif_conf db notif_conf_file alert_internal
@@ -333,16 +283,6 @@ let csv_delete =
                    [ "delete" ] in
   Arg.(value (flag i))
 
-let with_bcns =
-  let i = Arg.info ~doc:"Also output the program with BCN configuration"
-                   [ "with-bcns" ; "with-bcn" ; "bcns" ; "bcn" ] in
-  Arg.(value (opt ~vopt:10 int 0 i))
-
-let with_bcas =
-  let i = Arg.info ~doc:"Also output the program with BCA configuration"
-                   [ "with-bcas" ; "with-bca" ; "bcas" ; "bca" ] in
-  Arg.(value (opt ~vopt:10 int 0 i))
-
 let notif_conf_file =
   let env = Term.env_info "NOTIFIER_CONFIG" in
   let i = Arg.info ~doc:"Notifier configuration file to write"
@@ -373,8 +313,6 @@ let start_cmd =
       $ uncompress_opt
       $ csv_prefix
       $ csv_delete
-      $ with_bcns
-      $ with_bcas
       $ alert_internal
       $ notif_conf_file
       $ dry_run),
