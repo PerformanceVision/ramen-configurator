@@ -2,8 +2,7 @@
 
 -- For every CSV we have with an application, resample it and group by application.
 
-PARAMETERS
-  avg_window {seconds} DEFAULTS TO 60.0;
+PARAMETER avg_window {seconds} DEFAULTS TO 60.0;
 
 DEFINE tcp
   "TCP metrics per application and time step."

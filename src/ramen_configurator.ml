@@ -103,6 +103,7 @@ let sync_programs db debug ramen_cmd root_dir persist_dir uncompress
     Hashtbl.of_list [ "1min",  [ "obs_window", "60" ] ;
                       "1hour", [ "obs_window", "3600" ] ] in
   comp "sniffer/links/top_zones/_" aggr_times ;
+  comp "sniffer/links/per_zone/_" aggr_times ;
   comp "sniffer/apps/top_servers/_" aggr_times ;
   comp "sniffer/apps/per_application/_" aggr_times ;
   comp "sniffer/protocols/transactions/_" aggr_times ;
