@@ -1,7 +1,7 @@
 # Configuration
 
-VERSION = 2.3.0
-RAMEN_VERSION = 3.0.17
+VERSION = 2.4.0
+RAMEN_VERSION = 3.0.18
 
 DUPS_IN = $(shell ocamlfind ocamlc -where)/compiler-libs
 OCAMLOPT   = OCAMLPATH=$(OCAMLPATH) OCAMLRUNPARAM= OCAMLFIND_IGNORE_DUPS_IN="$(DUPS_IN)" ocamlfind ocamlopt
