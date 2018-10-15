@@ -101,6 +101,7 @@ let sync_programs debug ramen_cmd root_dir persist_dir uncompress
   comp "sniffer/csv" params ;
   let aggr_times =
     Hashtbl.of_list [ "1min",  [ "obs_window", "60" ] ;
+                      "10min", [ "obs_window", "600" ] ;
                       "1hour", [ "obs_window", "3600" ] ] in
   comp "sniffer/links/top_zones/_" aggr_times ;
   comp "sniffer/links/per_zone/_" aggr_times ;
