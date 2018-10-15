@@ -191,7 +191,7 @@ let write_notif_conf fname alert_internal cmds =
   ]
 }
 |}
-    (if alert_internal then "" else "{ name = \"Internal\" ; contacts = [] }, ")
+    (if alert_internal then "" else "{ name = \"Internal\" ; contacts = [] }; ")
     (if cmds <> [] then " ;" else "")
     (List.print ~first:"" ~sep:" ;\n" ~last:"\n" (fun oc cmd ->
       Printf.fprintf oc "ViaExec %S" cmd)) cmds)
