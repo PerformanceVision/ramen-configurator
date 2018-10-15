@@ -311,7 +311,7 @@ AS
       "Ratio of 5xx errors.",
     -- Timings:
     -- Client DTT:
-    query_end_ts - query_begin_ts AS _cdtt,
+    query_end - query_begin AS _cdtt,
     min _cdtt DOC "Minimum client DTT.",
     max _cdtt DOC "Maximum client DTT.",
     avg _cdtt DOC "Average client DTT.",
@@ -323,7 +323,7 @@ AS
       "Approximate 99th percentile of client DTT.",
     --HISTOGRAM(_cdtt, 0s, 1min, 20) AS cdtt_distribution,
     -- Response time:
-    resp_begin_ts - query_end_ts AS _rt,
+    resp_begin - query_end AS _rt,
     min _rt DOC "Minimum response time.",
     max _rt DOC "Maximum response time.",
     avg _rt DOC "Average response time.",
@@ -335,7 +335,7 @@ AS
       "Approximate 99th percentile of response time.",
     --HISTOGRAM(_rt, 0s, 1min, 20) AS rt_distribution,
     -- Server DTT:
-    resp_end_ts - resp_begin_ts AS _sdtt,
+    resp_end - resp_begin AS _sdtt,
     min _sdtt DOC "Minimum server DTT.",
     max _sdtt DOC "Maximum server DTT.",
     avg _sdtt DOC "Average server DTT.",
@@ -550,7 +550,7 @@ AS
       "bytes per second in write responses.",
     -- Timings:
     -- Client DTT:
-    query_end_ts - query_begin_ts AS _cdtt,
+    query_end - query_begin AS _cdtt,
     min _cdtt DOC "Minimum client DTT.",
     max _cdtt DOC "Maximum client DTT.",
     avg _cdtt DOC "Average client DTT.",
@@ -562,7 +562,7 @@ AS
       "Approximate 99th percentile of client DTT.",
     --HISTOGRAM(_cdtt, 0s, 1min, 20) AS cdtt_distribution,
     -- Response time:
-    resp_begin_ts - query_end_ts AS _rt,
+    resp_begin - query_end AS _rt,
     min _rt DOC "Minimum response time.",
     max _rt DOC "Maximum response time.",
     avg _rt DOC "Average response time.",
@@ -574,7 +574,7 @@ AS
       "Approximate 99th percentile of response time.",
     --HISTOGRAM(_rt, 0s, 1min, 20) AS rt_distribution,
     -- Server DTT:
-    resp_end_ts - resp_begin_ts AS _sdtt,
+    resp_end - resp_begin AS _sdtt,
     min _sdtt DOC "Minimum server DTT.",
     max _sdtt DOC "Maximum server DTT.",
     avg _sdtt DOC "Average server DTT.",
@@ -615,7 +615,7 @@ AS
       "Packets per second in responses.",
     -- Timings:
     -- Client DTT:
-    query_end_ts - query_begin_ts AS _cdtt,
+    query_end - query_begin AS _cdtt,
     min _cdtt DOC "Minimum client DTT.",
     max _cdtt DOC "Maximum client DTT.",
     avg _cdtt DOC "Average client DTT.",
@@ -627,7 +627,7 @@ AS
       "Approximate 99th percentile of client DTT.",
     --HISTOGRAM(_cdtt, 0s, 1min, 20) AS cdtt_distribution,
     -- Response time:
-    resp_begin_ts - query_end_ts AS _rt,
+    resp_begin - query_end AS _rt,
     min _rt DOC "Minimum response time.",
     max _rt DOC "Maximum response time.",
     avg _rt DOC "Average response time.",
@@ -639,7 +639,7 @@ AS
       "Approximate 99th percentile of response time.",
     --HISTOGRAM(_rt, 0s, 1min, 20) AS rt_distribution,
     -- Server DTT:
-    resp_end_ts - resp_begin_ts AS _sdtt,
+    resp_end - resp_begin AS _sdtt,
     min _sdtt DOC "Minimum server DTT.",
     max _sdtt DOC "Maximum server DTT.",
     avg _sdtt DOC "Average server DTT.",

@@ -47,10 +47,10 @@ DEFINE dns_resolutions AS
 
 DEFINE http_hits AS
   FROM ../../../csv/http
-  WHERE resp_begin_ts IS NOT NULL
+  WHERE resp_begin IS NOT NULL
   SELECT
     start,
-    start + COALESCE(resp_begin_ts, 0) - query_end_ts AS stop,
+    start + COALESCE(resp_begin, 0) - query_end AS stop,
     application,
     "HTTP" AS protocol,
     host || url AS query,
@@ -76,10 +76,10 @@ DEFINE citrix_mix AS
 
 DEFINE smb_mix AS
   FROM ../../../csv/smb
-  WHERE resp_begin_ts IS NOT NULL
+  WHERE resp_begin IS NOT NULL
   SELECT
     start,
-    start + COALESCE(resp_begin_ts, 0) - query_end_ts AS stop,
+    start + (COALESCE(resp_begin, 0) - query_end) AS stop,
     application,
     "SMB" AS protocol,
     COALESCE(user || "@", "") || domain || COALESCE(":" || path, "") AS query,
@@ -88,10 +88,10 @@ DEFINE smb_mix AS
 
 DEFINE sql_queries AS
   FROM ../../../csv/sql
-  WHERE resp_begin_ts IS NOT NULL
+  WHERE resp_begin IS NOT NULL
   SELECT
     start,
-    start + COALESCE(resp_begin_ts, 0) - query_end_ts AS stop,
+    start + COALESCE(resp_begin, 0) - query_end AS stop,
     application,
     "SQL" AS protocol,
     COALESCE(dbname ||": ", "") || query AS query,
