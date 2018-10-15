@@ -153,86 +153,6 @@ AS
     COALESCE(retrans_payload_bytes_server, 0) AS retrans_payload_bytes_server,
     *; -- -ip4_client -ip6_client etc
 
-DEFINE 'c2s tcp' AS
-  FROM tcp SELECT
-    poller, start, stop,
-    device_client AS device_src,
-    vlan_client AS vlan_src,
-    mac_client AS mac_src,
-    zone_client AS zone_src,
-    ip_client AS ip_src,
-    port_client AS port_src,
-    diffserv_client AS diffserv_src,
-    os_client AS os_src,
-    mtu_client AS mtu_src,
-    traffic_packets_client AS packets_src,
-    traffic_bytes_client AS bytes_src,
-    payload_bytes_client AS payload_src,
-    payload_packets_client AS packets_with_payload_src,
-    retrans_traffic_bytes_client AS retrans_bytes_src,
-    retrans_payload_bytes_client AS retrans_payload_src,
-    fin_count_client AS fins_src,
-    rst_count_client AS rsts_src,
-    dupack_count_client AS dupacks_src,
-    zero_window_count_client AS zero_windows_src,
-    rtt_count_client AS rtt_count_src,
-    rtt_sum_client AS rtt_sum_src,
-    rtt_square_sum_client AS rtt_sum2_src,
-    rd_count_client AS rd_count_src,
-    rd_sum_client AS rd_sum_src,
-    rd_square_sum_client AS rd_sum2_src,
-    dtt_count_client AS dtt_count_src,
-    dtt_sum_client AS dtt_sum_src,
-    dtt_square_sum_client AS dtt_sum2_src,
-    zone_server AS zone_dst,
-    ip_external,
-    captured_pcap, application, protostack, uuid,
-    timeout_count AS timeouts, close_count AS closes,
-    ct_count AS connections, ct_sum AS connections_time,
-    ct_square_sum AS connections_time2, syn_count_client AS syns,
-    dcerpc_uuid
-  WHERE traffic_packets_client > 0;
-
-DEFINE 's2c tcp' AS
-  FROM tcp SELECT
-    poller, start, stop,
-    device_server AS device_src,
-    vlan_server AS vlan_src,
-    mac_server AS mac_src,
-    zone_server AS zone_src,
-    ip_server AS ip_src,
-    port_server AS port_src,
-    diffserv_server AS diffserv_src,
-    os_server AS os_src,
-    mtu_server AS mtu_src,
-    traffic_packets_server AS packets_src,
-    traffic_bytes_server AS bytes_src,
-    payload_bytes_server AS payload_src,
-    payload_packets_server AS packets_with_payload_src,
-    retrans_traffic_bytes_server AS retrans_bytes_src,
-    retrans_payload_bytes_server AS retrans_payload_src,
-    fin_count_server AS fins_src,
-    rst_count_server AS rsts_src,
-    dupack_count_server AS dupacks_src,
-    zero_window_count_server AS zero_windows_src,
-    rtt_count_server AS rtt_count_src,
-    rtt_sum_server AS rtt_sum_src,
-    rtt_square_sum_server AS rtt_sum2_src,
-    rd_count_server AS rd_count_src,
-    rd_sum_server AS rd_sum_src,
-    rd_square_sum_server AS rd_sum2_src,
-    dtt_count_server AS dtt_count_src,
-    dtt_sum_server AS dtt_sum_src,
-    dtt_square_sum_server AS dtt_sum2_src,
-    zone_client AS zone_dst,
-    ip_external,
-    captured_pcap, application, protostack, uuid,
-    timeout_count AS timeouts, close_count AS closes,
-    ct_count AS connections, ct_sum AS connections_time,
-    ct_square_sum AS connections_time2, syn_count_client AS syns,
-    dcerpc_uuid
-  WHERE traffic_packets_server > 0;
-
 DEFINE udp_raw AS
   READ AND DELETE IF csv_delete
        FILES csv_prefix || "udp_v29.*csv" || (IF csv_compressed THEN ".lz4" ELSE "")
@@ -298,54 +218,6 @@ AS
     u32(0) {packets} AS rd_count_client,
     u32(0) {packets} AS rd_count_server,
     *;
-
-DEFINE 'c2s udp' AS
-  FROM udp SELECT
-    poller, start, stop,
-    device_client AS device_src,
-    vlan_client AS vlan_src,
-    mac_client AS mac_src,
-    zone_client AS zone_src,
-    ip_client AS ip_src,
-    port_client AS port_src,
-    diffserv_client AS diffserv_src,
-    mtu_client AS mtu_src,
-    traffic_packets_client AS packets_src,
-    traffic_bytes_client AS bytes_src,
-    payload_bytes_client AS payload_src,
-    zone_server AS zone_dst,
-    ip_external,
-    rtt_count_client AS rtt_count_src,
-    rtt_sum_client AS rtt_sum_src,
-    payload_packets_client AS packets_with_payload_src,-- TODO: do not rename
-    rd_count_client AS rd_count_src,
-    application, protostack,
-    dcerpc_uuid
-  WHERE traffic_packets_client > 0;
-
-DEFINE 's2c udp' AS
-  FROM udp SELECT
-    poller, start, stop,
-    device_server AS device_src,
-    vlan_server AS vlan_src,
-    mac_server AS mac_src,
-    zone_server AS zone_src,
-    ip_server AS ip_src,
-    port_server AS port_src,
-    diffserv_server AS diffserv_src,
-    mtu_server AS mtu_src,
-    traffic_packets_server AS packets_src,
-    traffic_bytes_server AS bytes_src,
-    payload_bytes_server AS payload_src,
-    zone_client AS zone_dst,
-    ip_external,
-    rtt_count_server AS rtt_count_src,
-    rtt_sum_server AS rtt_sum_src,
-    payload_packets_server AS packets_with_payload_src,
-    rd_count_server AS rd_count_src,
-    application, protostack,
-    dcerpc_uuid
-  WHERE traffic_packets_server > 0;
 
 DEFINE icmp_raw AS
   READ AND DELETE IF csv_delete
@@ -421,48 +293,6 @@ AS
     u32(0) {packets} AS rd_count_server,
     *;
 
-DEFINE 'c2s icmp' AS
-  FROM icmp SELECT
-    poller, start, stop,
-    device_client AS device_src,
-    vlan_client AS vlan_src,
-    mac_client AS mac_src,
-    zone_client AS zone_src,
-    ip_client AS ip_src,
-    diffserv_client AS diffserv_src,
-    mtu_client AS mtu_src,
-    traffic_packets_client AS packets_src,
-    traffic_bytes_client AS bytes_src,
-    zone_server AS zone_dst,
-    ip_external,
-    rtt_count_client AS rtt_count_src,
-    rtt_sum_client AS rtt_sum_src,
-    payload_packets_client AS packets_with_payload_src,-- TODO: do not rename
-    rd_count_client AS rd_count_src,
-    application, protostack
-  WHERE traffic_packets_client > 0;
-
-DEFINE 's2c icmp' AS
-  FROM icmp SELECT
-    poller, start, stop,
-    device_server AS device_src,
-    vlan_server AS vlan_src,
-    mac_server AS mac_src,
-    zone_server AS zone_src,
-    ip_server AS ip_src,
-    diffserv_server AS diffserv_src,
-    mtu_server AS mtu_src,
-    traffic_packets_server AS packets_src,
-    traffic_bytes_server AS bytes_src,
-    zone_client AS zone_dst,
-    ip_external,
-    rtt_count_server AS rtt_count_src,
-    rtt_sum_server AS rtt_sum_src,
-    payload_packets_server AS packets_with_payload_src,
-    rd_count_server AS rd_count_src,
-    application, protostack
-  WHERE traffic_packets_server > 0;
-
 DEFINE 'other-ip_raw' AS
   READ AND DELETE IF csv_delete
        FILES csv_prefix || "other_ip_v29.*csv" || (IF csv_compressed THEN ".lz4" ELSE "")
@@ -521,46 +351,6 @@ AS
     u32(0) {packets} AS rd_count_server,
     *;
 
-DEFINE 'c2s other-ip' AS
-  FROM 'other-ip' SELECT
-    poller, start, stop,
-    device_client AS device_src,
-    vlan_client AS vlan_src,
-    mac_client AS mac_src,
-    zone_client AS zone_src,
-    ip_client AS ip_src,
-    diffserv_client AS diffserv_src,
-    mtu_client AS mtu_src,
-    traffic_packets_client AS packets_src,
-    traffic_bytes_client AS bytes_src,
-    zone_server AS zone_dst,
-    rtt_count_client AS rtt_count_src,
-    rtt_sum_client AS rtt_sum_src,
-    payload_packets_client AS packets_with_payload_src,-- TODO: do not rename
-    rd_count_client AS rd_count_src,
-    application, protostack
-  WHERE traffic_packets_client > 0;
-
-DEFINE 's2c other-ip' AS
-  FROM 'other-ip' SELECT
-    poller, start, stop,
-    device_server AS device_src,
-    vlan_server AS vlan_src,
-    mac_server AS mac_src,
-    zone_server AS zone_src,
-    ip_server AS ip_src,
-    diffserv_server AS diffserv_src,
-    mtu_server AS mtu_src,
-    traffic_packets_server AS packets_src,
-    traffic_bytes_server AS bytes_src,
-    zone_client AS zone_dst,
-    rtt_count_server AS rtt_count_src,
-    rtt_sum_server AS rtt_sum_src,
-    payload_packets_server AS packets_with_payload_src,
-    rd_count_server AS rd_count_src,
-    application, protostack
-  WHERE traffic_packets_server > 0;
-
 DEFINE 'non-ip_raw' AS
   READ AND DELETE IF csv_delete
        FILES csv_prefix || "non_ip_v29.*csv" || (IF csv_compressed THEN ".lz4" ELSE "")
@@ -604,42 +394,6 @@ AS
     traffic_bytes_client AS payload_bytes_client,
     traffic_bytes_server AS payload_bytes_server,
     *;
-
-DEFINE 'c2s non-ip' AS
-  FROM 'non-ip' SELECT
-    poller, start, stop,
-    device_client AS device_src,
-    vlan_client AS vlan_src,
-    mac_client AS mac_src,
-    zone_client AS zone_src,
-    mtu_client AS mtu_src,
-    traffic_packets_client AS packets_src,
-    traffic_bytes_client AS bytes_src,
-    zone_server AS zone_dst,
-    u32(0) {packets} AS rtt_count_src,
-    0. {seconds} AS rtt_sum_src,
-    0u32 {packets} AS packets_with_payload_src,
-    u32(0) {packets} AS rd_count_src,
-    application, protostack
-  WHERE traffic_packets_client > 0;
-
-DEFINE 's2c non-ip' AS
-  FROM 'non-ip' SELECT
-    poller, start, stop,
-    device_server AS device_src,
-    vlan_server AS vlan_src,
-    mac_server AS mac_src,
-    zone_server AS zone_src,
-    mtu_server AS mtu_src,
-    traffic_packets_server AS packets_src,
-    traffic_bytes_server AS bytes_src,
-    zone_client AS zone_dst,
-    u32(0) {packets} AS rtt_count_src,
-    0. {seconds} AS rtt_sum_src,
-    0u32 {packets} AS packets_with_payload_src,
-    u32(0) {packets} AS rd_count_src,
-    application, protostack
-  WHERE traffic_packets_server > 0;
 
 DEFINE dns_raw AS
   READ AND DELETE IF csv_delete
