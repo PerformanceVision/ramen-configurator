@@ -20,8 +20,7 @@ RAMEN_SOURCES = \
 	ramen_root/sniffer/security/scans.ramen \
 	ramen_root/sniffer/security/DDoS.ramen \
 	ramen_root/sniffer/links/top_zones/_.ramen \
-	ramen_root/sniffer/links/per_zone_server/_.ramen \
-	ramen_root/sniffer/links/per_zone_destination/_.ramen \
+	ramen_root/sniffer/links/per_zone/_.ramen \
 	ramen_root/sniffer/apps/top_servers/_.ramen \
 	ramen_root/sniffer/apps/per_application/_.ramen \
 	ramen_root/sniffer/protocols/transactions/_.ramen \
@@ -68,8 +67,7 @@ FINDCSV_SOURCES = \
 ramen_root/sniffer/security/scans.x: ramen_root/sniffer/csv.x
 ramen_root/sniffer/security/DDoS.x: ramen_root/sniffer/csv.x
 ramen_root/sniffer/links/top_zones/_.x: ramen_root/sniffer/csv.x
-ramen_root/sniffer/apps/per_zone_server/_.x: ramen_root/sniffer/csv.x
-ramen_root/sniffer/apps/per_zone_destination/_.x: ramen_root/sniffer/csv.x
+ramen_root/sniffer/apps/per_zone/_.x: ramen_root/sniffer/csv.x
 ramen_root/sniffer/apps/top_servers/_.x: ramen_root/sniffer/csv.x
 ramen_root/sniffer/apps/per_application/_.x: ramen_root/sniffer/csv.x
 ramen_root/sniffer/protocols/transactions/_.x: ramen_root/sniffer/csv.x
