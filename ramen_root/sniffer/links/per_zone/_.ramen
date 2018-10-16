@@ -1,6 +1,7 @@
 -- vim: ft=sql expandtab
 
-PARAMETER avg_window {seconds} DEFAULTS TO 60.0;
+PARAMETER time_step {seconds} DEFAULTS TO 60.0;
+
 
 -- TCP
 
@@ -402,45 +403,45 @@ AS
     start > merge.greatest.start - 3min
   SELECT
     -- Time
-    (start // u32(avg_window)) * u32(avg_window) AS start,
-    out.start + avg_window AS stop,
+    (start // u32(time_step)) * u32(time_step) AS start,
+    out.start + time_step AS stop,
     zone,
     -- Volumes
-    sum traffic_bytes_in / avg_window AS c2s_bytes_per_sec
+    sum traffic_bytes_in / time_step AS c2s_bytes_per_sec
       "Bytes per second flowing from sources to destinations.",
-    sum traffic_bytes_out / avg_window AS s2c_bytes_per_sec
+    sum traffic_bytes_out / time_step AS s2c_bytes_per_sec
       "Bytes per second flowing from destinations to sources.",
-    sum traffic_packets_in / avg_window AS c2s_packets_per_sec
+    sum traffic_packets_in / time_step AS c2s_packets_per_sec
       "Packets per second flowing from sources to destinations.",
-    sum traffic_packets_out / avg_window AS s2c_packets_per_sec
+    sum traffic_packets_out / time_step AS s2c_packets_per_sec
       "Packets per second flowing from destinations to sources.",
     -- Retransmissions
-    sum retrans_traffic_bytes_in / avg_window AS c2s_retrans_traffic_bytes_per_sec
+    sum retrans_traffic_bytes_in / time_step AS c2s_retrans_traffic_bytes_per_sec
       "Bytes per second retransferred from sources to destinations.",
-    sum retrans_traffic_bytes_out / avg_window AS s2c_retrans_traffic_bytes_per_sec
+    sum retrans_traffic_bytes_out / time_step AS s2c_retrans_traffic_bytes_per_sec
       "Bytes per second retransferred from destinations to sources.",
     -- TCP flags
-    sum syn_count_in / avg_window AS c2s_syns_per_sec
+    sum syn_count_in / time_step AS c2s_syns_per_sec
       "SYN flag per second",
-    sum fin_count_in / avg_window AS c2s_fins_per_sec
+    sum fin_count_in / time_step AS c2s_fins_per_sec
       "FIN flags from sources to destinations per second.",
-    sum fin_count_out / avg_window AS s2c_fins_per_sec
+    sum fin_count_out / time_step AS s2c_fins_per_sec
       "FIN flags from destinations to sources per second.",
-    sum rst_count_in / avg_window AS c2s_rsts_per_sec
+    sum rst_count_in / time_step AS c2s_rsts_per_sec
       "RST flags from sources to destinations per second.",
-    sum rst_count_out / avg_window AS s2c_rsts_per_sec
+    sum rst_count_out / time_step AS s2c_rsts_per_sec
       "RST flags from destinations to sources per second.",
-    sum close_count / avg_window AS close_per_sec
+    sum close_count / time_step AS close_per_sec
       "Connection teardowns per second.",
     -- TCP issues
-    sum dupack_count_in / avg_window AS c2s_dupack_count_per_sec
+    sum dupack_count_in / time_step AS c2s_dupack_count_per_sec
       "DupAcks per second from sources to destinations.",
-    sum dupack_count_out / avg_window AS s2c_dupack_count_per_sec
+    sum dupack_count_out / time_step AS s2c_dupack_count_per_sec
       "DupAcks per second from destinations to sources.",
     -- Average Connection Time
     sum ct_count AS _sum_ct_count,
     sum ct_sum AS _sum_ct_sum,
-    _sum_ct_count / avg_window AS ct_per_sec
+    _sum_ct_count / time_step AS ct_per_sec
       "Connection establishments per second.",
     IF _sum_ct_count = 0 THEN 0 ELSE
       _sum_ct_sum / _sum_ct_count AS ct_avg
@@ -451,7 +452,7 @@ AS
     -- Average Round Trip Time CSC
     sum rtt_count_out AS _sum_rtt_count_out,
     sum rtt_sum_out AS _sum_rtt_sum_out,
-    _sum_rtt_count_out / avg_window AS crtt_per_sec
+    _sum_rtt_count_out / time_step AS crtt_per_sec
       "Measured source→destination→source round trip times per second.",
     IF _sum_rtt_count_out = 0 THEN 0 ELSE
       _sum_rtt_sum_out / _sum_rtt_count_out AS crtt_avg
@@ -463,7 +464,7 @@ AS
     -- Average Round Trip Time SCS
     sum rtt_count_in AS _sum_rtt_count_in,
     sum rtt_sum_in AS _sum_rtt_sum_in,
-    _sum_rtt_count_in / avg_window AS srtt_per_sec
+    _sum_rtt_count_in / time_step AS srtt_per_sec
       "Measured destination→source→destination round trip times per second.",
     IF _sum_rtt_count_in = 0 THEN 0 ELSE
       _sum_rtt_sum_in / _sum_rtt_count_in AS srtt_avg
@@ -475,7 +476,7 @@ AS
     -- Average Retransmission Delay C2S
     sum rd_count_in AS _sum_rd_count_in,
     sum rd_sum_in AS _sum_rd_sum_in,
-    _sum_rd_count_in / avg_window AS crd_per_sec
+    _sum_rd_count_in / time_step AS crd_per_sec
       "Measured retransmission delays per second.",
     IF _sum_rd_count_in = 0 THEN 0 ELSE
       _sum_rd_sum_in / _sum_rd_count_in AS crd_avg
@@ -487,7 +488,7 @@ AS
     -- Average Retransmission Delay S2C
     sum rd_count_out AS _sum_rd_count_out,
     sum rd_sum_out AS _sum_rd_sum_out,
-    _sum_rd_count_out / avg_window AS srd_per_sec
+    _sum_rd_count_out / time_step AS srd_per_sec
       "Measured sources to destinations retransmission delays per second.",
     IF _sum_rd_count_out = 0 THEN 0 ELSE
       _sum_rd_sum_out / _sum_rd_count_out AS srd_avg
@@ -499,7 +500,7 @@ AS
     -- Average Data Transfer Time C2S
     sum dtt_count_in AS _sum_dtt_count_in,
     sum dtt_sum_in AS _sum_dtt_sum_in,
-    _sum_dtt_count_in / avg_window AS cdtt_per_sec
+    _sum_dtt_count_in / time_step AS cdtt_per_sec
       "Measured sources to destinations data transfer time per second.",
     IF _sum_dtt_count_in = 0 THEN 0 ELSE
       _sum_dtt_sum_in / _sum_dtt_count_in AS cdtt_avg
@@ -511,7 +512,7 @@ AS
     -- Average Data Transfer Time S2C
     sum dtt_count_out AS _sum_dtt_count_out,
     sum dtt_sum_out AS _sum_dtt_sum_out,
-    _sum_dtt_count_out / avg_window AS sdtt_per_sec
+    _sum_dtt_count_out / time_step AS sdtt_per_sec
       "Measured destinations to sources data transfer time per second.",
     IF _sum_dtt_count_out = 0 THEN 0 ELSE
       _sum_dtt_sum_out / _sum_dtt_count_out AS sdtt_avg
@@ -525,8 +526,8 @@ AS
     -- sum all values or take the min or max) then also group by icmp_type and code.
     sum u32(icmp_error_count) AS icmp_errors_per_sec
       "ICMP errors per second."
-  GROUP BY start // u32(avg_window), zone
+  GROUP BY start // u32(time_step), zone
   COMMIT AFTER
-    in.start > out.start + 2 * avg_window
+    in.start > out.start + 2 * time_step
   FACTOR zone;
 

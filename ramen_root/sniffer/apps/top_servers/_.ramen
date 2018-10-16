@@ -6,7 +6,7 @@
 PARAMETERS
   top_size DEFAULT TO 100,
   top_duration DEFAULT TO 1h,
-  obs_window DEFAULT TO 1min,
+  time_step DEFAULT TO 1min,
   false_pos_rate DEFAULT TO 0.1;
 
 -- We need to make all CSV similar before merging them:
@@ -83,7 +83,7 @@ DEFINE top
   "Per minute statistics about the most important services (per number of clients)."
 AS
   FROM degraded
-  GROUP BY vlan, ip, port, protocol, start // obs_window
+  GROUP BY vlan, ip, port, protocol, start // time_step
   SELECT
     vlan, ip, port,
     protocol DOC "IP protocol.",
@@ -93,8 +93,8 @@ AS
 
     -- Time info
     min start AS _min_start,
-    (_min_start // obs_window) * obs_window AS start,
-    out.start + obs_window AS stop,
+    (_min_start // time_step) * time_step AS start,
+    out.start + time_step AS stop,
 
     -- Volumetry
     sum traffic_packets_client AS packets_from_client,
@@ -136,16 +136,16 @@ AS
       "Ratio of retransmitted packets over packets with payload, from servers.",
 
     -- Connections
-    sum syns / obs_window AS syns "SYN flags per second.",
-    sum connections / obs_window AS connections "Connections per second.",
+    sum syns / time_step AS syns "SYN flags per second.",
+    sum connections / time_step AS connections "Connections per second.",
     syns / connections AS syns_per_connections "Ratio of SYNs per connection.",
 
     -- 0 window events
-    sum zero_window_count_server / obs_window AS zero_windows
+    sum zero_window_count_server / time_step AS zero_windows
       "0-window events per second.",
     out.zero_windows / packets_with_tcp_payload_from_server
       AS zero_windows_per_pauyload_packets
       "Ratio of 0-window events per packets with payload."
 
-  COMMIT AFTER in.start > out.start + obs_window * 1.3
+  COMMIT AFTER in.start > out.start + time_step * 1.3
   FACTORS vlan, port, protocol;

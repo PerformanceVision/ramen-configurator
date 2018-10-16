@@ -4,7 +4,7 @@
 PARAMETERS
   top_size DEFAULT TO 20,
   top_duration DEFAULT TO 1h,
-  obs_window DEFAULT TO 1min;
+  time_step DEFAULT TO 1min;
 
 -- Top of type * code * error_ip_server * error_port every obs_window
 DEFINE icmp_degraded AS
@@ -24,11 +24,11 @@ AS
   FROM icmp_degraded
   GROUP BY
     icmp_type, icmp_code, error_ip_server, error_port_server,
-    start // obs_window
+    start // time_step
   SELECT
     -- Time info:
-    (start // obs_window) * obs_window AS start,
-    out.start + obs_window AS stop,
+    (start // time_step) * time_step AS start,
+    out.start + time_step AS stop,
 
     -- Error description:
     icmp_type DOC "ICMP type of packets.",
@@ -36,7 +36,7 @@ AS
     error_ip_server DOC "Server IP in the error message.",
     error_port_server DOC "Server port in the error message.",
     sum 1 AS count "Number of ICMP messages with that type, code, IP and port."
-  COMMIT AFTER in.start > out.start + obs_window * 1.3
+  COMMIT AFTER in.start > out.start + time_step * 1.3
   FACTORS icmp_type, icmp_code;
 
 -- Select the worse TCP servers:
@@ -73,48 +73,48 @@ DEFINE tcp
   "Worse TCP servers."
 AS
   FROM tcp_degraded
-  GROUP BY ip_server, start // obs_window
+  GROUP BY ip_server, start // time_step
   SELECT
     -- Time info:
-    (start // obs_window) * obs_window AS start,
-    out.start + obs_window AS stop,
+    (start // time_step) * time_step AS start,
+    out.start + time_step AS stop,
     -- Data:
     ip_server AS ip,
-    sum traffic_bytes_client / obs_window AS traffic_bytes_client_per_sec
+    sum traffic_bytes_client / time_step AS traffic_bytes_client_per_sec
       "Bytes per second from clients.",
-    sum traffic_bytes_server / obs_window AS traffic_bytes_server_per_sec
+    sum traffic_bytes_server / time_step AS traffic_bytes_server_per_sec
       "Bytes per second from this server.",
-    sum traffic_packets_client / obs_window AS traffic_packets_client_per_sec
+    sum traffic_packets_client / time_step AS traffic_packets_client_per_sec
       "Packets per second from clients.",
-    sum traffic_packets_server / obs_window AS traffic_packets_server_per_sec
+    sum traffic_packets_server / time_step AS traffic_packets_server_per_sec
       "Packets per second from this server.",
-    sum payload_bytes_client / obs_window AS payload_bytes_client_per_sec
+    sum payload_bytes_client / time_step AS payload_bytes_client_per_sec
       "Payload bytes from clients.",
-    sum payload_bytes_server / obs_window AS payload_bytes_server_per_sec
+    sum payload_bytes_server / time_step AS payload_bytes_server_per_sec
       "Payload bytes from this server.",
-    sum retrans_traffic_bytes_client / obs_window AS retrans_traffic_bytes_client_per_sec
+    sum retrans_traffic_bytes_client / time_step AS retrans_traffic_bytes_client_per_sec
       "Retransmitted bytes per second from clients.",
-    sum retrans_traffic_bytes_server / obs_window AS retrans_traffic_bytes_server_per_sec
+    sum retrans_traffic_bytes_server / time_step AS retrans_traffic_bytes_server_per_sec
       "Retransmitted bytes per second from this server.",
-    sum syn_count_client / obs_window AS syns_per_sec
+    sum syn_count_client / time_step AS syns_per_sec
       "SYN flags per second.",
-    sum fin_count_client / obs_window AS client_fins_per_sec
+    sum fin_count_client / time_step AS client_fins_per_sec
       "FIN flags per second from clients.",
-    sum fin_count_server / obs_window AS server_fins_per_sec
+    sum fin_count_server / time_step AS server_fins_per_sec
       "FIN flags per second from this server.",
-    sum rst_count_client / obs_window AS client_rst_per_sec
+    sum rst_count_client / time_step AS client_rst_per_sec
       "RST flags per second from clients.",
-    sum rst_count_server / obs_window AS server_rst_per_sec
+    sum rst_count_server / time_step AS server_rst_per_sec
       "RST flags per second from this server.",
-    sum timeout_count / obs_window AS timeouts_per_sec
+    sum timeout_count / time_step AS timeouts_per_sec
       "Timeout rate.",
     sum ct_count AS _sum_ct_count,
-    _sum_ct_count / obs_window AS ct_per_secs
+    _sum_ct_count / time_step AS ct_per_secs
       "connection establishments per second.",
     IF _sum_ct_count = 0 THEN 0 ELSE
       syn_count_client / _sum_ct_count AS syns_per_ct
       "Average number of SYNs per connection establishment.",
-    sum close_count / obs_window AS closes_per_sec
+    sum close_count / time_step AS closes_per_sec
       "Connection teardowns per second.",
     IF traffic_packets_server = 0 THEN 0 ELSE
       sum dupack_count_client / traffic_packets_server AS dupack_ratio_client
@@ -128,5 +128,5 @@ AS
     IF traffic_packets_server = 0 THEN 0 ELSE
       sum zero_window_count_server / traffic_packets_server AS zero_window_ratio_server
       "Ratio of 0-window events over number of packets from this server."
-  COMMIT AFTER in.start > out.start + obs_window * 1.3
+  COMMIT AFTER in.start > out.start + time_step * 1.3
   FACTORS ip;

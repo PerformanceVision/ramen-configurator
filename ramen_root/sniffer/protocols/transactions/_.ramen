@@ -2,7 +2,7 @@
 
 PARAMETERS
   -- Duration for which histograms are grown:
-  obs_window DEFAULTS TO 350s,
+  time_step DEFAULTS TO 350s,
   -- width of the histograms:
   nb_buckets DEFAULTS TO 20;
 
@@ -115,15 +115,15 @@ AS
     smb_mix
   MERGE TIMEOUT AFTER 5s
   WHERE start > merge.greatest.start - 3min
-  GROUP BY application, protocol, success, start // obs_window
+  GROUP BY application, protocol, success, start // time_step
   SELECT
-    (start // obs_window) * obs_window AS start,
-    out.start + obs_window AS stop,
+    (start // time_step) * time_step AS start,
+    out.start + time_step AS stop,
     application, protocol,
     success DOC "Does the response indicate success?",
     SUM count AS count "Number of transactions."
     -- TODO: nb_buckets
     --HISTOGRAM(stop - start, 0, 30, 20) AS response_times
   -- Since we order the tuple according chronologically at input:
-  COMMIT AFTER in.start > out.start + obs_window
+  COMMIT AFTER in.start > out.start + time_step
   FACTORS application, protocol, success;

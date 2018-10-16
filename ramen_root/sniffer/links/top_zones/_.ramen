@@ -6,7 +6,7 @@
 PARAMETERS
   top_size DEFAULT TO 100,
   top_duration DEFAULT TO 1h,
-  obs_window DEFAULT TO 1min,
+  time_step DEFAULT TO 1min,
   false_pos_rate DEFAULT TO 0.1;
 
 -- In c2s and s2c we have a unidirectional view of the IP traffic.
@@ -107,7 +107,7 @@ DEFINE top
   "Statistics about the most important links in between zones (per number of active hosts)."
 AS
   FROM degraded
-  GROUP BY zone_1, zone_2, start // obs_window
+  GROUP BY zone_1, zone_2, start // time_step
   SELECT
     -- Zone info
     zone_1 DOC "First zone (down)",
@@ -117,22 +117,22 @@ AS
 
     -- Time info
     min start AS _min_start,
-    (_min_start // obs_window) * obs_window AS start,
-    out.start + obs_window AS stop,
+    (_min_start // time_step) * time_step AS start,
+    out.start + time_step AS stop,
 
     -- Volumetry 1 -> 2
-    sum packets_1 / obs_window AS packets_per_sec_1
+    sum packets_1 / time_step AS packets_per_sec_1
       "Packets per seconds (uplink).",
-    sum bytes_1 / obs_window AS bytes_per_sec_1
+    sum bytes_1 / time_step AS bytes_per_sec_1
       "Bytes per seconds (uplink).",
-    sum payload_1 / obs_window AS payload_bytes_per_sec_1
+    sum payload_1 / time_step AS payload_bytes_per_sec_1
       "Payload per seconds (uplink).",
     -- Volumetry 2 -> 1
-    sum packets_2 / obs_window AS packets_per_sec_2
+    sum packets_2 / time_step AS packets_per_sec_2
       "Packets per seconds (downlink).",
-    sum bytes_2 / obs_window AS bytes_per_sec_2
+    sum bytes_2 / time_step AS bytes_per_sec_2
       "Bytes per seconds (downlink).",
-    sum payload_2 / obs_window AS payload_bytes_per_sec_2
+    sum payload_2 / time_step AS payload_bytes_per_sec_2
       "Payload per seconds (downlink).",
 
     -- RTT 1 -> 2 (in seconds)
@@ -159,5 +159,5 @@ AS
     -- that will be verbose and less efficient.
 
   -- We know that the worse hop back in time is less than 60s in the original CSV
-  COMMIT AFTER in.start > out.stop + obs_window * 1.1
+  COMMIT AFTER in.start > out.stop + time_step * 1.1
   FACTORS zone_1, zone_2;
