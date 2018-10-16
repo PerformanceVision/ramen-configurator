@@ -6,7 +6,15 @@ PARAMETERS
   top_duration DEFAULT TO 1h,
   time_step DEFAULT TO 1min;
 
--- Top of type * code * error_ip_server * error_port every obs_window
+RUN IF
+  COALESCE(
+    variant("extra_tables") = "all" AND (
+      time_step <= 1min OR
+      time_step <= 10min AND variant("run_time_steps") IN ["up_to_10min"; "up_to_1hour"] OR
+      variant("what_time_steps") = "up_to_1hour"
+    ), false);
+
+-- Top of type * code * error_ip_server * error_port every time_step
 DEFINE icmp_degraded AS
   FROM ../../../csv/icmp
   SELECT

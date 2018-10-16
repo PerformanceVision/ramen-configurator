@@ -9,6 +9,14 @@ PARAMETERS
   time_step DEFAULT TO 1min,
   false_pos_rate DEFAULT TO 0.1;
 
+RUN IF
+  COALESCE(
+    variant("extra_tables") = "all" AND (
+      time_step <= 1min OR
+      time_step <= 10min AND variant("run_time_steps") IN ["up_to_10min"; "up_to_1hour"] OR
+      variant("what_time_steps") = "up_to_1hour"
+    ), false);
+
 -- In c2s and s2c we have a unidirectional view of the IP traffic.
 -- Here, we'd like to build a view where all the data concerning all
 -- transferts bewtween Z1 and Z2 are in a single tuple.
