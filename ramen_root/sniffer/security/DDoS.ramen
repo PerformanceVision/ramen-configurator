@@ -1,3 +1,5 @@
+-- vim: ft=sql expandtab
+
 PARAMETERS
   avg_win DEFAULTS TO 2min,
   false_pos_rate DEFAULT TO 0.1; -- 10% of false positives
