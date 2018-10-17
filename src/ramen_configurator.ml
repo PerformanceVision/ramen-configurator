@@ -216,7 +216,7 @@ let start debug monitor ramen_cmd root_dir persist_dir db_name
   dry_run := dry_run_ ;
   let open Conf_of_sqlite in
   let db = get_db db_name in
-  let update_bcs () =
+  let update_programs () =
     sync_programs debug ramen_cmd root_dir persist_dir uncompress
                   csv_prefix csv_delete
   and update_notif_conf () =
@@ -224,13 +224,9 @@ let start debug monitor ramen_cmd root_dir persist_dir db_name
       sync_notif_conf db notif_conf_file alert_internal
   in
   update_notif_conf () ;
-  update_bcs () ;
+  update_programs () ;
   if monitor then
     while true do
-      check_bc_config_changed db ;
-      if must_reload db then (
-        !logger.info "Must reload configuration" ;
-        update_bcs ()) ;
       update_notif_conf () ;
       Unix.sleep 5
     done
