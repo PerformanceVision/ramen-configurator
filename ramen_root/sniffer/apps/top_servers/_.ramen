@@ -14,7 +14,7 @@ RUN IF
     variant("extra_tables") = "all" AND (
       time_step <= 1min OR
       time_step <= 10min AND variant("run_time_steps") IN ["up_to_10min"; "up_to_1hour"] OR
-      variant("what_time_steps") = "up_to_1hour"
+      variant("run_time_steps") = "up_to_1hour"
     ), false);
 
 -- We need to make all CSV similar before merging them:
