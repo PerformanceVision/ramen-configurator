@@ -4,7 +4,7 @@ PARAMETERS
   -- Duration for which histograms are grown:
   time_step DEFAULTS TO 350s,
   -- width of the histograms:
-  nb_buckets DEFAULTS TO 20;
+  num_buckets DEFAULTS TO 20;
 
 RUN IF
   COALESCE(
@@ -130,7 +130,7 @@ AS
     application, protocol,
     success DOC "Does the response indicate success?",
     SUM count AS count "Number of transactions."
-    -- TODO: nb_buckets
+    -- TODO: num_buckets
     --HISTOGRAM(stop - start, 0, 30, 20) AS response_times
   -- Since we order the tuple according chronologically at input:
   COMMIT AFTER in.start > out.start + time_step

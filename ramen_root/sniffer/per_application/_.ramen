@@ -373,9 +373,9 @@ AS
     sum pdus_server AS _sum_pdus_server,
     _sum_pdus_server / time_step AS pdus_server_per_sec
       "PDUs from servers per second.",
-    sum nb_compressed_client / _sum_pdus_client AS compressed_client_ratio
+    sum num_compressed_client / _sum_pdus_client AS compressed_client_ratio
       "Ratio of compressed PDUs from clients.",
-    sum nb_compressed_server / _sum_pdus_server AS compressed_server_ratio
+    sum num_compressed_server / _sum_pdus_server AS compressed_server_ratio
       "Ratio of compressed PDUs from servers.",
     sum payloads_client / time_step AS payloads_client_bytes_per_sec
       "Payload bytes per second from clients.",
@@ -439,18 +439,18 @@ AS
       "PDUs from servers per second.",
     sum pdus_cgp_client / time_step AS pdus_cgp_client_per_sec,
     sum pdus_cgp_server / time_step AS pdus_cgp_server_per_sec,
-    sum nb_keep_alives_client / time_step AS client_keep_alives_per_sec
+    sum num_keep_alives_client / time_step AS client_keep_alives_per_sec
       "Keep alives from clients per second.",
-    sum nb_keep_alives_server / time_step AS server_keep_alives_per_sec
+    sum num_keep_alives_server / time_step AS server_keep_alives_per_sec
       "Keep alives from server per second.",
     sum payloads_client / time_step AS payloads_client_bytes_per_sec
       "Payload bytes per second from clients.",
     sum payloads_server / time_step AS payloads_server_bytes_per_sec
       "Payload bytes per second from servers.",
-    sum nb_aborts / time_step AS aborts_per_sec
+    sum num_aborts / time_step AS aborts_per_sec
       "Aborts per second.",
-    -- rather nb_timeouts / pdus_client or similar?
-    sum nb_timeouts / time_step AS timeouts_per_sec
+    -- rather num_timeouts / pdus_client or similar?
+    sum num_timeouts / time_step AS timeouts_per_sec
       "Timeouts per second.",
     -- Timings:
     -- Average Response Times:
