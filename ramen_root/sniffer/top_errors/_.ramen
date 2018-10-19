@@ -16,7 +16,7 @@ RUN IF
 
 -- Top of type * code * error_ip_server * error_port every time_step
 DEFINE icmp_degraded AS
-  FROM ../../../csv/icmp
+  FROM ../../csv/icmp
   SELECT
     start, stop,
     IS icmp_type, icmp_code, error_ip_server, error_port_server IN TOP top_size
@@ -49,7 +49,7 @@ AS
 
 -- Select the worse TCP servers:
 DEFINE tcp_degraded AS
-  FROM ../../../csv/tcp
+  FROM ../../csv/tcp
   SELECT
     start, stop,
     (IS ip_server IN TOP top_size BY zero_window_count_server

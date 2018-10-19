@@ -13,7 +13,7 @@ RUN IF
 DEFINE tcp
   "TCP metrics per application and time step."
 AS
-  FROM ../../../csv/tcp
+  FROM ../../csv/tcp
   SELECT
     -- Time
     (start // u32(time_step)) * u32(time_step) AS start,
@@ -160,7 +160,7 @@ AS
 DEFINE udp
   "UDP metrics per application and time step."
 AS
-  FROM ../../../csv/udp
+  FROM ../../csv/udp
   SELECT
     -- Time
     (start // u32(time_step)) * u32(time_step) AS start,
@@ -185,7 +185,7 @@ AS
 DEFINE icmp
   "ICMP metrics per application and time step."
 AS
-  FROM ../../../csv/icmp
+  FROM ../../csv/icmp
   SELECT
     -- Time
     (start // u32(time_step)) * u32(time_step) AS start,
@@ -214,7 +214,7 @@ AS
 DEFINE 'other-ip'
   "'Other-ip' metrics per application and time step."
 AS
-  FROM '../../../csv/other-ip'
+  FROM '../../csv/other-ip'
   SELECT
     -- Time
     (start // u32(time_step)) * u32(time_step) AS start,
@@ -237,7 +237,7 @@ AS
 DEFINE 'non-ip'
   "Non-IP metrics per application and time step."
 AS
-  FROM '../../../csv/non-ip'
+  FROM '../../csv/non-ip'
   SELECT
     -- Time
     (start // u32(time_step)) * u32(time_step) AS start,
@@ -260,7 +260,7 @@ AS
 DEFINE http
   "HTTP metrics per application and time step."
 AS
-  FROM ../../../csv/http
+  FROM ../../csv/http
   SELECT
     -- Time
     (start // u32(time_step)) * u32(time_step) AS start,
@@ -360,7 +360,7 @@ AS
 DEFINE citrix
   "Citrix metrics per application and time step."
 AS
-  FROM ../../../csv/citrix
+  FROM ../../csv/citrix
   SELECT
     -- Time
     (start // u32(time_step)) * u32(time_step) AS start,
@@ -426,7 +426,7 @@ AS
 DEFINE citrix_chanless
   "'Citrix-Chaless' metrics per application and time step."
 AS
-  FROM ../../../csv/citrix_chanless
+  FROM ../../csv/citrix_chanless
   SELECT
     -- Time
     (start // u32(time_step)) * u32(time_step) AS start,
@@ -521,7 +521,7 @@ AS
 DEFINE smb
   "SMB metrics per application and time step."
 AS
-  FROM ../../../csv/smb
+  FROM ../../csv/smb
   SELECT
     -- Time
     (start // u32(time_step)) * u32(time_step) AS start,
@@ -599,7 +599,7 @@ AS
 DEFINE sql
   "SQL metrics per application and time step."
 AS
-  FROM ../../../csv/sql
+  FROM ../../csv/sql
   SELECT
     -- Time
     (start // u32(time_step)) * u32(time_step) AS start,
@@ -664,7 +664,7 @@ AS
 DEFINE voip
   "VoIP metrics per application and time step."
 AS
-  FROM ../../../csv/voip
+  FROM ../../csv/voip
   SELECT
     -- Time
     (start // u32(time_step)) * u32(time_step) AS start,

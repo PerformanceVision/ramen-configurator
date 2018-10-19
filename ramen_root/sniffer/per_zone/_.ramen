@@ -11,7 +11,7 @@ RUN IF
 -- TCP
 
 DEFINE c2s_tcp AS
-  FROM ../../../csv/tcp
+  FROM ../../csv/tcp
   SELECT
     start, stop,
     -- In this table we consider that the client is source and the client dest.
@@ -62,7 +62,7 @@ DEFINE c2s_tcp AS
     0u32 AS icmp_error_count;
 
 DEFINE s2c_tcp AS
-  FROM ../../../csv/tcp
+  FROM ../../csv/tcp
   WHERE zone_client <> zone_client
   SELECT
     start, stop,
@@ -113,7 +113,7 @@ DEFINE s2c_tcp AS
 -- UDP
 
 DEFINE c2s_udp AS
-  FROM ../../../csv/udp
+  FROM ../../csv/udp
   SELECT
     start, stop,
     zone_server AS zone,
@@ -146,7 +146,7 @@ DEFINE c2s_udp AS
     0u32 AS icmp_error_count;
 
 DEFINE s2c_udp AS
-  FROM ../../../csv/udp
+  FROM ../../csv/udp
   WHERE zone_client <> zone_client
   SELECT
     start, stop,
@@ -182,7 +182,7 @@ DEFINE s2c_udp AS
 -- ICMP
 
 DEFINE c2s_icmp AS
-  FROM ../../../csv/icmp
+  FROM ../../csv/icmp
   SELECT
     start, stop,
     zone_server AS zone,
@@ -218,7 +218,7 @@ DEFINE c2s_icmp AS
         error_ip_proto IS NOT NULL) AS icmp_error_count;
 
 DEFINE s2c_icmp AS
-  FROM ../../../csv/icmp
+  FROM ../../csv/icmp
   WHERE zone_client <> zone_client
   SELECT
     start, stop,
@@ -257,7 +257,7 @@ DEFINE s2c_icmp AS
 -- OtherIP
 
 DEFINE c2s_other_ip AS
-  FROM '../../../csv/other-ip'
+  FROM '../../csv/other-ip'
   SELECT
     start, stop,
     zone_server AS zone,
@@ -290,7 +290,7 @@ DEFINE c2s_other_ip AS
     0u32 AS icmp_error_count;
 
 DEFINE s2c_other_ip AS
-  FROM '../../../csv/other-ip'
+  FROM '../../csv/other-ip'
   WHERE zone_client <> zone_client
   SELECT
     start, stop,
@@ -326,7 +326,7 @@ DEFINE s2c_other_ip AS
 -- NonIP
 
 DEFINE c2s_non_ip AS
-  FROM '../../../csv/non-ip'
+  FROM '../../csv/non-ip'
   SELECT
     start, stop,
     zone_server AS zone,
@@ -359,7 +359,7 @@ DEFINE c2s_non_ip AS
     0u32 AS icmp_error_count;
 
 DEFINE s2c_non_ip AS
-  FROM '../../../csv/non-ip'
+  FROM '../../csv/non-ip'
   WHERE zone_client <> zone_client
   SELECT
     start, stop,

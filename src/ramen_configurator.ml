@@ -103,12 +103,12 @@ let sync_programs debug ramen_cmd root_dir persist_dir uncompress
     Hashtbl.of_list [ "1min",  [ "time_step", "60" ] ;
                       "10min", [ "time_step", "600" ] ;
                       "1hour", [ "time_step", "3600" ] ] in
-  comp "sniffer/links/top_zones/_" aggr_times ;
-  comp "sniffer/links/per_zone/_" aggr_times ;
-  comp "sniffer/apps/top_servers/_" aggr_times ;
-  comp "sniffer/apps/per_application/_" aggr_times ;
-  comp "sniffer/protocols/transactions/_" aggr_times ;
-  comp "sniffer/protocols/top_errors/_" aggr_times ;
+  comp "sniffer/top_zones/_" aggr_times ;
+  comp "sniffer/per_zone/_" aggr_times ;
+  comp "sniffer/top_servers/_" aggr_times ;
+  comp "sniffer/per_application/_" aggr_times ;
+  comp "sniffer/transactions/_" aggr_times ;
+  comp "sniffer/top_errors/_" aggr_times ;
   let open Conf_of_sqlite in
   (* Several bad behavior detectors, regrouped in a "Security" namespace:
    *)

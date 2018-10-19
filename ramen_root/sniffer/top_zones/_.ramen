@@ -25,10 +25,10 @@ RUN IF
 -- or ip_client is smaller.
 DEFINE c2s AS
   FROM
-    ../../../csv/tcp,
-    ../../../csv/udp,
-    ../../../csv/icmp,
-    '../../../csv/other-ip'
+    ../../csv/tcp,
+    ../../csv/udp,
+    ../../csv/icmp,
+    '../../csv/other-ip'
   MERGE TIMEOUT AFTER 5s
   WHERE
     start > merge.greatest.start - 3min AND
@@ -55,10 +55,10 @@ DEFINE c2s AS
 -- In the other way around for the other tuples:
 DEFINE s2c AS
   FROM
-    ../../../csv/tcp,
-    ../../../csv/udp,
-    ../../../csv/icmp,
-    '../../../csv/other-ip'
+    ../../csv/tcp,
+    ../../csv/udp,
+    ../../csv/icmp,
+    '../../csv/other-ip'
   MERGE TIMEOUT AFTER 5s
   WHERE
     start > merge.greatest.start - 3min AND

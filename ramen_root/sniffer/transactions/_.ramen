@@ -17,7 +17,7 @@ RUN IF
 -- TODO: add the query / response sizes
 
 DEFINE tcp_connections AS
-  FROM ../../../csv/tcp
+  FROM ../../csv/tcp
   WHERE ct_count > 0
   SELECT
     start,  -- approximation
@@ -29,7 +29,7 @@ DEFINE tcp_connections AS
     true AS success;
 
 DEFINE tcp_generic AS
-  FROM ../../../csv/tcp
+  FROM ../../csv/tcp
   WHERE rt_count_server > 0
   SELECT
     start,
@@ -41,7 +41,7 @@ DEFINE tcp_generic AS
     true AS success;
 
 DEFINE dns_resolutions AS
-  FROM ../../../csv/dns WHERE
+  FROM ../../csv/dns WHERE
     query_type = 1 -- A
     OR query_type = 28 -- AAA
   SELECT
@@ -54,7 +54,7 @@ DEFINE dns_resolutions AS
     error_count = 0 AS success;
 
 DEFINE http_hits AS
-  FROM ../../../csv/http
+  FROM ../../csv/http
   WHERE resp_begin IS NOT NULL
   SELECT
     start,
@@ -66,8 +66,8 @@ DEFINE http_hits AS
     1 AS count;
 
 DEFINE citrix_mix AS
-  FROM ../../../csv/citrix,
-       ../../../csv/citrix_chanless
+  FROM ../../csv/citrix,
+       ../../csv/citrix_chanless
   MERGE TIMEOUT AFTER 5s
   WHERE
     start > merge.greatest.start - 3min AND
@@ -83,7 +83,7 @@ DEFINE citrix_mix AS
     true AS success;
 
 DEFINE smb_mix AS
-  FROM ../../../csv/smb
+  FROM ../../csv/smb
   WHERE resp_begin IS NOT NULL
   SELECT
     start,
@@ -95,7 +95,7 @@ DEFINE smb_mix AS
     1 AS count;
 
 DEFINE sql_queries AS
-  FROM ../../../csv/sql
+  FROM ../../csv/sql
   WHERE resp_begin IS NOT NULL
   SELECT
     start,
