@@ -117,7 +117,7 @@ DEFINE alert_output AS
 
 DEFINE alert_output_do_notif AS
   FROM alert_output
-  SELECT tot_diff > 0.75 AS firing
+  SELECT tot_diff > 0.8 AS firing
   NOTIFY "Internal - Output changed" WITH
     firing,
     0.1 AS certainty,
