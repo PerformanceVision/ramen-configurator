@@ -2,6 +2,10 @@
 -- Meta-Monitoring
 
 PARAMETERS
+  -- How long to gather data before outputing
+  -- Should be > 1min since the 1min avg varies a lot with
+  -- ~1min CSVs.
+  time_step DEFAULT TO 5min,
   -- Since we have 1hour aggregates we cannot be too picky:
   max_event_time_spread DEFAULTS TO 7200s;
 
@@ -10,72 +14,68 @@ DEFINE stats AS
 
 -- Checks the global number of output tuples and running/active programs
 -- per minute
-DEFINE per_minute
-  "Per minute statistics about every worker."
+DEFINE resampled
+  "Per time-step statistics about every worker."
 AS
   FROM stats
   WHERE not (worker starts with "monitoring/meta/")
   SELECT
     worker,
-    (start // 1min) * 1min AS start,
-    out.start + 1min AS stop,
-    max start AS _max_start,
+    (start // time_step) * time_step AS start,
+    out.start + time_step AS stop,
 
     max max_event_time AS max_event_time
       "Largest event time emitted so far",
 
     max tuples_in AS tuples_in,
-    (out.tuples_in - min tuples_in) / 1min AS in_per_sec
+    (out.tuples_in - min tuples_in) / time_step AS in_per_sec
       "Number of received tuples per seconds.",
 
     max tuples_selected AS tuples_selected,
-     (out.tuples_selected - min tuples_selected) / 1min AS selected_per_sec
+     (out.tuples_selected - min tuples_selected) / time_step AS selected_per_sec
       "Number of received tuples passing the WHERE filter per seconds.",
 
     max tuples_out AS tuples_out,
-    (out.tuples_out - min tuples_out) / 1min AS out_per_sec
+    (out.tuples_out - min tuples_out) / time_step AS out_per_sec
       "Number of produced tuples per seconds.",
 
     max groups AS groups
       "Peak number of active groups.",
 
     max cpu AS cpu,
-    (out.cpu - min cpu) / 1min AS cpu_per_sec
+    (out.cpu - min cpu) / time_step AS cpu_per_sec
       "Average number of CPU seconds consummed per seconds.",
     max ram AS ram "Peak number of bytes allocated on the heap.",
 
     max wait_in AS wait_in,
-    (out.wait_in - min wait_in) / 1min AS wait_in_per_sec
+    (out.wait_in - min wait_in) / time_step AS wait_in_per_sec
       "Average time spent waiting for parent.",
 
     max wait_out AS wait_out,
-    (out.wait_out - min wait_out) / 1min AS wait_out_per_sec
+    (out.wait_out - min wait_out) / time_step AS wait_out_per_sec
       "Average time spent waiting for children.",
 
     max bytes_in AS bytes_in,
-    (out.bytes_in - min bytes_in) / 1min AS bytes_in_per_sec
+    (out.bytes_in - min bytes_in) / time_step AS bytes_in_per_sec
       "Average amount of bytes read.",
 
     max bytes_out AS bytes_out,
-    (out.bytes_out - min bytes_out) / 1min AS bytes_out_per_sec
+    (out.bytes_out - min bytes_out) / time_step AS bytes_out_per_sec
       "Average number of bytes written.",
 
     min age last_out AS last_out_age
       "Time elapsed since last production."
 
-  --GROUP BY worker
-  --COMMIT BEFORE _dt >= 60
-  GROUP BY worker, start // 60
-  COMMIT AFTER in.start - out.start > 120
+  GROUP BY worker, start // time_step
+  COMMIT AFTER in.start - out.start > 2min
   FACTOR worker;
 
-DEFINE tot_per_minute
+DEFINE tot_resampled
   "Global statistics about total work done."
 AS
-  FROM per_minute
+  FROM resampled
   SELECT
-    (start // 60) * 60 AS start,
-    out.start + 60s AS stop,
+    start, stop,
     sum 1 {processes} AS running "Total number of running worker.",
     -- Given data arrive only every minute in the test lab (and some datasets
     -- are frequently missed), let's call "active" any operation that had
@@ -96,7 +96,7 @@ AS
 -- notify when the last value is off compared to the moving average:
 
 DEFINE alert_output AS
-  FROM tot_per_minute
+  FROM tot_resampled
   SELECT
     *,
 
@@ -126,7 +126,7 @@ DEFINE alert_output_do_notif AS
 
 -- Also alert when the difference between the max event times is too large:
 DEFINE alert_event_times AS
-  FROM tot_per_minute
+  FROM tot_resampled
   SELECT
     start, stop,
     COALESCE(max_event_time - min_event_time, 0) AS event_time_spread
