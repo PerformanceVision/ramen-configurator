@@ -99,9 +99,7 @@ DEFINE tcp_raw AS
 -- Unfortunately, only TCP comes with any metric that bear any relation to
 -- quality of service. We blanks these metrics for other sources below:
 
-DEFINE tcp
-  "TCP measurements from the traffic sniffer."
-AS
+DEFINE tcp AS
   FROM tcp_raw
   SELECT
     "tcp" AS metric,
@@ -193,9 +191,7 @@ DEFINE udp_raw AS
   EVENT STARTING AT capture_begin * 1e-6
     AND STOPPING AT capture_end * 1e-6;
 
-DEFINE udp
-  "UDP measurements from the traffic sniffer."
-AS
+DEFINE udp AS
   FROM udp_raw
   SELECT
     "udp" AS metric,
@@ -265,9 +261,7 @@ DEFINE icmp_raw AS
   EVENT STARTING AT capture_begin * 1e-6
     AND STOPPING AT capture_end * 1e-6;
 
-DEFINE icmp
-  "ICMP measurements from the traffic sniffer."
-AS
+DEFINE icmp AS
   FROM icmp_raw
   SELECT
     "icmp" AS metric,
@@ -327,9 +321,7 @@ DEFINE 'other-ip_raw' AS
   EVENT STARTING AT capture_begin * 1e-6
     AND STOPPING AT capture_end * 1e-6;
 
-DEFINE 'other-ip'
-  "IP measurements other than TCP,UDP and ICMP from the traffic sniffer."
-AS
+DEFINE 'other-ip' AS
   FROM 'other-ip_raw'
   SELECT
     "other-ip" AS metric,
@@ -379,9 +371,7 @@ DEFINE 'non-ip_raw' AS
   EVENT STARTING AT capture_begin * 1e-6
     AND STOPPING AT capture_end * 1e-6;
 
-DEFINE 'non-ip'
-  "Non IP measurements from the traffic sniffer."
-AS
+DEFINE 'non-ip' AS
   FROM 'non-ip_raw'
   SELECT
     "non-ip" AS metric,
@@ -434,9 +424,7 @@ DEFINE dns_raw AS
   EVENT STARTING AT capture_begin * 1e-6
     AND STOPPING AT capture_end * 1e-6;
 
-DEFINE dns
-  "DNS measurements from the traffic sniffer."
-AS
+DEFINE dns AS
   FROM dns_raw
   SELECT
     "dns" AS metric,
@@ -533,9 +521,7 @@ DEFINE http_raw AS
   EVENT STARTING AT capture_begin * 1e-6
     AND STOPPING AT capture_end * 1e-6;
 
-DEFINE http
-  "HTTP measurements from the traffic sniffer."
-AS
+DEFINE http AS
   FROM http_raw
   SELECT
     "http" AS metric,
@@ -610,9 +596,7 @@ DEFINE citrix_raw AS
   EVENT STARTING AT capture_begin * 1e-6
     AND STOPPING AT capture_end * 1e-6;
 
-DEFINE citrix
-  "Citrix measurements from the traffic sniffer."
-AS
+DEFINE citrix AS
   FROM citrix_raw
   SELECT
     "citrix" AS metric,
@@ -688,9 +672,7 @@ DEFINE citrix_chanless_raw AS
   EVENT STARTING AT capture_begin * 1e-6
     AND STOPPING AT capture_end * 1e-6;
 
-DEFINE citrix_chanless
-  "Citrix (chanless) measurements from the traffic sniffer."
-AS
+DEFINE citrix_chanless AS
   FROM citrix_chanless_raw
   SELECT
     "citrix-chanless" AS metric,
@@ -776,9 +758,7 @@ DEFINE smb_raw AS
   EVENT STARTING AT capture_begin * 1e-6
     AND STOPPING AT capture_end * 1e-6;
 
-DEFINE smb
-  "SMB measurements from the traffic sniffer."
-AS
+DEFINE smb AS
   FROM smb_raw
   SELECT
     "smb" AS metric,
@@ -855,9 +835,7 @@ DEFINE sql_raw AS
   EVENT STARTING AT capture_begin * 1e-6
     AND STOPPING AT capture_end * 1e-6;
 
-DEFINE sql
-  "SQL measurements from the traffic sniffer."
-AS
+DEFINE sql AS
   FROM sql_raw
   SELECT
     "sql" AS metric,
@@ -971,9 +949,7 @@ DEFINE voip_raw AS
   EVENT STARTING AT capture_begin * 1e-6
     AND STOPPING AT capture_end * 1e-6;
 
-DEFINE voip
-  "VoIP measurements from the traffic sniffer."
-AS
+DEFINE voip AS
   FROM voip_raw
   SELECT
     "voip" AS metric,
