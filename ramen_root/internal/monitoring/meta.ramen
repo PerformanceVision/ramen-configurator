@@ -100,16 +100,16 @@ DEFINE alert_output AS
   SELECT
     *,
 
-    moveavg(10, tot_out_per_sec) AS avg_tot_out_per_sec,
+    moveavg(5, tot_out_per_sec) AS avg_tot_out_per_sec,
     abs (avg_tot_out_per_sec - tot_out_per_sec) AS _d_out,
     min (_d_out, avg_tot_out_per_sec) / max (_d_out, avg_tot_out_per_sec)
       AS diff_out_per_sec,
 
-    moveavg(10, running) AS avg_running,
+    moveavg(5, running) AS avg_running,
     abs (avg_running - running) AS _d_running,
     min (_d_running, avg_running) / max (_d_running, avg_running) AS diff_running,
 
-    moveavg(10, active) AS avg_active,
+    moveavg(5, active) AS avg_active,
     abs (avg_active - active) AS _d_active,
     min (_d_active, avg_active) / max (_d_active, avg_active) AS diff_active,
 
