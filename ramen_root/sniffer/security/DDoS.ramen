@@ -6,7 +6,7 @@ PARAMETERS
   -- TODO: also remember durations?
 
 DEFINE 'new peers'
-  "Approximation of the number of new unique clients and socket pairs."
+--  "Approximation of the number of new unique clients and socket pairs."
 AS
   FROM
     ../../csv/tcp,

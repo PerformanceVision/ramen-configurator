@@ -32,7 +32,7 @@ DEFINE new_triplets AS
       AS is_important;
 
 DEFINE 'top port scans'
-  "Detection of port scanners."
+--  "Detection of port scanners."
 AS
   FROM new_triplets
   WHERE
@@ -79,7 +79,7 @@ DEFINE new_pairs AS
       AS is_important;
 
 DEFINE 'top ip scans'
-  "Detection of host scanners."
+--  "Detection of host scanners."
 AS
   FROM new_pairs
   WHEN
