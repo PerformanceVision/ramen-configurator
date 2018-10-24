@@ -267,14 +267,14 @@ AS
     out.start + time_step AS stop,
     application DOC "Application",
     -- Volumes
-    sum 1 AS _count,
+    sum 1 {queries} AS _count,
     sum u32(timeouted) / _count AS timeout_ratio
       "Ratio of transactions that timed out during capture.",
     sum u32(compressed) / _count AS compressed_ratio
       "Ratio of compressed response bodies.",
     sum u32(chunked_encoding) / _count AS chunked_encoded_ratio
       "Ratio of bodies using the chunked encoding.",
-    sum u32(not contributed) / time_step AS pages_per_sec
+    sum u32(not contributed) {queries} / time_step AS pages_per_sec
       "Ratio of top-level documents.",
     sum query_headers / time_step AS query_header_bytes_per_sec
       "Header bytes per second in queries.",

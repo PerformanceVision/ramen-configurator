@@ -66,7 +66,7 @@ DEFINE tcp_raw AS
      ct_count u32? {packets},
      ct_sum u64 {microseconds},
      ct_square_sum u128 {microseconds^2},
-     rt_count_server u32? {packets},
+     rt_count_server u32? {queries},
      rt_sum_server u64,
      rt_square_sum_server u128,
      rtt_count_client u32? {packets},
@@ -418,7 +418,7 @@ DEFINE dns_raw AS
      traffic_bytes_server u64 {bytes},
      traffic_packets_client u32 {packets},
      traffic_packets_server u32 {packets},
-     rt_count_server u32 {packets},
+     rt_count_server u32 {queries},
      rt_sum_server u64,       -- 30
      rt_square_sum_server u128)
   EVENT STARTING AT capture_begin * 1e-6
@@ -510,7 +510,7 @@ DEFINE http_raw AS
      tot_end u64,
      tot_load_time u64,
      tot_load_time_squared u128,
-     rt_count_server u32 {packets},
+     rt_count_server u32 {queries},
      rt_sum_server u64,
      rt_square_sum_server u128,
      dtt_sum_client u64,
@@ -581,7 +581,7 @@ DEFINE citrix_raw AS
      num_compressed_server u32,
      payloads_client u32 {bytes},
      payloads_server u32 {bytes},
-     rt_count_server u32 {packets},
+     rt_count_server u32 {queries},
      rt_sum_server u64,                 -- 30
      rt_square_sum_server u128,
      dtt_count_client u32 {packets},
@@ -649,7 +649,7 @@ DEFINE citrix_chanless_raw AS
      num_keep_alives_server u32,
      payloads_client u32 {bytes},
      payloads_server u32 {bytes},       -- 30
-     rt_count_server u32 {packets},
+     rt_count_server u32 {queries},
      rt_sum_server u64,
      rt_square_sum_server u128,
      dtt_count_client u32 {packets},
@@ -745,7 +745,7 @@ DEFINE smb_raw AS
      query_write_bytes u32 {bytes},
      resp_read_bytes u32 {bytes},
      resp_write_bytes u32 {bytes},
-     rt_count_server u32 {packets},
+     rt_count_server u32 {queries},
      rt_sum_server u64,
      rt_square_sum_server u128,
      dtt_count_client u32 {packets},    -- 50
@@ -822,7 +822,7 @@ DEFINE sql_raw AS
      resp_end u64?,
      resp_payload u32 {bytes},
      resp_pkts u32 {packets},
-     rt_count_server u32 {packets},
+     rt_count_server u32 {queries},
      rt_sum_server u64,
      rt_square_sum_server u128,         -- 40
      dtt_count_client u32 {packets},
@@ -917,7 +917,7 @@ DEFINE voip_raw AS
      rtp_rtcp_count_server u32 {packets},
      rtp_rtcp_payload_client u32 {bytes},
      rtp_rtcp_payload_server u32 {bytes},
-     rt_count_server u32 {packets},
+     rt_count_server u32 {queries},
      rt_sum_server u64,
      rt_square_sum_server u128,
      jitter_count_caller u32 {packets},
