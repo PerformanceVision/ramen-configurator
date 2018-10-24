@@ -64,8 +64,8 @@ AS
       _sum_ct_sum / _sum_ct_count AS ct_avg
       "Average connection time.",
     IF _sum_ct_count = 0 THEN 0 ELSE
-      sqrt (((sum ct_square_sum - _sum_ct_sum^2) / _sum_ct_count)) AS ct_stddev
-      "Standard deviation of the connection time.",
+      sqrt (((sum ct_square_sum - _sum_ct_sum^2) / _sum_ct_count {}))
+      AS ct_stddev "Standard deviation of the connection time.",
     -- Average Server Response Time
     sum rt_count_server AS _sum_rt_count_server,
     sum rt_sum_server AS _sum_rt_sum_server,
@@ -76,7 +76,7 @@ AS
       "Average response time.",
     IF _sum_rt_count_server = 0 THEN 0 ELSE
       sqrt ((sum rt_square_sum_server - _sum_rt_sum_server^2) /
-            _sum_rt_count_server) AS srt_stddev
+            _sum_rt_count_server {}) AS srt_stddev
       "Standard deviation of the response time.",
     -- Average Round Trip Time CSC
     sum rtt_count_server AS _sum_rtt_count_server,
@@ -88,7 +88,7 @@ AS
       "Average client→server→client round trip time.",
     IF _sum_rtt_count_server = 0 THEN 0 ELSE
       sqrt ((sum rtt_square_sum_server - _sum_rtt_sum_server^2) /
-            _sum_rtt_count_server) AS crtt_stddev
+            _sum_rtt_count_server {}) AS crtt_stddev
       "Standard deviation of the client→server→client round trip time.",
     -- Average Round Trip Time SCS
     sum rtt_count_client AS _sum_rtt_count_client,
@@ -100,7 +100,7 @@ AS
       "Average server→client→server round trip time.",
     IF _sum_rtt_count_client = 0 THEN 0 ELSE
       sqrt ((sum rtt_square_sum_client - _sum_rtt_sum_client^2) /
-            _sum_rtt_count_client) AS srtt_stddev
+            _sum_rtt_count_client {}) AS srtt_stddev
       "Standard deviation of the server→client→server round trip time.",
     -- Average Retransmission Delay C2S
     sum rd_count_client AS _sum_rd_count_client,
@@ -112,7 +112,7 @@ AS
       "Average retransmission delay.",
     IF _sum_rd_count_client = 0 THEN 0 ELSE
       sqrt ((sum rd_square_sum_client - _sum_rd_sum_client^2) /
-            _sum_rd_count_client) AS crd_stddev
+            _sum_rd_count_client {}) AS crd_stddev
       "Standard deviation of the retransmission delays.",
     -- Average Retransmission Delay S2C
     sum rd_count_server AS _sum_rd_count_server,
@@ -124,7 +124,7 @@ AS
       "Average clients to servers retransmission delay.",
     IF _sum_rd_count_server = 0 THEN 0 ELSE
       sqrt ((sum rd_square_sum_server - _sum_rd_sum_server^2) /
-            _sum_rd_count_server) AS srd_stddev
+            _sum_rd_count_server {}) AS srd_stddev
       "Standard deviation of the clients to servers retransmission delay.",
     -- Average Data Transfer Time C2S
     sum dtt_count_client AS _sum_dtt_count_client,
@@ -136,7 +136,7 @@ AS
       "Average clients to servers data transfer time.",
     IF _sum_dtt_count_client = 0 THEN 0 ELSE
       sqrt ((sum dtt_square_sum_client - _sum_dtt_sum_client^2) /
-            _sum_dtt_count_client) AS cdtt_stddev
+            _sum_dtt_count_client {}) AS cdtt_stddev
       "Standard deviation of the clients to servers data transfer time.",
     -- Average Data Transfer Time S2C
     sum dtt_count_server AS _sum_dtt_count_server,
@@ -148,7 +148,7 @@ AS
       "Average servers to clients data transfer time.",
     IF _sum_dtt_count_server = 0 THEN 0 ELSE
       sqrt ((sum dtt_square_sum_server - _sum_dtt_sum_server^2) /
-            _sum_dtt_count_server) AS sdtt_stddev
+            _sum_dtt_count_server {}) AS sdtt_stddev
       "Standard deviation of the servers to clients data transfer time."
   WHERE
     ip_external IS NULL -- Exclude netflow
@@ -392,7 +392,7 @@ AS
       "Average response time.",
     IF _sum_rt_count_server = 0 THEN 0 ELSE
       sqrt ((sum rt_square_sum_server - _sum_rt_sum_server^2) /
-            _sum_rt_count_server) AS srt_stddev
+            _sum_rt_count_server {}) AS srt_stddev
       "Standard deviation of the response times.",
     -- Average Data Transfer Time C2S
     sum dtt_count_client AS _sum_dtt_count_client,
@@ -404,7 +404,7 @@ AS
       "Average clients to servers data transfer time.",
     IF _sum_dtt_count_client = 0 THEN 0 ELSE
       sqrt ((sum dtt_square_sum_client - _sum_dtt_sum_client^2) /
-            _sum_dtt_count_client) AS cdtt_stddev
+            _sum_dtt_count_client {}) AS cdtt_stddev
       "Standard deviation of the clients to servers data transfer time.",
     -- Average Data Transfer Time S2C
     sum dtt_count_server AS _sum_dtt_count_server,
@@ -416,7 +416,7 @@ AS
       "Average servers to clients data transfer time.",
     IF _sum_dtt_count_server = 0 THEN 0 ELSE
       sqrt ((sum dtt_square_sum_server - _sum_dtt_sum_server^2) /
-            _sum_dtt_count_server) AS sdtt_stddev
+            _sum_dtt_count_server {}) AS sdtt_stddev
       "Standard deviation of the servers to clients data transfer time."
   GROUP BY start // u32(time_step), application
   COMMIT AFTER
@@ -463,7 +463,7 @@ AS
       "Average response time.",
     IF _sum_rt_count_server = 0 THEN 0 ELSE
       sqrt ((sum rt_square_sum_server - _sum_rt_sum_server^2) /
-            _sum_rt_count_server) AS srt_stddev
+            _sum_rt_count_server {}) AS srt_stddev
       "Standard deviation of the response time.",
     -- Average Data Transfer Time C2S
     sum dtt_count_client AS _sum_dtt_count_client,
@@ -475,7 +475,7 @@ AS
       "Average clients to servers data transfer time.",
     IF _sum_dtt_count_client = 0 THEN 0 ELSE
       sqrt ((sum dtt_square_sum_client - _sum_dtt_sum_client^2) /
-            _sum_dtt_count_client) AS cdtt_stddev
+            _sum_dtt_count_client {}) AS cdtt_stddev
       "Standard deviation of the clients to servers data transfer time.",
     -- Average Data Transfer Time S2C
     sum dtt_count_server AS _sum_dtt_count_server,
@@ -487,7 +487,7 @@ AS
       "Average servers to clients data transfer time.",
     IF _sum_dtt_count_server = 0 THEN 0 ELSE
       sqrt ((sum dtt_square_sum_server - _sum_dtt_sum_server^2) /
-            _sum_dtt_count_server) AS sdtt_stddev
+            _sum_dtt_count_server {}) AS sdtt_stddev
       "Standard deviation of the servers to clients data transfer time.",
     -- Average Login Time:
     sum login_time_count AS _sum_login_time_count,
@@ -499,7 +499,7 @@ AS
       "Average login time.",
     IF _sum_login_time_count = 0 THEN 0 ELSE
       sqrt ((sum login_time_square_sum - _sum_login_time_sum^2) /
-            _sum_login_time_count) AS slogin_time_stddev
+            _sum_login_time_count {}) AS slogin_time_stddev
       "Standard deviation of the login time.",
     -- Average Launch Time:
     sum launch_time_count AS _sum_launch_time_count,
@@ -511,7 +511,7 @@ AS
       "Average launch time.",
     IF _sum_launch_time_count = 0 THEN 0 ELSE
       sqrt ((sum launch_time_square_sum - _sum_launch_time_sum^2) /
-            _sum_launch_time_count) AS slaunch_time_stddev
+            _sum_launch_time_count {}) AS slaunch_time_stddev
       "Standard deviation of the launch time."
   GROUP BY start // u32(time_step), application
   COMMIT AFTER
@@ -703,7 +703,7 @@ AS
       "Average server response time.",
     IF _sum_rt_count_server = 0 THEN 0 ELSE
       sqrt ((sum rt_square_sum_server - _sum_rt_sum_server^2) /
-            _sum_rt_count_server) AS srt_stddev
+            _sum_rt_count_server {}) AS srt_stddev
       "Standard deviation of the server response time.",
     -- Jitter caller
     sum jitter_count_caller AS _sum_jitter_count_caller,
@@ -715,7 +715,7 @@ AS
       "Average jitter from caller.",
     IF _sum_jitter_count_caller = 0 THEN 0 ELSE
       sqrt ((sum jitter_square_sum_caller - _sum_jitter_sum_caller^2) /
-            _sum_jitter_count_caller) AS caller_jitter_stddev
+            _sum_jitter_count_caller {}) AS caller_jitter_stddev
       "Standard deviation of the jitter from caller.",
     -- Jitter callee
     sum jitter_count_callee AS _sum_jitter_count_callee,
@@ -727,7 +727,7 @@ AS
       "Average jitter from callee.",
     IF _sum_jitter_count_callee = 0 THEN 0 ELSE
       sqrt ((sum jitter_square_sum_callee - _sum_jitter_sum_callee^2) /
-            _sum_jitter_count_callee) AS callee_jitter_stddev
+            _sum_jitter_count_callee {}) AS callee_jitter_stddev
       "Standard deviation of the jitter from callee.",
     -- RTT CalleeCallerCallee
     sum rtt_count_caller AS _sum_rtt_count_caller,
@@ -739,7 +739,7 @@ AS
       "Average callee→caller→callee round trip time.",
     IF _sum_rtt_count_caller = 0 THEN 0 ELSE
       sqrt ((sum rtt_square_sum_caller - _sum_rtt_sum_caller^2) /
-            _sum_rtt_count_caller) AS caller_rtt_stddev
+            _sum_rtt_count_caller {}) AS caller_rtt_stddev
       "Standard deviation of the callee→caller→callee round trip time.",
     -- caller→callee→caller round trip time
     sum rtt_count_callee AS _sum_rtt_count_callee,
@@ -751,7 +751,7 @@ AS
       "Average caller→callee→caller round trip time.",
     IF _sum_rtt_count_callee = 0 THEN 0 ELSE
       sqrt ((sum rtt_square_sum_callee - _sum_rtt_sum_callee^2) /
-            _sum_rtt_count_callee) AS callee_rtt_stddev
+            _sum_rtt_count_callee {}) AS callee_rtt_stddev
       "Standard deviation of the caller→callee→caller round trip time.",
     -- Losses (alt count)
     sum loss_callee2caller_alt_count / time_step AS loss_callee2caller_per_sec
@@ -768,7 +768,7 @@ AS
       "Average signalisation client→server→client round trip time.",
     IF _sum_sign_rtt_count_server = 0 THEN 0 ELSE
       sqrt ((sum sign_rtt_square_sum_server - _sum_sign_rtt_sum_server^2) /
-            _sum_sign_rtt_count_server) AS sign_srtt_stddev
+            _sum_sign_rtt_count_server {}) AS sign_srtt_stddev
       "Standard deviation of the signalisation client→server→client round trip time.",
     -- signalisation server→client→server round trip time
     sum sign_rtt_count_client AS _sum_sign_rtt_count_client,
@@ -780,7 +780,7 @@ AS
       "Average signalisation server→client→server round trip time.",
     IF _sum_sign_rtt_count_client = 0 THEN 0 ELSE
       sqrt ((sum sign_rtt_square_sum_client - _sum_sign_rtt_sum_client^2) /
-            _sum_sign_rtt_count_client) AS sign_crtt_stddev
+            _sum_sign_rtt_count_client {}) AS sign_crtt_stddev
       "Standard deviation of the signalisation server→client→server round trip time.",
     -- Signalisation Average Retransmission Delay S2C
     sum sign_rd_count_server AS _sum_sign_rd_count_server,
@@ -792,7 +792,7 @@ AS
       "Average signalisation retransmission delay from servers.",
     IF _sum_sign_rd_count_server = 0 THEN 0 ELSE
       sqrt ((sum sign_rd_square_sum_server - _sum_sign_rd_sum_server^2) /
-            _sum_sign_rd_count_server) AS sign_srd_stddev
+            _sum_sign_rd_count_server {}) AS sign_srd_stddev
       "Standard deviation of the signalisation retransmission delay from servers.",
     -- Signalisation Average Retransmission Delay C2S
     sum sign_rd_count_client AS _sum_sign_rd_count_client,
@@ -804,7 +804,7 @@ AS
       "Average signalisation retransmission delay from clients.",
     IF _sum_sign_rd_count_client = 0 THEN 0 ELSE
       sqrt ((sum sign_rd_square_sum_client - _sum_sign_rd_sum_client^2) /
-            _sum_sign_rd_count_client) AS sign_crd_stddev
+            _sum_sign_rd_count_client {}) AS sign_crd_stddev
       "Standard deviation of the signalisation retransmission delay from clients."
   GROUP BY start // u32(time_step), application
   COMMIT AFTER
