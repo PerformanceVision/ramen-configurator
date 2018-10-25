@@ -459,27 +459,27 @@ AS
     -- Average Round Trip Time out then in
     sum rtt_count_out AS _sum_rtt_count_out,
     sum rtt_sum_out AS _sum_rtt_sum_out,
-    _sum_rtt_count_out / time_step AS crtt_per_sec
-      "Measured out then in round trip times per second.",
+    _sum_rtt_count_out / time_step AS rtt_per_sec_out
+      "Measured in then out round trip times per second.",
     IF _sum_rtt_count_out = 0 THEN 0 ELSE
-      _sum_rtt_sum_out / _sum_rtt_count_out AS crtt_avg
-      "Average out then in round trip time.",
+      _sum_rtt_sum_out / _sum_rtt_count_out AS rtt_avg_out
+      "Average in then out round trip time.",
     IF _sum_rtt_count_out = 0 THEN 0 ELSE
       sqrt ((sum rtt_square_sum_out - _sum_rtt_sum_out^2) /
-            _sum_rtt_count_out {}) AS crtt_stddev
-      "Standard deviation of the out then in round trip time.",
+            _sum_rtt_count_out {}) AS rtt_stddev_out
+      "Standard deviation of the in then out round trip time.",
     -- Average Round Trip Time in then out
     sum rtt_count_in AS _sum_rtt_count_in,
     sum rtt_sum_in AS _sum_rtt_sum_in,
-    _sum_rtt_count_in / time_step AS srtt_per_sec
-      "Measured in then out round trip times per second.",
+    _sum_rtt_count_in / time_step AS rtt_per_sec_in
+      "Measured out then in round trip times per second.",
     IF _sum_rtt_count_in = 0 THEN 0 ELSE
-      _sum_rtt_sum_in / _sum_rtt_count_in AS srtt_avg
-      "Average in then out round trip time.",
+      _sum_rtt_sum_in / _sum_rtt_count_in AS rtt_avg_in
+      "Average out then in round trip time.",
     IF _sum_rtt_count_in = 0 THEN 0 ELSE
       sqrt ((sum rtt_square_sum_in - _sum_rtt_sum_in^2) /
-            _sum_rtt_count_in {}) AS srtt_stddev
-      "Standard deviation of the in then out round trip time.",
+            _sum_rtt_count_in {}) AS rtt_stddev_in
+      "Standard deviation of the out then in round trip time.",
     -- Average Retransmission Delay C2S
     sum rd_count_in AS _sum_rd_count_in,
     sum rd_sum_in AS _sum_rd_sum_in,
