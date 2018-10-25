@@ -300,7 +300,7 @@ AS
     -- Status:
     _count / time_step AS hits_per_sec "Queries per second.",
     -- tot_count = number of sub-hits in a page, 0 when not a page
-    sum u32(tot_count > 0) AS _num_pages,
+    sum u32(tot_count > 0) {pages} AS _num_pages,
     sum tot_count / _num_pages AS avg_hits_per_page
       "Average number of queries per page.",
     sum tot_errors / _count AS error_ratio "Error ratio.",

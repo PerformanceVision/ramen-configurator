@@ -503,9 +503,9 @@ DEFINE http_raw AS
      resp_mime_type string?,
      tot_volume_query u32? {bytes},
      tot_volume_response u32? {bytes},
-     tot_count u32,
-     tot_errors u16,
-     tot_timeouts u16,                  -- 60
+     tot_count u32 {queries},
+     tot_errors u16 {queries},
+     tot_timeouts u16 {queries},         -- 60
      tot_begin u64,
      tot_end u64,
      tot_load_time u64,
@@ -575,8 +575,8 @@ DEFINE citrix_raw AS
      connection_uuid string?,           -- 20
      channel_id u8?,
      channel u8?,
-     pdus_client u32,
-     pdus_server u32,
+     pdus_client u32 {pdus},
+     pdus_server u32 {pdus},
      num_compressed_client u32,
      num_compressed_server u32,
      payloads_client u32 {bytes},

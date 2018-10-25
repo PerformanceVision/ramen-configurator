@@ -59,7 +59,7 @@ DEFINE c2s_tcp AS
     0u32 AS syn_count_out,
     -- Those are significant for both directions regardless of where is the client:
     timeout_count, close_count, ct_count, ct_sum, ct_square_sum,
-    0u32 AS icmp_error_count;
+    0u32 {packets} AS icmp_error_count;
 
 DEFINE s2c_tcp AS
   FROM ../../csv/tcp
@@ -108,7 +108,7 @@ DEFINE s2c_tcp AS
     0u32 AS syn_count_in,
     syn_count_client AS syn_count_out,
     timeout_count, close_count, ct_count, ct_sum, ct_square_sum,
-    0u32 AS icmp_error_count;
+    0u32 {packets} AS icmp_error_count;
 
 -- UDP
 
@@ -143,7 +143,7 @@ DEFINE c2s_udp AS
     0u32 AS syn_count_in, 0u32 AS syn_count_out,
     0u32 AS timeout_count, 0u32 AS close_count,
     0u32 AS ct_count, 0. AS ct_sum, 0. AS ct_square_sum,
-    0u32 AS icmp_error_count;
+    0u32 {packets} AS icmp_error_count;
 
 DEFINE s2c_udp AS
   FROM ../../csv/udp
@@ -177,7 +177,7 @@ DEFINE s2c_udp AS
     0u32 AS syn_count_in, 0u32 AS syn_count_out,
     0u32 AS timeout_count, 0u32 AS close_count,
     0u32 AS ct_count, 0. AS ct_sum, 0. AS ct_square_sum,
-    0u32 AS icmp_error_count;
+    0u32 {packets} AS icmp_error_count;
 
 -- ICMP
 
@@ -215,7 +215,7 @@ DEFINE c2s_icmp AS
     u32(error_ip4_client IS NOT NULL OR error_ip6_client IS NOT NULL OR
         error_ip4_server IS NOT NULL OR error_ip6_server IS NOT NULL OR
         error_port_client IS NOT NULL OR error_port_server IS NOT NULL OR
-        error_ip_proto IS NOT NULL) AS icmp_error_count;
+        error_ip_proto IS NOT NULL) {packets} AS icmp_error_count;
 
 DEFINE s2c_icmp AS
   FROM ../../csv/icmp
@@ -252,7 +252,7 @@ DEFINE s2c_icmp AS
     u32(error_ip4_client IS NOT NULL OR error_ip6_client IS NOT NULL OR
         error_ip4_server IS NOT NULL OR error_ip6_server IS NOT NULL OR
         error_port_client IS NOT NULL OR error_port_server IS NOT NULL OR
-        error_ip_proto IS NOT NULL) AS icmp_error_count;
+        error_ip_proto IS NOT NULL) {packets} AS icmp_error_count;
 
 -- OtherIP
 
@@ -287,7 +287,7 @@ DEFINE c2s_other_ip AS
     0u32 AS syn_count_in, 0u32 AS syn_count_out,
     0u32 AS timeout_count, 0u32 AS close_count,
     0u32 AS ct_count, 0. AS ct_sum, 0. AS ct_square_sum,
-    0u32 AS icmp_error_count;
+    0u32 {packets} AS icmp_error_count;
 
 DEFINE s2c_other_ip AS
   FROM '../../csv/other-ip'
@@ -321,7 +321,7 @@ DEFINE s2c_other_ip AS
     0u32 AS syn_count_in, 0u32 AS syn_count_out,
     0u32 AS timeout_count, 0u32 AS close_count,
     0u32 AS ct_count, 0. AS ct_sum, 0. AS ct_square_sum,
-    0u32 AS icmp_error_count;
+    0u32 {packets} AS icmp_error_count;
 
 -- NonIP
 
@@ -356,7 +356,7 @@ DEFINE c2s_non_ip AS
     0u32 AS syn_count_in, 0u32 AS syn_count_out,
     0u32 AS timeout_count, 0u32 AS close_count,
     0u32 AS ct_count, 0. AS ct_sum, 0. AS ct_square_sum,
-    0u32 AS icmp_error_count;
+    0u32 {packets} AS icmp_error_count;
 
 DEFINE s2c_non_ip AS
   FROM '../../csv/non-ip'
@@ -390,7 +390,7 @@ DEFINE s2c_non_ip AS
     0u32 AS syn_count_in, 0u32 AS syn_count_out,
     0u32 AS timeout_count, 0u32 AS close_count,
     0u32 AS ct_count, 0. AS ct_sum, 0. AS ct_square_sum,
-    0u32 AS icmp_error_count;
+    0u32 {packets} AS icmp_error_count;
 
 -- Finally:
 
@@ -531,7 +531,7 @@ AS
     -- Errors
     -- As soon as we handle factors in set-alerts (ie. either select one value or
     -- sum all values or take the min or max) then also group by icmp_type and code.
-    sum u32(icmp_error_count) AS icmp_errors_per_sec
+    sum icmp_error_count / time_step AS icmp_errors_per_sec
       "ICMP errors per second."
   GROUP BY start // u32(time_step), zone
   COMMIT AFTER
