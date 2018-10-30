@@ -810,3 +810,73 @@ AS
   COMMIT AFTER
     in.start > out.start + 2 * time_step
   FACTOR application;
+
+DEFINE tls
+  "TLS metrics per application and time step."
+AS
+  FROM ../../csv/tls
+  SELECT
+    -- Time
+    (start // u32(time_step)) * u32(time_step) AS start,
+    out.start + time_step AS stop,
+    application DOC "Application",
+    -- Volumes
+    sum traffic_bytes_client / time_step AS c2s_bytes_per_sec
+      "Bytes per second from client.",
+    sum traffic_bytes_server / time_step AS s2c_bytes_per_sec
+      "Bytes per second from server.",
+    sum payload_bytes_client / time_step AS c2s_payload_bytes_per_sec
+      "Bytes per second of payload from client.",
+    sum payload_bytes_server / time_step AS s2c_payload_bytes_per_sec
+      "Bytes per second of payload from server.",
+    -- Average Connection Time
+    sum ct_count AS _sum_ct_count,
+    sum ct_sum AS _sum_ct_sum,
+    _sum_ct_count / time_step AS ct_per_sec
+      "Connection establishments per second.",
+    IF _sum_ct_count = 0 THEN 0 ELSE
+      _sum_ct_sum / _sum_ct_count AS ct_avg
+      "Average connection time.",
+    IF _sum_ct_count = 0 THEN 0 ELSE
+      sqrt (((sum ct_square_sum - _sum_ct_sum^2) / _sum_ct_count {}))
+      AS ct_stddev "Standard deviation of the connection time.",
+    -- Average Server Response Time
+    sum rt_count_server AS _sum_rt_count_server,
+    sum rt_sum_server AS _sum_rt_sum_server,
+    _sum_rt_count_server / time_step AS srt_per_sec
+      "Number of query/response pairs per second.",
+    IF _sum_rt_count_server = 0 THEN 0 ELSE
+      _sum_rt_sum_server / _sum_rt_count_server AS srt_avg
+      "Average response time.",
+    IF _sum_rt_count_server = 0 THEN 0 ELSE
+      sqrt ((sum rt_square_sum_server - _sum_rt_sum_server^2) /
+            _sum_rt_count_server {}) AS srt_stddev
+      "Standard deviation of the response time.",
+    -- Average Data Transfer Time C2S
+    sum dtt_count_client AS _sum_dtt_count_client,
+    sum dtt_sum_client AS _sum_dtt_sum_client,
+    _sum_dtt_count_client / time_step AS cdtt_per_sec
+      "Measured clients to servers data transfer time per second.",
+    IF _sum_dtt_count_client = 0 THEN 0 ELSE
+      _sum_dtt_sum_client / _sum_dtt_count_client AS cdtt_avg
+      "Average clients to servers data transfer time.",
+    IF _sum_dtt_count_client = 0 THEN 0 ELSE
+      sqrt ((sum dtt_square_sum_client - _sum_dtt_sum_client^2) /
+            _sum_dtt_count_client {}) AS cdtt_stddev
+      "Standard deviation of the clients to servers data transfer time.",
+    -- Average Data Transfer Time S2C
+    sum dtt_count_server AS _sum_dtt_count_server,
+    sum dtt_sum_server AS _sum_dtt_sum_server,
+    _sum_dtt_count_server / time_step AS sdtt_per_sec
+      "Measured servers to clients data transfer time per second.",
+    IF _sum_dtt_count_server = 0 THEN 0 ELSE
+      _sum_dtt_sum_server / _sum_dtt_count_server AS sdtt_avg
+      "Average servers to clients data transfer time.",
+    IF _sum_dtt_count_server = 0 THEN 0 ELSE
+      sqrt ((sum dtt_square_sum_server - _sum_dtt_sum_server^2) /
+            _sum_dtt_count_server {}) AS sdtt_stddev
+      "Standard deviation of the servers to clients data transfer time."
+  GROUP BY start // u32(time_step), application
+  COMMIT AFTER
+    in.start > out.start + 2 * time_step
+  FACTOR application;

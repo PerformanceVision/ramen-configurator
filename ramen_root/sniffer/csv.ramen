@@ -983,3 +983,84 @@ DEFINE voip AS
     (sign_rd_sum_server / 1e6) {seconds} AS sign_rd_sum_server,
     (sign_rd_square_sum_server / 1e12) {seconds^2} AS sign_rd_square_sum_server,
     *;
+
+DEFINE tls_raw AS
+  READ AND DELETE IF csv_delete
+       FILES csv_prefix || "tls_v29.*csv" || (IF csv_compressed THEN ".lz4" ELSE "")
+       PREPROCESS WITH (IF csv_compressed THEN "lz4 -d -c" ELSE "")
+       SEPARATOR "\t" NULL "<NULL>"
+    (poller string,                     -- 1
+     capture_begin u64,
+     capture_end u64,
+     device_client u16?,
+     device_server u16?,
+     vlan_client u32?,
+     vlan_server u32?,
+     mac_client u64?,
+     mac_server u64?,
+     zone_client u32,                   -- 10
+     zone_server u32,
+     ip4_client u32?,
+     ip6_client i128?,
+     ip4_server u32?,
+     ip6_server i128?,
+     port_client u16,
+     port_server u16,
+     application u32,
+     protostack string?,
+     connection_uuid string?,           -- 20
+     cipher_suite u32?,
+     client_common_name string?,
+     server_common_name string?,
+     server_name string?,
+     client_not_after u64 {seconds},
+     server_not_after u64 {seconds},
+     resumed u32, -- actually a bool
+     decrypted u32, -- actually a bool
+     version u32,
+     client_signature string?,          -- 30
+     server_signature string?,
+     client_type u32?,
+     server_type u32?,
+     client_bits u32?,
+     server_bits u32?,
+     meta_client u32 {pdus},
+     meta_server u32 {pdus},
+     data_client u32,
+     data_server u32,
+     alert_types u32,                   -- 40
+     alert_errors u32,
+     traffic_bytes_client u64 {bytes},
+     traffic_bytes_server u64 {bytes},
+     payload_bytes_client u64 {bytes},
+     payload_bytes_server u64 {bytes},
+     dtt_count_client u32 {packets},
+     dtt_sum_client u64,
+     dtt_square_sum_client u128,
+     dtt_count_server u32 {packets},
+     dtt_sum_server u64,                -- 50
+     dtt_square_sum_server u128,
+     rt_count_server u32 {queries},
+     rt_sum_server u64,
+     rt_square_sum_server u128,
+     ct_count u32? {packets},
+     ct_sum u64 {microseconds},
+     ct_square_sum u128 {microseconds^2})
+  EVENT STARTING AT capture_begin * 1e-6
+    AND STOPPING AT capture_end * 1e-6;
+
+DEFINE tls AS
+  FROM tls_raw
+  SELECT
+    "tls" AS metric,
+    (capture_begin / 1e6) {seconds} AS start,
+    (capture_end / 1e6) {seconds} AS stop,
+    COALESCE(ip(ip4_client), ip(u128(ip6_client)), 0.0.0.0) AS ip_client,
+    COALESCE(ip(ip4_server), ip(u128(ip6_server)), 0.0.0.0) AS ip_server,
+    eth(mac_client) AS mac_client,
+    eth(mac_server) AS mac_server,
+    bool(resumed) AS resumed,
+    bool(decrypted) AS decrypted,
+    -- Also fix NULL counters:
+    COALESCE(ct_count, 0) AS ct_count,
+    *;
