@@ -1013,8 +1013,8 @@ DEFINE tls_raw AS
      client_common_name string?,
      server_common_name string?,
      server_name string?,
-     client_not_after u64 {seconds},
-     server_not_after u64 {seconds},
+     client_not_after u64? {seconds},
+     server_not_after u64? {seconds},
      resumed u32, -- actually a bool
      decrypted u32, -- actually a bool
      version u32,
