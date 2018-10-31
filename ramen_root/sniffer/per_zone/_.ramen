@@ -450,10 +450,10 @@ AS
     sum ct_sum AS _sum_ct_sum,
     _sum_ct_count / time_step AS ct_per_sec
       "Connection establishments per second.",
-    IF _sum_ct_count = 0 THEN 0 ELSE
+    IF _sum_ct_count > 0 THEN
       _sum_ct_sum / _sum_ct_count AS ct_avg
       "Average connection time.",
-    IF _sum_ct_count = 0 THEN 0 ELSE
+    IF _sum_ct_count > 0 THEN
       sqrt (((sum ct_square_sum - _sum_ct_sum^2) / _sum_ct_count {}))
       AS ct_stddev "Standard deviation of the connection time.",
     -- Average Round Trip Time out then in
@@ -461,10 +461,10 @@ AS
     sum rtt_sum_out AS _sum_rtt_sum_out,
     _sum_rtt_count_out / time_step AS rtt_per_sec_out
       "Measured in then out round trip times per second.",
-    IF _sum_rtt_count_out = 0 THEN 0 ELSE
+    IF _sum_rtt_count_out > 0 THEN
       _sum_rtt_sum_out / _sum_rtt_count_out AS rtt_avg_out
       "Average in then out round trip time.",
-    IF _sum_rtt_count_out = 0 THEN 0 ELSE
+    IF _sum_rtt_count_out > 0 THEN
       sqrt ((sum rtt_square_sum_out - _sum_rtt_sum_out^2) /
             _sum_rtt_count_out {}) AS rtt_stddev_out
       "Standard deviation of the in then out round trip time.",
@@ -473,10 +473,10 @@ AS
     sum rtt_sum_in AS _sum_rtt_sum_in,
     _sum_rtt_count_in / time_step AS rtt_per_sec_in
       "Measured out then in round trip times per second.",
-    IF _sum_rtt_count_in = 0 THEN 0 ELSE
+    IF _sum_rtt_count_in > 0 THEN
       _sum_rtt_sum_in / _sum_rtt_count_in AS rtt_avg_in
       "Average out then in round trip time.",
-    IF _sum_rtt_count_in = 0 THEN 0 ELSE
+    IF _sum_rtt_count_in > 0 THEN
       sqrt ((sum rtt_square_sum_in - _sum_rtt_sum_in^2) /
             _sum_rtt_count_in {}) AS rtt_stddev_in
       "Standard deviation of the out then in round trip time.",
@@ -485,10 +485,10 @@ AS
     sum rd_sum_in AS _sum_rd_sum_in,
     _sum_rd_count_in / time_step AS rd_per_sec_in
       "Measured retransmission delays per second for incoming traffic.",
-    IF _sum_rd_count_in = 0 THEN 0 ELSE
+    IF _sum_rd_count_in > 0 THEN
       _sum_rd_sum_in / _sum_rd_count_in AS rd_avg_in
       "Average retransmission delay for incoming traffic.",
-    IF _sum_rd_count_in = 0 THEN 0 ELSE
+    IF _sum_rd_count_in > 0 THEN
       sqrt ((sum rd_square_sum_in - _sum_rd_sum_in^2) /
             _sum_rd_count_in {}) AS rd_stddev_in
       "Standard deviation of the retransmission delays for incoming traffic.",
@@ -497,10 +497,10 @@ AS
     sum rd_sum_out AS _sum_rd_sum_out,
     _sum_rd_count_out / time_step AS rd_per_sec_out
       "Measured retransmission delays per second for outgoing traffic.",
-    IF _sum_rd_count_out = 0 THEN 0 ELSE
+    IF _sum_rd_count_out > 0 THEN
       _sum_rd_sum_out / _sum_rd_count_out AS rd_avg_out
       "Average retransmission delay for outgoing traffic.",
-    IF _sum_rd_count_out = 0 THEN 0 ELSE
+    IF _sum_rd_count_out > 0 THEN
       sqrt ((sum rd_square_sum_out - _sum_rd_sum_out^2) /
             _sum_rd_count_out {}) AS rd_stddev_out
       "Standard deviation of the retransmission delays for outgoing traffic.",
@@ -509,10 +509,10 @@ AS
     sum dtt_sum_in AS _sum_dtt_sum_in,
     _sum_dtt_count_in / time_step AS dtt_per_sec_in
       "Measured data transfer time per second for incoming traffic.",
-    IF _sum_dtt_count_in = 0 THEN 0 ELSE
+    IF _sum_dtt_count_in > 0 THEN
       _sum_dtt_sum_in / _sum_dtt_count_in AS dtt_avg_in
       "Average data transfer time for incoming traffic.",
-    IF _sum_dtt_count_in = 0 THEN 0 ELSE
+    IF _sum_dtt_count_in > 0 THEN
       sqrt ((sum dtt_square_sum_in - _sum_dtt_sum_in^2) /
             _sum_dtt_count_in {}) AS dtt_stddev_in
       "Standard deviation of the data transfer times for incoming traffic.",
@@ -521,10 +521,10 @@ AS
     sum dtt_sum_out AS _sum_dtt_sum_out,
     _sum_dtt_count_out / time_step AS dtt_per_sec_out
       "Measured data transfer time per second for outgoing traffic.",
-    IF _sum_dtt_count_out = 0 THEN 0 ELSE
+    IF _sum_dtt_count_out > 0 THEN
       _sum_dtt_sum_out / _sum_dtt_count_out AS dtt_avg_out
       "Average data transfer time for outgoing traffic.",
-    IF _sum_dtt_count_out = 0 THEN 0 ELSE
+    IF _sum_dtt_count_out > 0 THEN
       sqrt ((sum dtt_square_sum_out - _sum_dtt_sum_out^2) /
             _sum_dtt_count_out {}) AS dtt_stddev_out
       "Standard deviation of the data transfer times for outgoing traffic.",
