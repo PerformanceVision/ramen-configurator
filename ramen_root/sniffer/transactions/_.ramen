@@ -58,7 +58,7 @@ DEFINE http_hits AS
   WHERE resp_begin IS NOT NULL
   SELECT
     start,
-    start + COALESCE(resp_begin, 0) - query_end AS stop,
+    start + (COALESCE(resp_begin, 0) - query_end) AS stop,
     application,
     "HTTP" AS protocol,
     host || url AS query,
@@ -99,7 +99,7 @@ DEFINE sql_queries AS
   WHERE resp_begin IS NOT NULL
   SELECT
     start,
-    start + COALESCE(resp_begin, 0) - query_end AS stop,
+    start + (COALESCE(resp_begin, 0) - query_end) AS stop,
     application,
     "SQL" AS protocol,
     COALESCE(dbname ||": ", "") || query AS query,

@@ -103,8 +103,8 @@ DEFINE tcp AS
   FROM tcp_raw
   SELECT
     "tcp" AS metric,
-    (capture_begin / 1e6) {seconds} AS start,
-    (capture_end / 1e6) {seconds} AS stop,
+    (capture_begin / 1e6) {seconds(rel)} AS start,
+    (capture_end / 1e6) {seconds(rel)} AS stop,
     COALESCE(ip(ip4_client), ip(u128(ip6_client)), 0.0.0.0) AS ip_client,
     COALESCE(ip(ip4_server), ip(u128(ip6_server)), 0.0.0.0) AS ip_server,
     IF ip4_external IS NULL THEN ip6_external ELSE ip4_external AS ip_external,
@@ -195,8 +195,8 @@ DEFINE udp AS
   FROM udp_raw
   SELECT
     "udp" AS metric,
-    (capture_begin / 1e6) {seconds} AS start,
-    (capture_end / 1e6) {seconds} AS stop,
+    (capture_begin / 1e6) {seconds(rel)} AS start,
+    (capture_end / 1e6) {seconds(rel)} AS stop,
     COALESCE(ip(ip4_client), ip(u128(ip6_client)), 0.0.0.0) AS ip_client,
     COALESCE(ip(ip4_server), ip(u128(ip6_server)), 0.0.0.0) AS ip_server,
     IF ip4_external IS NULL THEN ip6_external ELSE ip4_external AS ip_external,
@@ -265,8 +265,8 @@ DEFINE icmp AS
   FROM icmp_raw
   SELECT
     "icmp" AS metric,
-    (capture_begin / 1e6) {seconds} AS start,
-    (capture_end / 1e6) {seconds} AS stop,
+    (capture_begin / 1e6) {seconds(rel)} AS start,
+    (capture_end / 1e6) {seconds(rel)} AS stop,
     COALESCE(ip(ip4_client), ip(u128(ip6_client)), 0.0.0.0) AS ip_client,
     COALESCE(ip(ip4_server), ip(u128(ip6_server)), 0.0.0.0) AS ip_server,
     IF ip4_external IS NULL THEN ip6_external ELSE ip4_external AS ip_external,
@@ -325,8 +325,8 @@ DEFINE 'other-ip' AS
   FROM 'other-ip_raw'
   SELECT
     "other-ip" AS metric,
-    (capture_begin / 1e6) {seconds} AS start,
-    (capture_end / 1e6) {seconds} AS stop,
+    (capture_begin / 1e6) {seconds(rel)} AS start,
+    (capture_end / 1e6) {seconds(rel)} AS stop,
     COALESCE(ip(ip4_client), ip(u128(ip6_client)), 0.0.0.0) AS ip_client,
     COALESCE(ip(ip4_server), ip(u128(ip6_server)), 0.0.0.0) AS ip_server,
     eth(mac_client) AS mac_client,
@@ -375,8 +375,8 @@ DEFINE 'non-ip' AS
   FROM 'non-ip_raw'
   SELECT
     "non-ip" AS metric,
-    (capture_begin / 1e6) {seconds} AS start,
-    (capture_end / 1e6) {seconds} AS stop,
+    (capture_begin / 1e6) {seconds(rel)} AS start,
+    (capture_end / 1e6) {seconds(rel)} AS stop,
     eth(mac_client) AS mac_client,
     eth(mac_server) AS mac_server,
     traffic_packets_client AS payload_packets_client,
@@ -428,8 +428,8 @@ DEFINE dns AS
   FROM dns_raw
   SELECT
     "dns" AS metric,
-    (capture_begin / 1e6) {seconds} AS start,
-    (capture_end / 1e6) {seconds} AS stop,
+    (capture_begin / 1e6) {seconds(rel)} AS start,
+    (capture_end / 1e6) {seconds(rel)} AS stop,
     COALESCE(ip(ip4_client), ip(u128(ip6_client)), 0.0.0.0) AS ip_client,
     COALESCE(ip(ip4_server), ip(u128(ip6_server)), 0.0.0.0) AS ip_server,
     eth(mac_client) AS mac_client,
@@ -525,19 +525,19 @@ DEFINE http AS
   FROM http_raw
   SELECT
     "http" AS metric,
-    (capture_begin / 1e6) {seconds} AS start,
-    (capture_end / 1e6) {seconds} AS stop,
+    (capture_begin / 1e6) {seconds(rel)} AS start,
+    (capture_end / 1e6) {seconds(rel)} AS stop,
     COALESCE(ip(ip4_client), ip(u128(ip6_client)), 0.0.0.0) AS ip_client,
     COALESCE(ip(ip4_server), ip(u128(ip6_server)), 0.0.0.0) AS ip_server,
     COALESCE(ip(ip4_orig_client), ip(u128(ip6_orig_client)), 0.0.0.0) AS ip_orig_client,
     eth(mac_client) AS mac_client,
     eth(mac_server) AS mac_server,
-    (query_begin / 1e6) {seconds} AS query_begin,
-    (query_end / 1e6) {seconds} AS query_end,
-    (resp_begin / 1e6) {seconds} AS resp_begin,
-    (resp_end / 1e6) {seconds} AS resp_end,
-    (tot_begin / 1e6) {seconds} AS tot_begin,
-    (tot_end / 1e6) {seconds} AS tot_end,
+    (query_begin / 1e6) {seconds(rel)} AS query_begin,
+    (query_end / 1e6) {seconds(rel)} AS query_end,
+    (resp_begin / 1e6) {seconds(rel)} AS resp_begin,
+    (resp_end / 1e6) {seconds(rel)} AS resp_end,
+    (tot_begin / 1e6) {seconds(rel)} AS tot_begin,
+    (tot_end / 1e6) {seconds(rel)} AS tot_end,
     (tot_load_time / 1e6) {seconds} AS tot_load_time,
     (tot_load_time_squared / 1e12) {seconds^2} AS tot_load_time_squared,
     (rt_sum_server / 1e6) {seconds} AS rt_sum_server,
@@ -600,8 +600,8 @@ DEFINE citrix AS
   FROM citrix_raw
   SELECT
     "citrix" AS metric,
-    (capture_begin / 1e6) {seconds} AS start,
-    (capture_end / 1e6) {seconds} AS stop,
+    (capture_begin / 1e6) {seconds(rel)} AS start,
+    (capture_end / 1e6) {seconds(rel)} AS stop,
     COALESCE(ip(ip4_client), ip(u128(ip6_client)), 0.0.0.0) AS ip_client,
     COALESCE(ip(ip4_server), ip(u128(ip6_server)), 0.0.0.0) AS ip_server,
     eth(mac_client) AS mac_client,
@@ -676,8 +676,8 @@ DEFINE citrix_chanless AS
   FROM citrix_chanless_raw
   SELECT
     "citrix-chanless" AS metric,
-    (capture_begin / 1e6) {seconds} AS start,
-    (capture_end / 1e6) {seconds} AS stop,
+    (capture_begin / 1e6) {seconds(rel)} AS start,
+    (capture_end / 1e6) {seconds(rel)} AS stop,
     COALESCE(ip(ip4_client), ip(u128(ip6_client)), 0.0.0.0) AS ip_client,
     COALESCE(ip(ip4_server), ip(u128(ip6_server)), 0.0.0.0) AS ip_server,
     eth(mac_client) AS mac_client,
@@ -762,16 +762,16 @@ DEFINE smb AS
   FROM smb_raw
   SELECT
     "smb" AS metric,
-    (capture_begin / 1e6) {seconds} AS start,
-    (capture_end / 1e6) {seconds} AS stop,
+    (capture_begin / 1e6) {seconds(rel)} AS start,
+    (capture_end / 1e6) {seconds(rel)} AS stop,
     COALESCE(ip(ip4_client), ip(u128(ip6_client)), 0.0.0.0) AS ip_client,
     COALESCE(ip(ip4_server), ip(u128(ip6_server)), 0.0.0.0) AS ip_server,
     eth(mac_client) AS mac_client,
     eth(mac_server) AS mac_server,
-    (query_begin / 1e6) {seconds} AS query_begin,
-    (query_end / 1e6) {seconds} AS query_end,
-    (resp_begin / 1e6) {seconds} AS resp_begin,
-    (resp_end / 1e6) {seconds} AS resp_end,
+    (query_begin / 1e6) {seconds(rel)} AS query_begin,
+    (query_end / 1e6) {seconds(rel)} AS query_end,
+    (resp_begin / 1e6) {seconds(rel)} AS resp_begin,
+    (resp_end / 1e6) {seconds(rel)} AS resp_end,
     (rt_sum_server / 1e6) {seconds} AS rt_sum_server,
     (rt_square_sum_server / 1e12) {seconds^2} AS rt_square_sum_server,
     (dtt_sum_client / 1e6) {seconds} AS dtt_sum_client,
@@ -839,16 +839,16 @@ DEFINE sql AS
   FROM sql_raw
   SELECT
     "sql" AS metric,
-    (capture_begin / 1e6) {seconds} AS start,
-    (capture_end / 1e6) {seconds} AS stop,
+    (capture_begin / 1e6) {seconds(rel)} AS start,
+    (capture_end / 1e6) {seconds(rel)} AS stop,
     COALESCE(ip(ip4_client), ip(u128(ip6_client)), 0.0.0.0) AS ip_client,
     COALESCE(ip(ip4_server), ip(u128(ip6_server)), 0.0.0.0) AS ip_server,
     eth(mac_client) AS mac_client,
     eth(mac_server) AS mac_server,
-    (query_begin / 1e6) {seconds} AS query_begin,
-    (query_end / 1e6) {seconds} AS query_end_,
-    (resp_begin / 1e6) {seconds} AS resp_begin,
-    (resp_end / 1e6) {seconds} AS resp_end,
+    (query_begin / 1e6) {seconds(rel)} AS query_begin,
+    (query_end / 1e6) {seconds(rel)} AS query_end_,
+    (resp_begin / 1e6) {seconds(rel)} AS resp_begin,
+    (resp_end / 1e6) {seconds(rel)} AS resp_end,
     (rt_sum_server / 1e6) {seconds} AS rt_sum_server,
     (rt_square_sum_server / 1e12) {seconds^2} AS rt_square_sum_server,
     (dtt_sum_client / 1e6) {seconds} AS dtt_sum_client,
@@ -953,8 +953,8 @@ DEFINE voip AS
   FROM voip_raw
   SELECT
     "voip" AS metric,
-    (capture_begin / 1e6) {seconds} AS start,
-    (capture_end / 1e6) {seconds} AS stop,
+    (capture_begin / 1e6) {seconds(rel)} AS start,
+    (capture_end / 1e6) {seconds(rel)} AS stop,
     COALESCE(ip(ip4_client), ip(u128(ip6_client)), 0.0.0.0) AS ip_client,
     COALESCE(ip(ip4_server), ip(u128(ip6_server)), 0.0.0.0) AS ip_server,
     eth(mac_client) AS mac_client,
