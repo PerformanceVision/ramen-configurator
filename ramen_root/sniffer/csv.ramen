@@ -911,12 +911,14 @@ DEFINE voip_raw AS
      sign_count_server u32 {packets},
      sign_payload_client u32 {bytes},
      sign_payload_server u32 {bytes},
-     rtp_rtcp_bytes_client u32 {bytes}, -- 50
-     rtp_rtcp_bytes_server u32 {bytes},
-     rtp_rtcp_count_client u32 {packets},
-     rtp_rtcp_count_server u32 {packets},
-     rtp_rtcp_payload_client u32 {bytes},
-     rtp_rtcp_payload_server u32 {bytes},
+     -- v29 specs say these are client/server but junkie seems to do the right
+     -- thing here, that is: callee/caller:
+     rtp_rtcp_bytes_caller u32 {bytes}, -- 50
+     rtp_rtcp_bytes_callee u32 {bytes},
+     rtp_rtcp_count_caller u32 {packets},
+     rtp_rtcp_count_callee u32 {packets},
+     rtp_rtcp_payload_caller u32 {bytes},
+     rtp_rtcp_payload_callee u32 {bytes},
      rt_count_server u32 {queries},
      rt_sum_server u64,
      rt_square_sum_server u128,
@@ -932,8 +934,8 @@ DEFINE voip_raw AS
      rtt_count_callee u32 {packets},
      rtt_sum_callee u64,
      rtt_square_sum_callee u128,        -- 70
-     loss_callee2caller_alt_count u32,
-     loss_caller2callee_alt_count u32,
+     loss_callee2caller_alt_count u32 {packets},
+     loss_caller2callee_alt_count u32 {packets},
      sign_rtt_count_client u32 {packets},
      sign_rtt_sum_client u64,
      sign_rtt_square_sum_client u128,

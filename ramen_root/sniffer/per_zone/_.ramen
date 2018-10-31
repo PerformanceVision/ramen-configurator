@@ -58,8 +58,7 @@ DEFINE c2s_tcp AS
     syn_count_client AS syn_count_in,
     0u32 AS syn_count_out,
     -- Those are significant for both directions regardless of where is the client:
-    timeout_count, close_count, ct_count, ct_sum, ct_square_sum,
-    0u32 {packets} AS icmp_error_count;
+    timeout_count, close_count, ct_count, ct_sum, ct_square_sum;
 
 DEFINE s2c_tcp AS
   FROM ../../csv/tcp
@@ -107,8 +106,7 @@ DEFINE s2c_tcp AS
     dtt_square_sum_client AS dtt_square_sum_out,
     0u32 AS syn_count_in,
     syn_count_client AS syn_count_out,
-    timeout_count, close_count, ct_count, ct_sum, ct_square_sum,
-    0u32 {packets} AS icmp_error_count;
+    timeout_count, close_count, ct_count, ct_sum, ct_square_sum;
 
 -- UDP
 
@@ -142,8 +140,7 @@ DEFINE c2s_udp AS
     0. AS dtt_square_sum_in, 0. AS dtt_square_sum_out,
     0u32 AS syn_count_in, 0u32 AS syn_count_out,
     0u32 AS timeout_count, 0u32 AS close_count,
-    0u32 AS ct_count, 0. AS ct_sum, 0. AS ct_square_sum,
-    0u32 {packets} AS icmp_error_count;
+    0u32 AS ct_count, 0. AS ct_sum, 0. AS ct_square_sum;
 
 DEFINE s2c_udp AS
   FROM ../../csv/udp
@@ -176,8 +173,7 @@ DEFINE s2c_udp AS
     0. AS dtt_square_sum_in, 0. AS dtt_square_sum_out,
     0u32 AS syn_count_in, 0u32 AS syn_count_out,
     0u32 AS timeout_count, 0u32 AS close_count,
-    0u32 AS ct_count, 0. AS ct_sum, 0. AS ct_square_sum,
-    0u32 {packets} AS icmp_error_count;
+    0u32 AS ct_count, 0. AS ct_sum, 0. AS ct_square_sum;
 
 -- ICMP
 
@@ -211,11 +207,7 @@ DEFINE c2s_icmp AS
     0. AS dtt_square_sum_in, 0. AS dtt_square_sum_out,
     0u32 AS syn_count_in, 0u32 AS syn_count_out,
     0u32 AS timeout_count, 0u32 AS close_count,
-    0u32 AS ct_count, 0. AS ct_sum, 0. AS ct_square_sum,
-    u32(error_ip4_client IS NOT NULL OR error_ip6_client IS NOT NULL OR
-        error_ip4_server IS NOT NULL OR error_ip6_server IS NOT NULL OR
-        error_port_client IS NOT NULL OR error_port_server IS NOT NULL OR
-        error_ip_proto IS NOT NULL) {packets} AS icmp_error_count;
+    0u32 AS ct_count, 0. AS ct_sum, 0. AS ct_square_sum;
 
 DEFINE s2c_icmp AS
   FROM ../../csv/icmp
@@ -248,11 +240,7 @@ DEFINE s2c_icmp AS
     0. AS dtt_square_sum_in, 0. AS dtt_square_sum_out,
     0u32 AS syn_count_in, 0u32 AS syn_count_out,
     0u32 AS timeout_count, 0u32 AS close_count,
-    0u32 AS ct_count, 0. AS ct_sum, 0. AS ct_square_sum,
-    u32(error_ip4_client IS NOT NULL OR error_ip6_client IS NOT NULL OR
-        error_ip4_server IS NOT NULL OR error_ip6_server IS NOT NULL OR
-        error_port_client IS NOT NULL OR error_port_server IS NOT NULL OR
-        error_ip_proto IS NOT NULL) {packets} AS icmp_error_count;
+    0u32 AS ct_count, 0. AS ct_sum, 0. AS ct_square_sum;
 
 -- OtherIP
 
@@ -286,8 +274,7 @@ DEFINE c2s_other_ip AS
     0. AS dtt_square_sum_in, 0. AS dtt_square_sum_out,
     0u32 AS syn_count_in, 0u32 AS syn_count_out,
     0u32 AS timeout_count, 0u32 AS close_count,
-    0u32 AS ct_count, 0. AS ct_sum, 0. AS ct_square_sum,
-    0u32 {packets} AS icmp_error_count;
+    0u32 AS ct_count, 0. AS ct_sum, 0. AS ct_square_sum;
 
 DEFINE s2c_other_ip AS
   FROM '../../csv/other-ip'
@@ -320,8 +307,7 @@ DEFINE s2c_other_ip AS
     0. AS dtt_square_sum_in, 0. AS dtt_square_sum_out,
     0u32 AS syn_count_in, 0u32 AS syn_count_out,
     0u32 AS timeout_count, 0u32 AS close_count,
-    0u32 AS ct_count, 0. AS ct_sum, 0. AS ct_square_sum,
-    0u32 {packets} AS icmp_error_count;
+    0u32 AS ct_count, 0. AS ct_sum, 0. AS ct_square_sum;
 
 -- NonIP
 
@@ -355,8 +341,7 @@ DEFINE c2s_non_ip AS
     0. AS dtt_square_sum_in, 0. AS dtt_square_sum_out,
     0u32 AS syn_count_in, 0u32 AS syn_count_out,
     0u32 AS timeout_count, 0u32 AS close_count,
-    0u32 AS ct_count, 0. AS ct_sum, 0. AS ct_square_sum,
-    0u32 {packets} AS icmp_error_count;
+    0u32 AS ct_count, 0. AS ct_sum, 0. AS ct_square_sum;
 
 DEFINE s2c_non_ip AS
   FROM '../../csv/non-ip'
@@ -389,8 +374,7 @@ DEFINE s2c_non_ip AS
     0. AS dtt_square_sum_in, 0. AS dtt_square_sum_out,
     0u32 AS syn_count_in, 0u32 AS syn_count_out,
     0u32 AS timeout_count, 0u32 AS close_count,
-    0u32 AS ct_count, 0. AS ct_sum, 0. AS ct_square_sum,
-    0u32 {packets} AS icmp_error_count;
+    0u32 AS ct_count, 0. AS ct_sum, 0. AS ct_square_sum;
 
 -- Finally:
 
@@ -412,39 +396,28 @@ AS
     out.start + time_step AS stop,
     zone,
     -- Volumes
-    sum traffic_bytes_in / time_step AS bytes_per_sec_in
+    sum traffic_bytes_in AS _sum_traffic_bytes_in,
+    _sum_traffic_bytes_in / time_step AS bytes_per_sec_in
       "Bytes per second entering the zone.",
-    sum traffic_bytes_out / time_step AS bytes_per_sec_out
+    sum traffic_bytes_out AS _sum_traffic_bytes_out,
+    _sum_traffic_bytes_out / time_step AS bytes_per_sec_out
       "Bytes per second exiting the zone.",
     sum traffic_packets_in / time_step AS packets_per_sec_in
       "Packets per second entering the zone.",
     sum traffic_packets_out / time_step AS packets_per_sec_out
       "Packets per second exiting the zone.",
     -- Retransmissions
-    sum retrans_traffic_bytes_in / time_step AS retrans_traffic_bytes_per_sec_in
-      "Bytes per second retransferred entering the zone.",
-    sum retrans_traffic_bytes_out / time_step AS retrans_traffic_bytes_per_sec_out
-      "Bytes per second retransferred exiting the zone.",
+    sum retrans_traffic_bytes_in / _sum_traffic_bytes_in
+      AS retrans_bytes_ratio_in "Ratio of incoming retransmitted bytes.",
+    sum retrans_traffic_bytes_out / _sum_traffic_bytes_out
+      AS retrans_bytes_ratio_out "Ratio of outgoing retransmitted bytes.",
     -- TCP flags
-    sum syn_count_in / time_step AS syn_count_per_sec_in
-      "SYN flag per second entering the zone.",
-    sum syn_count_out / time_step AS syn_count_per_sec_out
-      "SYN flag per second leaving the zone.",
-    sum fin_count_in / time_step AS fin_count_per_sec_in
-      "FIN flags entering the zone per second.",
-    sum fin_count_out / time_step AS fin_count_per_sec_out
-      "FIN flags exiting the zone per second.",
+    sum (syn_count_in + syn_count_out) / ct_count AS syns_per_ct
+      "SYN flags per established connections across that zone boundary.",
     sum rst_count_in / time_step AS rst_count_per_sec_in
       "RST flags entering the zone per second.",
     sum rst_count_out / time_step AS rst_count_per_sec_out
       "RST flags exiting the zone per second.",
-    sum close_count / time_step AS close_count_per_sec
-      "Connection teardowns per second.",
-    -- TCP issues
-    sum dupack_count_in / time_step AS dupack_count_per_sec_in
-      "DupAcks per second entering the zone.",
-    sum dupack_count_out / time_step AS dupack_count_per_sec_out
-      "DupAcks per second exiting the zone.",
     -- Average Connection Time
     sum ct_count AS _sum_ct_count,
     sum ct_sum AS _sum_ct_sum,
@@ -454,8 +427,12 @@ AS
       _sum_ct_sum / _sum_ct_count AS ct_avg
       "Average connection time.",
     IF _sum_ct_count > 0 THEN
-      sqrt (((sum ct_square_sum - _sum_ct_sum^2) / _sum_ct_count {}))
-      AS ct_stddev "Standard deviation of the connection time.",
+      sqrt (((sum ct_square_sum - _sum_ct_sum^2) / _sum_ct_count {packets^2}))
+      AS _ct_stddev "Standard deviation of the connection time.",
+    ct_avg + _ct_stddev AS 'ct_avg + σ'
+      "Average connection time plus its standard deviation.",
+    ct_avg - _ct_stddev AS 'ct_avg - σ'
+      "Average connection time minus its standard deviation.",
     -- Average Round Trip Time out then in
     sum rtt_count_out AS _sum_rtt_count_out,
     sum rtt_sum_out AS _sum_rtt_sum_out,
@@ -466,8 +443,12 @@ AS
       "Average in then out round trip time.",
     IF _sum_rtt_count_out > 0 THEN
       sqrt ((sum rtt_square_sum_out - _sum_rtt_sum_out^2) /
-            _sum_rtt_count_out {}) AS rtt_stddev_out
+            _sum_rtt_count_out {packets^2}) AS _rtt_stddev_out
       "Standard deviation of the in then out round trip time.",
+    rtt_avg_out + _rtt_stddev_out AS 'rtt_avg_out + σ'
+      "Average in then out round trip time plus its standard deviation.",
+    rtt_avg_out - _rtt_stddev_out AS 'rtt_avg_out - σ'
+      "Average in then out round trip time minus its standard deviation.",
     -- Average Round Trip Time in then out
     sum rtt_count_in AS _sum_rtt_count_in,
     sum rtt_sum_in AS _sum_rtt_sum_in,
@@ -478,61 +459,12 @@ AS
       "Average out then in round trip time.",
     IF _sum_rtt_count_in > 0 THEN
       sqrt ((sum rtt_square_sum_in - _sum_rtt_sum_in^2) /
-            _sum_rtt_count_in {}) AS rtt_stddev_in
+            _sum_rtt_count_in {packets^2}) AS _rtt_stddev_in
       "Standard deviation of the out then in round trip time.",
-    -- Average Retransmission Delay C2S
-    sum rd_count_in AS _sum_rd_count_in,
-    sum rd_sum_in AS _sum_rd_sum_in,
-    _sum_rd_count_in / time_step AS rd_per_sec_in
-      "Measured retransmission delays per second for incoming traffic.",
-    IF _sum_rd_count_in > 0 THEN
-      _sum_rd_sum_in / _sum_rd_count_in AS rd_avg_in
-      "Average retransmission delay for incoming traffic.",
-    IF _sum_rd_count_in > 0 THEN
-      sqrt ((sum rd_square_sum_in - _sum_rd_sum_in^2) /
-            _sum_rd_count_in {}) AS rd_stddev_in
-      "Standard deviation of the retransmission delays for incoming traffic.",
-    -- Average Retransmission Delay S2C
-    sum rd_count_out AS _sum_rd_count_out,
-    sum rd_sum_out AS _sum_rd_sum_out,
-    _sum_rd_count_out / time_step AS rd_per_sec_out
-      "Measured retransmission delays per second for outgoing traffic.",
-    IF _sum_rd_count_out > 0 THEN
-      _sum_rd_sum_out / _sum_rd_count_out AS rd_avg_out
-      "Average retransmission delay for outgoing traffic.",
-    IF _sum_rd_count_out > 0 THEN
-      sqrt ((sum rd_square_sum_out - _sum_rd_sum_out^2) /
-            _sum_rd_count_out {}) AS rd_stddev_out
-      "Standard deviation of the retransmission delays for outgoing traffic.",
-    -- Average Data Transfer Time C2S
-    sum dtt_count_in AS _sum_dtt_count_in,
-    sum dtt_sum_in AS _sum_dtt_sum_in,
-    _sum_dtt_count_in / time_step AS dtt_per_sec_in
-      "Measured data transfer time per second for incoming traffic.",
-    IF _sum_dtt_count_in > 0 THEN
-      _sum_dtt_sum_in / _sum_dtt_count_in AS dtt_avg_in
-      "Average data transfer time for incoming traffic.",
-    IF _sum_dtt_count_in > 0 THEN
-      sqrt ((sum dtt_square_sum_in - _sum_dtt_sum_in^2) /
-            _sum_dtt_count_in {}) AS dtt_stddev_in
-      "Standard deviation of the data transfer times for incoming traffic.",
-    -- Average Data Transfer Time S2C
-    sum dtt_count_out AS _sum_dtt_count_out,
-    sum dtt_sum_out AS _sum_dtt_sum_out,
-    _sum_dtt_count_out / time_step AS dtt_per_sec_out
-      "Measured data transfer time per second for outgoing traffic.",
-    IF _sum_dtt_count_out > 0 THEN
-      _sum_dtt_sum_out / _sum_dtt_count_out AS dtt_avg_out
-      "Average data transfer time for outgoing traffic.",
-    IF _sum_dtt_count_out > 0 THEN
-      sqrt ((sum dtt_square_sum_out - _sum_dtt_sum_out^2) /
-            _sum_dtt_count_out {}) AS dtt_stddev_out
-      "Standard deviation of the data transfer times for outgoing traffic.",
-    -- Errors
-    -- As soon as we handle factors in set-alerts (ie. either select one value or
-    -- sum all values or take the min or max) then also group by icmp_type and code.
-    sum icmp_error_count / time_step AS icmp_errors_per_sec
-      "ICMP errors per second."
+    rtt_avg_in + _rtt_stddev_in AS 'rtt_avg_in + σ'
+      "Average out then in round trip time plus its standard deviation.",
+    rtt_avg_in - _rtt_stddev_in AS 'rtt_avg_in - σ'
+      "Average out then in round trip time minus its standard deviation."
   GROUP BY start // u32(time_step), zone
   COMMIT AFTER
     in.start > out.start + 2 * time_step
