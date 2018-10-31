@@ -12,7 +12,7 @@ override OCAMLOPTFLAGS += -I src $(WARNS) -g -annot -O2 -S
 override OCAMLFLAGS    += -I src $(WARNS) -g -annot
 
 PACKAGES = \
-	batteries cmdliner stdint sqlite3 unix uri
+	batteries cmdliner sqlite3 unix
 
 RAMEN_SOURCES = \
 	ramen_root/internal/monitoring/meta.ramen \
