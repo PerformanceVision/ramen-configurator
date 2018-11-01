@@ -428,7 +428,8 @@ AS
       _sum_ct_sum / _sum_ct_count AS ct_avg
       "Average connection time.",
     IF _sum_ct_count > 0 THEN
-      sqrt (((sum ct_square_sum - _sum_ct_sum^2) / _sum_ct_count {packets^2}))
+      sqrt (sum ct_square_sum / _sum_ct_count {packets^2} -
+            (_sum_ct_sum / _sum_ct_count)^2)
       AS _ct_stddev "Standard deviation of the connection time.",
     ct_avg + _ct_stddev AS 'ct_avg + σ'
       "Average connection time plus its standard deviation.",
@@ -443,8 +444,8 @@ AS
       _sum_rtt_sum_out / _sum_rtt_count_out AS rtt_avg_out
       "Average in then out round trip time.",
     IF _sum_rtt_count_out > 0 THEN
-      sqrt ((sum rtt_square_sum_out - _sum_rtt_sum_out^2) /
-            _sum_rtt_count_out {packets^2}) AS _rtt_stddev_out
+      sqrt (sum rtt_square_sum_out / _sum_rtt_count_out {packets^2} -
+            (_sum_rtt_sum_out / _sum_rtt_count_out)^2) AS _rtt_stddev_out
       "Standard deviation of the in then out round trip time.",
     rtt_avg_out + _rtt_stddev_out AS 'rtt_avg_out + σ'
       "Average in then out round trip time plus its standard deviation.",
@@ -459,8 +460,8 @@ AS
       _sum_rtt_sum_in / _sum_rtt_count_in AS rtt_avg_in
       "Average out then in round trip time.",
     IF _sum_rtt_count_in > 0 THEN
-      sqrt ((sum rtt_square_sum_in - _sum_rtt_sum_in^2) /
-            _sum_rtt_count_in {packets^2}) AS _rtt_stddev_in
+      sqrt (sum rtt_square_sum_in / _sum_rtt_count_in {packets^2} -
+            (_sum_rtt_sum_in / _sum_rtt_count_in)^2) AS _rtt_stddev_in
       "Standard deviation of the out then in round trip time.",
     rtt_avg_in + _rtt_stddev_in AS 'rtt_avg_in + σ'
       "Average out then in round trip time plus its standard deviation.",
