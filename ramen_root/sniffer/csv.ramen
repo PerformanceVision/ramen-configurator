@@ -1063,6 +1063,14 @@ DEFINE tls AS
     eth(mac_server) AS mac_server,
     bool(resumed) AS resumed,
     bool(decrypted) AS decrypted,
+    (ct_sum / 1e6) {seconds} AS ct_sum,
+    (ct_square_sum / 1e12) {seconds^2} AS ct_square_sum,
+    (rt_sum_server / 1e6) {seconds} AS rt_sum_server,
+    (rt_square_sum_server / 1e12) {seconds^2} AS rt_square_sum_server,
+    (dtt_sum_client / 1e6) {seconds} AS dtt_sum_client,
+    (dtt_square_sum_client / 1e12) {seconds^2} AS dtt_square_sum_client,
+    (dtt_sum_server / 1e6) {seconds} AS dtt_sum_server,
+    (dtt_square_sum_server / 1e12) {seconds^2} AS dtt_square_sum_server,
     -- Also fix NULL counters:
     COALESCE(ct_count, 0) AS ct_count,
     *;
