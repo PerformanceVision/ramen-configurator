@@ -412,7 +412,8 @@ AS
     sum retrans_traffic_bytes_out / _sum_traffic_bytes_out
       AS retrans_bytes_ratio_out "Ratio of outgoing retransmitted bytes.",
     -- TCP flags
-    sum (syn_count_in + syn_count_out) / ct_count AS syns_per_ct
+    IF ct_count > 0 THEN
+      sum (syn_count_in + syn_count_out) / ct_count AS syns_per_ct
       "SYN flags per established connections across that zone boundary.",
     sum rst_count_in / time_step AS rst_count_per_sec_in
       "RST flags entering the zone per second.",
