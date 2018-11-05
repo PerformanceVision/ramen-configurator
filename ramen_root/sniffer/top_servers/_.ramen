@@ -50,11 +50,11 @@ DEFINE udp_services AS
     rtt_count_client, rtt_count_server,
     rtt_sum_client, rtt_sum_server,
     rd_count_client, rd_count_server,
-    0u32 {packets} AS rt_count_server,
+    0u32 AS rt_count_server,
     0. {seconds} AS rt_sum_server,
-    0u32 {packets} AS syns,
-    0u32 {packets} AS connections,
-    0u32 {packets} AS zero_window_count_server;
+    0u32 AS syns,
+    0u32 AS connections,
+    0u32 AS zero_window_count_server;
 
 -- Merge all possible CSV together
 DEFINE degraded AS

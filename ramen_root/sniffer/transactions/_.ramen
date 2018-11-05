@@ -21,7 +21,7 @@ DEFINE tcp_connections AS
   WHERE ct_count > 0
   SELECT
     start,  -- approximation
-    ct_count {queries} AS count,
+    ct_count AS count,
     start + ct_sum / out.count{} AS stop,
     application,
     "TCP-Syn" AS protocol,
@@ -63,7 +63,7 @@ DEFINE http_hits AS
     "HTTP" AS protocol,
     host || url AS query,
     NOT timeouted AND COALESCE(resp_code < 400, false) AS success,
-    1 {queries} AS count;
+    1 AS count;
 
 DEFINE citrix_mix AS
   FROM ../../csv/citrix,
@@ -92,7 +92,7 @@ DEFINE smb_mix AS
     "SMB" AS protocol,
     COALESCE(user || "@", "") || domain || COALESCE(":" || path, "") AS query,
     COALESCE(status = 0, false) AS success, -- TODO
-    1 {queries} AS count;
+    1 AS count;
 
 DEFINE sql_queries AS
   FROM ../../csv/sql
@@ -104,7 +104,7 @@ DEFINE sql_queries AS
     "SQL" AS protocol,
     COALESCE(dbname ||": ", "") || query AS query,
     NOT is_error AS success,
-    1 {queries} AS count;
+    1 AS count;
 
 -- TODO: We could have a group by application, protocol, success with an ongoing
 -- TOP selecting for each group the worse queries, and then in the next node we

@@ -62,7 +62,7 @@ AS
       _sum_ct_sum / _sum_ct_count AS ct_avg
       "Average connection time.",
     IF _sum_ct_count > 0 THEN
-      sqrt (sum ct_square_sum / _sum_ct_count {packets^2} -
+      sqrt (sum ct_square_sum / _sum_ct_count -
             (_sum_ct_sum / _sum_ct_count)^2)
       AS _ct_stddev "Standard deviation of the connection time.",
     ct_avg + _ct_stddev AS 'ct_avg + σ'
@@ -78,7 +78,7 @@ AS
       _sum_rt_sum_server / _sum_rt_count_server AS srt_avg
       "Average response time.",
     IF _sum_rt_count_server > 0 THEN
-      sqrt (sum rt_square_sum_server / _sum_rt_count_server {queries^2} -
+      sqrt (sum rt_square_sum_server / _sum_rt_count_server -
             (_sum_rt_sum_server / _sum_rt_count_server)^2)
       AS _srt_stddev "Standard deviation of the response time.",
     srt_avg + _srt_stddev AS 'srt_avg + σ'
@@ -94,7 +94,7 @@ AS
       _sum_rtt_sum_server / _sum_rtt_count_server AS crtt_avg
       "Average client→server→client round trip time.",
     IF _sum_rtt_count_server > 0 THEN
-      sqrt (sum rtt_square_sum_server / _sum_rtt_count_server {packets^2} -
+      sqrt (sum rtt_square_sum_server / _sum_rtt_count_server -
             (_sum_rtt_sum_server / _sum_rtt_count_server)^2) AS _crtt_stddev
       "Standard deviation of the client→server→client round trip time.",
     crtt_avg + _crtt_stddev AS 'crtt_avg + σ'
@@ -110,7 +110,7 @@ AS
       _sum_rtt_sum_client / _sum_rtt_count_client AS srtt_avg
       "Average server→client→server round trip time.",
     IF _sum_rtt_count_client > 0 THEN
-      sqrt (sum rtt_square_sum_client / _sum_rtt_count_client {packets^2} -
+      sqrt (sum rtt_square_sum_client / _sum_rtt_count_client -
             (_sum_rtt_sum_client / _sum_rtt_count_client)^2) AS _srtt_stddev
       "Standard deviation of the server→client→server round trip time.",
     srtt_avg + _srtt_stddev AS 'srtt_avg + σ'
@@ -126,7 +126,7 @@ AS
       _sum_dtt_sum_client / _sum_dtt_count_client AS cdtt_avg
       "Average clients to servers data transfer time.",
     IF _sum_dtt_count_client > 0 THEN
-      sqrt (sum dtt_square_sum_client / _sum_dtt_count_client {packets^2} -
+      sqrt (sum dtt_square_sum_client / _sum_dtt_count_client -
             (_sum_dtt_sum_client / _sum_dtt_count_client)^2) AS _cdtt_stddev
       "Standard deviation of the clients to servers data transfer time.",
     cdtt_avg + _cdtt_stddev AS 'cdtt_avg + σ'
@@ -142,7 +142,7 @@ AS
       _sum_dtt_sum_server / _sum_dtt_count_server AS sdtt_avg
       "Average servers to clients data transfer time.",
     IF _sum_dtt_count_server > 0 THEN
-      sqrt (sum dtt_square_sum_server / _sum_dtt_count_server {packets^2} -
+      sqrt (sum dtt_square_sum_server / _sum_dtt_count_server -
             (_sum_dtt_sum_server / _sum_dtt_count_server)^2) AS _sdtt_stddev
       "Standard deviation of the servers to clients data transfer time.",
     sdtt_avg + _sdtt_stddev AS 'sdtt_avg + σ'
@@ -273,9 +273,9 @@ AS
     out.start + time_step AS stop,
     application DOC "Application",
     -- Volumes
-    sum 1 {queries} AS _count,
+    sum 1 AS _count,
     _count / time_step AS hits_per_sec "Queries per second.",
-    sum u32(NOT contributed) {queries} / time_step AS pages_per_sec
+    sum u32(NOT contributed) / time_step AS pages_per_sec
       "Pages per second.",
     sum query_payload / time_step AS query_payload_per_sec
       "Payload bytes per second in queries.",
@@ -351,7 +351,7 @@ AS
       _sum_rt_sum_server / _sum_rt_count_server AS srt_avg
       "Average response time.",
     IF _sum_rt_count_server > 0 THEN
-      sqrt (sum rt_square_sum_server / _sum_rt_count_server {queries^2} -
+      sqrt (sum rt_square_sum_server / _sum_rt_count_server -
             (_sum_rt_sum_server / _sum_rt_count_server)^2) AS _srt_stddev
       "Standard deviation of the response times.",
     srt_avg + _srt_stddev AS 'srt_avg + σ'
@@ -367,7 +367,7 @@ AS
       _sum_dtt_sum_client / _sum_dtt_count_client AS cdtt_avg
       "Average clients to servers data transfer time.",
     IF _sum_dtt_count_client > 0 THEN
-      sqrt (sum dtt_square_sum_client / _sum_dtt_count_client {packets^2} -
+      sqrt (sum dtt_square_sum_client / _sum_dtt_count_client -
             (_sum_dtt_sum_client / _sum_dtt_count_client)^2) AS _cdtt_stddev
       "Standard deviation of the clients to servers data transfer time.",
     cdtt_avg + _cdtt_stddev AS 'cdtt_avg + σ'
@@ -383,7 +383,7 @@ AS
       _sum_dtt_sum_server / _sum_dtt_count_server AS sdtt_avg
       "Average servers to clients data transfer time.",
     IF _sum_dtt_count_server > 0 THEN
-      sqrt (sum dtt_square_sum_server / _sum_dtt_count_server {packets^2} -
+      sqrt (sum dtt_square_sum_server / _sum_dtt_count_server -
             (_sum_dtt_sum_server / _sum_dtt_count_server)^2) AS _sdtt_stddev
       "Standard deviation of the servers to clients data transfer time.",
     sdtt_avg + _sdtt_stddev AS 'sdtt_avg + σ'
@@ -428,7 +428,7 @@ AS
       _sum_rt_sum_server / _sum_rt_count_server AS srt_avg
       "Average response time.",
     IF _sum_rt_count_server > 0 THEN
-      sqrt (sum rt_square_sum_server / _sum_rt_count_server {queries^2} -
+      sqrt (sum rt_square_sum_server / _sum_rt_count_server -
             (_sum_rt_sum_server / _sum_rt_count_server)^2) AS _srt_stddev
       "Standard deviation of the response time.",
     srt_avg + _srt_stddev AS 'srt_avg + σ'
@@ -444,7 +444,7 @@ AS
       _sum_login_time_sum / _sum_login_time_count AS login_time_avg
       "Average login time.",
     IF _sum_login_time_count > 0 THEN
-      sqrt (sum login_time_square_sum / _sum_login_time_count {queries^2} -
+      sqrt (sum login_time_square_sum / _sum_login_time_count -
             (_sum_login_time_sum / _sum_login_time_count)^2) AS _login_time_stddev
       "Standard deviation of the login time.",
     login_time_avg + _login_time_stddev AS 'login_time_avg + σ'
@@ -460,7 +460,7 @@ AS
       _sum_launch_time_sum / _sum_launch_time_count AS launch_time_avg
       "Average launch time.",
     IF _sum_launch_time_count > 0 THEN
-      sqrt (sum launch_time_square_sum / _sum_launch_time_count {queries^2} -
+      sqrt (sum launch_time_square_sum / _sum_launch_time_count -
             (_sum_launch_time_sum / _sum_launch_time_count)^2) AS _launch_time_stddev
       "Standard deviation of the launch time.",
     launch_time_avg + _launch_time_stddev AS 'launch_time_avg + σ'
@@ -476,7 +476,7 @@ AS
       _sum_dtt_sum_client / _sum_dtt_count_client AS cdtt_avg
       "Average clients to servers data transfer time.",
     IF _sum_dtt_count_client > 0 THEN
-      sqrt (sum dtt_square_sum_client / _sum_dtt_count_client {packets^2} -
+      sqrt (sum dtt_square_sum_client / _sum_dtt_count_client -
             (_sum_dtt_sum_client / _sum_dtt_count_client)^2) AS _cdtt_stddev
       "Standard deviation of the clients to servers data transfer time.",
     cdtt_avg + _cdtt_stddev AS 'cdtt_avg + σ'
@@ -492,7 +492,7 @@ AS
       _sum_dtt_sum_server / _sum_dtt_count_server AS sdtt_avg
       "Average servers to clients data transfer time.",
     IF _sum_dtt_count_server > 0 THEN
-      sqrt (sum dtt_square_sum_server / _sum_dtt_count_server {packets^2} -
+      sqrt (sum dtt_square_sum_server / _sum_dtt_count_server -
             (_sum_dtt_sum_server / _sum_dtt_count_server)^2) AS _sdtt_stddev
       "Standard deviation of the servers to clients data transfer time.",
     sdtt_avg + _sdtt_stddev AS 'sdtt_avg + σ'
@@ -646,7 +646,7 @@ AS
       _sum_rt_sum_server / _sum_rt_count_server AS srt_avg
       "Average server response time.",
     IF _sum_rt_count_server > 0 THEN
-      sqrt (sum rt_square_sum_server / _sum_rt_count_server {queries^2} -
+      sqrt (sum rt_square_sum_server / _sum_rt_count_server -
             (_sum_rt_sum_server / _sum_rt_count_server)^2) AS _srt_stddev
       "Standard deviation of the server response time.",
     srt_avg + _srt_stddev AS 'srt_avg + σ'
@@ -662,7 +662,7 @@ AS
       _sum_jitter_sum_caller / _sum_jitter_count_caller AS caller_jitter_avg
       "Average jitter from caller.",
     IF _sum_jitter_count_caller > 0 THEN
-      sqrt (sum jitter_square_sum_caller / _sum_jitter_count_caller {packets^2} -
+      sqrt (sum jitter_square_sum_caller / _sum_jitter_count_caller -
             (_sum_jitter_sum_caller / _sum_jitter_count_caller)^2)
       AS _caller_jitter_stddev "Standard deviation of the jitter from caller.",
     caller_jitter_avg + _caller_jitter_stddev AS 'caller_jitter_avg + σ'
@@ -678,7 +678,7 @@ AS
       _sum_jitter_sum_callee / _sum_jitter_count_callee AS callee_jitter_avg
       "Average jitter from callee.",
     IF _sum_jitter_count_callee > 0 THEN
-      sqrt (sum jitter_square_sum_callee / _sum_jitter_count_callee {packets^2} -
+      sqrt (sum jitter_square_sum_callee / _sum_jitter_count_callee -
             (_sum_jitter_sum_callee / _sum_jitter_count_callee)^2)
       AS _callee_jitter_stddev "Standard deviation of the jitter from callee.",
     callee_jitter_avg + _callee_jitter_stddev AS 'callee_jitter_avg + σ'
@@ -694,7 +694,7 @@ AS
       _sum_rtt_sum_caller / _sum_rtt_count_caller AS caller_rtt_avg
       "Average callee→caller→callee round trip time.",
     IF _sum_rtt_count_caller > 0 THEN
-      sqrt (sum rtt_square_sum_caller / _sum_rtt_count_caller {packets^2} -
+      sqrt (sum rtt_square_sum_caller / _sum_rtt_count_caller -
             (_sum_rtt_sum_caller / _sum_rtt_count_caller)^2) AS _caller_rtt_stddev
       "Standard deviation of the callee→caller→callee round trip time.",
     caller_rtt_avg + _caller_rtt_stddev AS 'caller_rtt_avg + σ'
@@ -710,7 +710,7 @@ AS
       _sum_rtt_sum_callee / _sum_rtt_count_callee AS callee_rtt_avg
       "Average caller→callee→caller round trip time.",
     IF _sum_rtt_count_callee > 0 THEN
-      sqrt (sum rtt_square_sum_callee / _sum_rtt_count_callee {packets^2} -
+      sqrt (sum rtt_square_sum_callee / _sum_rtt_count_callee -
             (_sum_rtt_sum_callee / _sum_rtt_count_callee)^2) AS _callee_rtt_stddev
       "Standard deviation of the caller→callee→caller round trip time.",
     callee_rtt_avg + _callee_rtt_stddev AS 'callee_rtt_avg + σ'
@@ -783,7 +783,7 @@ AS
       _sum_ct_sum / _sum_ct_count AS ct_avg
       "Average connection time.",
     IF _sum_ct_count > 0 THEN
-      sqrt (sum ct_square_sum / _sum_ct_count {packets^2} -
+      sqrt (sum ct_square_sum / _sum_ct_count -
             (_sum_ct_sum / _sum_ct_count)^2)
       AS _ct_stddev "Standard deviation of the connection time.",
     ct_avg + _ct_stddev AS 'ct_avg + σ'
