@@ -297,7 +297,7 @@ AS
       "Ratio of 5xx errors.",
     -- Timings:
     -- Page load time:
-    IF NOT contributed THEN tot_begin - tot_end AS _page_load_time,
+    IF NOT contributed THEN tot_end - tot_begin AS _page_load_time,
     avg _page_load_time DOC "Approximate time to load the page.",
     95th percentile (sample(1000, _page_load_time)) AS page_load_time_95th
       "Approximate 95th percentile of the page load time.",
