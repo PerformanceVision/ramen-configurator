@@ -479,7 +479,7 @@ DEFINE http_raw AS
      ajax bool,
      ip4_orig_client u32?,
      ip6_orig_client i128?,
-     page_count u32 {pages},
+     page_count u32 {pages},  -- 0 or 1 iff a page
      _hardcoded_one_facepalm bool,
      query_begin u64,
      query_end u64,
@@ -495,7 +495,7 @@ DEFINE http_raw AS
      resp_end u64?,
      resp_code u32?,
      resp_headers u32 {bytes},
-     resp_payload u32 {bytes},           -- 50
+     resp_payload u32 {bytes},          -- 50
      resp_pkts u32,
      resp_content string?,
      resp_content_length u32? {bytes},
@@ -503,7 +503,7 @@ DEFINE http_raw AS
      resp_mime_type string?,
      tot_volume_query u32? {bytes},
      tot_volume_response u32? {bytes},
-     tot_count u32,
+     tot_count u32, -- aka page_hit_count
      tot_errors u16,
      tot_timeouts u16,         -- 60
      tot_begin u64,
