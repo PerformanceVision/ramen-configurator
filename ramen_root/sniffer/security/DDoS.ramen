@@ -79,7 +79,9 @@ DEFINE 'new peers: DDoS anomalies' AS
     5-ma float(abnormality) AS _recent_abnormality,
     NOT (HYSTERESIS (_recent_abnormality, 3/5, 4/5)) AS firing
   NOTIFY "Security - Possible DDoS detected" WITH
-    "${firing}" AS firing,
+    -- Our SNMP MIB has 0/1 for firing.
+    -- FIXME: Perform this substitution in the notif config
+    IF firing THEN "1" else "0" AS firing,
     0.1 * abs(_recent_abnormality - 3/5) AS certainty,
     "possible DDoS" AS desc
   AND KEEP ALL
