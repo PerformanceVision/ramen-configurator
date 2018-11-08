@@ -136,10 +136,10 @@ let send_trap sink =
    * ...? *)
   Printf.sprintf
     "snmptrap -v 2c -m ALL -IR -c public %s '' generic-notify \
-       name.0 s '${name}' \
-       firingStatus.0 i '${firing}' \
+       name.0 s ${name} \
+       firingStatus.0 i ${firing} \
        certainty.0 u 50 \
-       extParameters.0 s '${desc}'"
+       extParameters.0 s ${desc}"
     (shell_quote sink)
 
 let write_notif_conf fname alert_internal cmds =
