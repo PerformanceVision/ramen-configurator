@@ -121,14 +121,16 @@ let sync_programs debug ramen_cmd root_dir persist_dir uncompress
   Set.String.iter (kill ramen_cmd persist_dir) to_kill
 
 let send_email rcpts =
+  (* Double escaping the newlines because it seems `sh -c` will otherwise
+   * turn them into mere 'n' characters: *)
   Printf.sprintf
-    "sendmail -F 'Ramen Notifier <no-reply@accedian.com>' <<EOF\n\
-     To: %s\n\
-     Subject: ${severity} ${name}\n\
-     \n\
-     ${desc}\n\
-     .\n\
-     EOF\n"
+    "sendmail -F 'Ramen Notifier <no-reply@accedian.com>' <<EOF\\n\
+     To: %s\\n\
+     Subject: ${severity} ${name}\\n\
+     \\n\
+     ${desc}\\n\
+     .\\n\
+     EOF\\n"
      rcpts
 
 let send_trap sink =
