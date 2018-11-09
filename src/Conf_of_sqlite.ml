@@ -7,11 +7,16 @@ open SqliteHelpers
 type db =
   { db : Sqlite3.db ;
     get_email_rcpts : Sqlite3.stmt ;
+    get_email_from : Sqlite3.stmt ;
     get_snmp_sink : Sqlite3.stmt }
 
 let get_email_rcpts_query =
   "SELECT value FROM setting \
     WHERE key = 'alerts_email_recipients' AND value <> ''"
+
+let get_email_from =
+  "SELECT value FROM setting \
+    WHERE key = 'smtp_from' AND value <> ''"
 
 let get_snmp_sink_query =
   "SELECT \
@@ -30,6 +35,7 @@ let get_db filename =
     !logger.debug "SQL statements have been prepared" ;
     { db ;
       get_email_rcpts = prepare db get_email_rcpts_query ;
+      get_email_from = prepare db get_email_from ;
       get_snmp_sink = prepare db get_snmp_sink_query }
   ) with exc -> (
     !logger.error "Exception: %s" (Printexc.to_string exc) ;
@@ -39,33 +45,24 @@ let get_db filename =
 let get_alerts_sink db =
   !logger.debug "Getting alerts sink from DB..." ;
   let open Sqlite3 in
-  let rcpts =
-    match step db.get_email_rcpts with
+  let get_str_value what stmt def =
+    match step stmt with
     | Rc.ROW ->
-      let rcpts =
-        with_field db.get_email_rcpts 0 "value" (default "" % to_string) in
-      reset db.get_email_rcpts |> must_be_ok ;
-      rcpts
+      let res =
+        with_field stmt 0 "value" (default def % to_string) in
+      reset stmt |> must_be_ok ;
+      res
     | Rc.DONE ->
-      reset db.get_email_rcpts |> must_be_ok ;
-      ""
+      reset stmt |> must_be_ok ;
+      def
     | _ ->
-      reset db.get_email_rcpts |> ignore ;
-      failwith "No idea what to do from this get_email_rcpts result" in
-  let snmpsink =
-    match step db.get_snmp_sink with
-    | Rc.ROW ->
-      let rcpts =
-        with_field db.get_snmp_sink 0 "value" (default "" % to_string) in
-      reset db.get_snmp_sink |> must_be_ok ;
-      rcpts
-    | Rc.DONE ->
-      reset db.get_snmp_sink |> must_be_ok ;
-      ""
-    | _ ->
-      reset db.get_snmp_sink |> ignore ;
-      failwith "No idea what to do from this get_snmp_sink result" in
-  rcpts, snmpsink
+      reset stmt |> ignore ;
+      Printf.sprintf "No idea what to do from this %s result" what |>
+      failwith
+  in
+  get_str_value "get_email_from" db.get_email_from "no-reply@accedian.com",
+  get_str_value "get_email_rcpts" db.get_email_rcpts "",
+  get_str_value "get_snmp_sink" db.get_snmp_sink ""
 
 let make filename =
   let db = get_db filename in

@@ -120,17 +120,18 @@ let sync_programs debug ramen_cmd root_dir persist_dir uncompress
   !logger.info "To Kill: %a" (Set.String.print String.print) to_kill ;
   Set.String.iter (kill ramen_cmd persist_dir) to_kill
 
-let send_email rcpts =
+let send_email from rcpts =
   (* Double escaping the newlines because it seems `sh -c` will otherwise
    * turn them into mere 'n' characters: *)
   Printf.sprintf
-    "sendmail -F 'Ramen Notifier <no-reply@accedian.com>' <<EOF\\n\
+    "sendmail -F %s <<EOF\\n\
      To: %s\\n\
      Subject: ${severity} ${name}\\n\
      \\n\
      ${desc}\\n\
      .\\n\
      EOF\\n"
+     (shell_quote from)
      rcpts
 
 let send_trap sink =
@@ -203,10 +204,14 @@ let sync_notif_conf =
   let prev_cmds = ref None in
   fun db notif_conf_file alert_internal ->
     let open Conf_of_sqlite in
-    let rcpts, snmpsink = get_alerts_sink db in
+    let from, rcpts, snmpsink = get_alerts_sink db in
     let cmds = [] in
-    let cmds = if rcpts = "" then cmds else send_email rcpts :: cmds in
-    let cmds = if snmpsink = "" then cmds else send_trap snmpsink :: cmds in
+    let cmds =
+      if rcpts = "" || from = "" then cmds
+      else send_email from rcpts :: cmds in
+    let cmds =
+      if snmpsink = "" then cmds
+      else send_trap snmpsink :: cmds in
     if !prev_cmds <> Some cmds then (
       write_notif_conf notif_conf_file alert_internal cmds ;
       prev_cmds := Some cmds)
