@@ -121,16 +121,12 @@ let sync_programs debug ramen_cmd root_dir persist_dir uncompress
   Set.String.iter (kill ramen_cmd persist_dir) to_kill
 
 let send_email from rcpts =
-  (* Double escaping the newlines because it seems `sh -c` will otherwise
-   * turn them into mere 'n' characters: *)
   Printf.sprintf
-    "sendmail -F %s <<EOF\\n\
-     To: %s\\n\
-     Subject: ${severity} ${name}\\n\
-     \\n\
-     ${desc}\\n\
-     .\\n\
-     EOF\\n"
+    "echo -e \"\
+       Subject: ${severity} ${name}\\n\
+       \\n\
+       ${desc}\\n\
+     \" | sendmail -F %s %s"
      (shell_quote from)
      rcpts
 
