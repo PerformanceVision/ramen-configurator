@@ -119,9 +119,7 @@ DEFINE alert_output_do_notif AS
   FROM alert_output
   SELECT tot_diff > 0.8 AS firing
   NOTIFY "Internal - Output changed" WITH
-    -- Our SNMP MIB has 0/1 for firing.
-    -- FIXME: Perform this substitution in the notif config
-    IF firing THEN "1" else "0" AS firing,
+    firing,
     0.1 AS certainty,
     "Large variations in ramen number of output tuples" AS desc
   AFTER firing != COALESCE(previous.firing, false);
@@ -137,7 +135,7 @@ DEFINE alert_event_times AS
                     0.8 * max_event_time_spread,
                     max_event_time_spread)) AS firing
   NOTIFY "Internal - Late workers" WITH
-    IF firing THEN "1" else "0" AS firing,
+    firing,
     0.1 * reldiff(event_time_spread, max_event_time_spread) AS certainty,
     "The diference between oldest (${min_event_time}) and latest (${max_event_time}) event times is too large"
       AS desc,
