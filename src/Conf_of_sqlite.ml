@@ -10,13 +10,15 @@ type db =
     get_snmp_sink : Sqlite3.stmt }
 
 let get_email_rcpts_query =
-  "SELECT value FROM setting WHERE key = 'alerts_emails'"
+  "SELECT value FROM setting \
+    WHERE key = 'alerts_email_recipients' AND value <> ''"
 
 let get_snmp_sink_query =
   "SELECT \
-    (SELECT value FROM setting WHERE key = 'alerts_snmp_host') ||':'|| \
-    COALESCE((SELECT value FROM setting WHERE key = 'alerts_snmp_port' \
-                                          AND length(key) > 0), '162') \
+    (SELECT value FROM setting \
+       WHERE key = 'alerts_snmp_host' AND value <> '') ||':'|| \
+    COALESCE((SELECT value FROM setting \
+                WHERE key = 'alerts_snmp_port' AND value <> ''), '162') \
     AS value"
 
 let get_db filename =
