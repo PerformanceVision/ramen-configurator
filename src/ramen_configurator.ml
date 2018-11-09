@@ -122,7 +122,7 @@ let sync_programs debug ramen_cmd root_dir persist_dir uncompress
 
 let send_email rcpts =
   Printf.sprintf
-    "sendmail -F 'Ramen Notifier <no-reply@nowhere.com>' <<EOF\n\
+    "sendmail -F 'Ramen Notifier <no-reply@accedian.com>' <<EOF\n\
      To: %s\n\
      Subject: ${severity} ${name}\n\
      \n\
