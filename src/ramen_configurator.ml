@@ -127,7 +127,8 @@ let send_email rcpts =
      Subject: ${severity} ${name}\n\
      \n\
      ${desc}\n\
-     .\n"
+     .\n\
+     EOF\n"
      rcpts
 
 let send_trap sink =
