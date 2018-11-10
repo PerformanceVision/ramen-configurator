@@ -120,15 +120,23 @@ let sync_programs debug ramen_cmd root_dir persist_dir uncompress
   !logger.info "To Kill: %a" (Set.String.print String.print) to_kill ;
   Set.String.iter (kill ramen_cmd persist_dir) to_kill
 
+(* Note: When executing a shell command, all substitutions are shell-quoted
+ * and there is no way around it (FIXME: proper templating language that
+ * allows to call functions such as shell-quote so that user is in control).
+ * So for now we _unquote_ all substitution and rely on shell string
+ * concatenation instead. *)
 let send_email from rcpts =
   Printf.sprintf
-    "echo -e \"\
-       Subject: ${severity} ${name}\\n\
+    "/bin/echo -e '\
+       Subject: '${name}' (certainty: '${certainty}')\\n\
+       From: %s\\n\
+       To: %s\\n\
        \\n\
-       ${desc}\\n\
-     \" | sendmail -F %s %s"
-     (shell_quote from)
+       '${desc}'\\n\
+     ' | sendmail %s"
+     from
      rcpts
+     (shell_quote rcpts)
 
 let send_trap sink =
   (* Note regarding certainty: not sure if it'd be better to allow
