@@ -397,75 +397,75 @@ AS
     zone,
     -- Volumes
     sum traffic_bytes_in AS _sum_traffic_bytes_in,
-    _sum_traffic_bytes_in / time_step AS bytes_per_sec_in
+    _sum_traffic_bytes_in / time_step AS 'in.bytes.per_sec'
       "Bytes per second entering the zone.",
     sum traffic_bytes_out AS _sum_traffic_bytes_out,
-    _sum_traffic_bytes_out / time_step AS bytes_per_sec_out
+    _sum_traffic_bytes_out / time_step AS 'out.bytes.per_sec'
       "Bytes per second exiting the zone.",
-    sum traffic_packets_in / time_step AS packets_per_sec_in
+    sum traffic_packets_in / time_step AS 'in.packets.per_sec'
       "Packets per second entering the zone.",
-    sum traffic_packets_out / time_step AS packets_per_sec_out
+    sum traffic_packets_out / time_step AS 'out.packets.per_sec'
       "Packets per second exiting the zone.",
     -- Retransmissions
     sum retrans_traffic_bytes_in / _sum_traffic_bytes_in
-      AS retrans_bytes_ratio_in "Ratio of incoming retransmitted bytes.",
+      AS 'in.retrans.bytes.ratio' "Ratio of incoming retransmitted bytes.",
     sum retrans_traffic_bytes_out / _sum_traffic_bytes_out
-      AS retrans_bytes_ratio_out "Ratio of outgoing retransmitted bytes.",
+      AS 'out.retrans.bytes.ratio' "Ratio of outgoing retransmitted bytes.",
     -- TCP flags
     IF ct_count > 0 THEN
-      sum (syn_count_in + syn_count_out) / ct_count AS syns_per_ct
+      sum (syn_count_in + syn_count_out) / ct_count AS 'syns.ratio'
       "SYN flags per established connections across that zone boundary.",
-    sum rst_count_in / time_step AS rst_count_per_sec_in
+    sum rst_count_in / time_step AS 'in.rsts.count.per_sec'
       "RST flags entering the zone per second.",
-    sum rst_count_out / time_step AS rst_count_per_sec_out
+    sum rst_count_out / time_step AS 'out.rsts.count.per_sec'
       "RST flags exiting the zone per second.",
     -- Average Connection Time
     sum ct_count AS _sum_ct_count,
     sum ct_sum AS _sum_ct_sum,
-    _sum_ct_count / time_step AS ct_per_sec
+    _sum_ct_count / time_step AS 'ct.per_sec'
       "Connection establishments per second.",
     IF _sum_ct_count > 0 THEN
-      _sum_ct_sum / _sum_ct_count AS ct_avg
+      _sum_ct_sum / _sum_ct_count AS 'ct.avg'
       "Average connection time.",
     IF _sum_ct_count > 0 THEN
       sqrt (sum ct_square_sum / _sum_ct_count -
             (_sum_ct_sum / _sum_ct_count)^2)
       AS _ct_stddev "Standard deviation of the connection time.",
-    ct_avg + _ct_stddev AS 'ct_avg + σ'
+    'ct.avg' + _ct_stddev AS 'ct.avg + σ'
       "Average connection time plus its standard deviation.",
-    ct_avg - _ct_stddev AS 'ct_avg - σ'
+    'ct.avg' - _ct_stddev AS 'ct.avg - σ'
       "Average connection time minus its standard deviation.",
     -- Average Round Trip Time out then in
     sum rtt_count_out AS _sum_rtt_count_out,
     sum rtt_sum_out AS _sum_rtt_sum_out,
-    _sum_rtt_count_out / time_step AS rtt_per_sec_out
+    _sum_rtt_count_out / time_step AS 'out.rtt.per_sec'
       "Measured in then out round trip times per second.",
     IF _sum_rtt_count_out > 0 THEN
-      _sum_rtt_sum_out / _sum_rtt_count_out AS rtt_avg_out
+      _sum_rtt_sum_out / _sum_rtt_count_out AS 'out.rtt.avg'
       "Average in then out round trip time.",
     IF _sum_rtt_count_out > 0 THEN
       sqrt (sum rtt_square_sum_out / _sum_rtt_count_out -
             (_sum_rtt_sum_out / _sum_rtt_count_out)^2) AS _rtt_stddev_out
       "Standard deviation of the in then out round trip time.",
-    rtt_avg_out + _rtt_stddev_out AS 'rtt_avg_out + σ'
+    'out.rtt.avg' + _rtt_stddev_out AS 'out.rtt.avg + σ'
       "Average in then out round trip time plus its standard deviation.",
-    rtt_avg_out - _rtt_stddev_out AS 'rtt_avg_out - σ'
+    'out.rtt.avg' - _rtt_stddev_out AS 'out.rtt.avg - σ'
       "Average in then out round trip time minus its standard deviation.",
     -- Average Round Trip Time in then out
     sum rtt_count_in AS _sum_rtt_count_in,
     sum rtt_sum_in AS _sum_rtt_sum_in,
-    _sum_rtt_count_in / time_step AS rtt_per_sec_in
+    _sum_rtt_count_in / time_step AS 'in.rtt.per_sec'
       "Measured out then in round trip times per second.",
     IF _sum_rtt_count_in > 0 THEN
-      _sum_rtt_sum_in / _sum_rtt_count_in AS rtt_avg_in
+      _sum_rtt_sum_in / _sum_rtt_count_in AS 'in.rtt.avg'
       "Average out then in round trip time.",
     IF _sum_rtt_count_in > 0 THEN
       sqrt (sum rtt_square_sum_in / _sum_rtt_count_in -
             (_sum_rtt_sum_in / _sum_rtt_count_in)^2) AS _rtt_stddev_in
       "Standard deviation of the out then in round trip time.",
-    rtt_avg_in + _rtt_stddev_in AS 'rtt_avg_in + σ'
+    'in.rtt.avg' + _rtt_stddev_in AS 'in.rtt.avg + σ'
       "Average out then in round trip time plus its standard deviation.",
-    rtt_avg_in - _rtt_stddev_in AS 'rtt_avg_in - σ'
+    'in.rtt.avg' - _rtt_stddev_in AS 'in.rtt.avg - σ'
       "Average out then in round trip time minus its standard deviation."
   GROUP BY start // u32(time_step), zone
   COMMIT AFTER
