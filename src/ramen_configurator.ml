@@ -125,14 +125,18 @@ let sync_programs debug ramen_cmd root_dir persist_dir uncompress
  * allows to call functions such as shell-quote so that user is in control).
  * So for now we _unquote_ all substitution and rely on shell string
  * concatenation instead. *)
+(* Note: Better use the parameter hostname rather than the envvar, as a
+ * parameter will be shell-quoted properly. *)
 let send_email from rcpts =
   Printf.sprintf
     "/bin/echo -e '\
-       Subject: '${name}' (certainty: '${certainty}')\\n\
+       Subject: '${hostname}': '${name}'\\n\
        From: %s\\n\
        To: %s\\n\
        \\n\
        '${desc}'\\n\
+       \\n\
+       (certainty: '${certainty}')\\n\
      ' | sendmail %s"
      from
      rcpts

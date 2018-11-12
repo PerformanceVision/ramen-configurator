@@ -49,10 +49,15 @@ AS
 
 DEFINE port_scan_alert AS
   FROM 'top port scans'
+  SELECT
+    i32(port_count) AS int_port_count,
+    format_time("%Y-%m-%d %H:%M:%S", start) AS date_start,
+    format_time("%Y-%m-%d %H:%M:%S", stop) AS date_stop,
+    *
   WHEN port_count > max_ports
   NOTIFY "Security - Port-Scan from ${ip_client} to ${ip_server}" WITH
     0.1 * reldiff(port_count, max_ports) AS certainty,
-    "${ip_client} has probed at least ${port_count} ports of ${ip_server} from ${start} to ${stop}" AS desc,
+    "${ip_client} has probed at least ${int_port_count} ports of ${ip_server} from ${date_start} to ${date_stop}" AS desc,
     "${ip_client},${ip_server}" AS ips,
     "${port_count}" AS values,
     "${max_ports}" AS thresholds;
@@ -96,10 +101,15 @@ AS
 
 DEFINE ip_scan_alert AS
   FROM 'top ip scans'
+  SELECT
+    i32(ip_count) AS int_ip_count,
+    format_time("%Y-%m-%d %H:%M:%S", start) AS date_start,
+    format_time("%Y-%m-%d %H:%M:%S", stop) AS date_stop,
+    *
   WHEN ip_count > max_hosts
   NOTIFY "Security - IP-Scan from ${ip_client}" WITH
     0.1 * reldiff(ip_count, max_hosts) AS certainty,
-    "${ip_client} has probed at least ${ip_count} hosts from ${start} to ${stop}" AS desc,
+    "${ip_client} has probed at least ${int_ip_count} hosts from ${date_start} to ${date_stop}" AS desc,
     "${ip_client}" AS ips,
     "${ip_count}" AS values,
     "${max_hosts}" AS thresholds;
