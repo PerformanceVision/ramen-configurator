@@ -136,21 +136,18 @@ let send_email from rcpts =
        \\n\
        '${desc}'\\n\
        \\n\
-       (certainty: '${certainty}')\\n\
+       (certainty: '${certainty_percent}'%%)\\n\
      ' | sendmail %s"
      from
      rcpts
      (shell_quote rcpts)
 
 let send_trap sink =
-  (* Note regarding certainty: not sure if it'd be better to allow
-   * expressions within ${}, or to have a dedicated SNMP Via, or
-   * ...? *)
   Printf.sprintf
     "snmptrap -v 2c -m ALL -IR -c public %s '' generic-notify \
        name.0 s ${name} \
        firingStatus.0 i ${firing} \
-       certainty.0 u 50 \
+       certainty.0 u ${certainty_percent} \
        extParameters.0 s ${desc}"
     (shell_quote sink)
 
