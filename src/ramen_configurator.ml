@@ -311,7 +311,7 @@ let dry_run =
 
 let start_cmd =
   let doc = "Configurator for Ramen in PV"
-  and version = "2.8.7" in
+  and version = "2.8.8" in
   Term.(
     (const start
       $ debug
