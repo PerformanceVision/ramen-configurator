@@ -581,21 +581,21 @@ AS
     min _cdtt AS 'client.dtt.min' "Minimum client DTT.",
     max _cdtt AS 'client.dtt.max' "Maximum client DTT.",
     avg _cdtt AS 'client.dtt.avg' "Average client DTT.",
-    95th percentile (sample(1000, _cdtt)) AS 'client.dtt_95th'
+    95th percentile (sample(1000, _cdtt)) AS 'client.dtt.95th'
       "Approximate 95th percentile of client DTT.",
     -- Response time:
     resp_begin - query_end AS _rt,
     min _rt AS 'server.rt.min' "Minimum response time.",
     max _rt AS 'server.rt.max' "Maximum response time.",
     avg _rt AS 'server.rt.avg' "Average response time.",
-    95th percentile (sample(1000, _rt)) AS 'rt_95th'
+    95th percentile (sample(1000, _rt)) AS 'server.rt.95th'
       "Approximate 95th percentile of response time.",
     -- Server DTT:
     resp_end - resp_begin AS _sdtt,
     min _sdtt AS 'server.dtt.min' "Minimum server DTT.",
     max _sdtt AS 'server.dtt.max' "Maximum server DTT.",
     avg _sdtt AS 'server.dtt.avg' "Average server DTT.",
-    95th percentile (sample(1000, _sdtt)) AS 'server.dtt_95th'
+    95th percentile (sample(1000, _sdtt)) AS 'server.dtt.95th'
       "Approximate 95th percentile of server DTT."
   GROUP BY start // u32(time_step), application
   COMMIT AFTER
