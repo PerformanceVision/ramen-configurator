@@ -794,10 +794,14 @@ AS
     'ct.avg' - _ct_stddev AS 'ct.avg - σ'
       "Average connection time minus its standard deviation.",
     -- Certificate expirations
-    min client_not_after AS 'client.expiration.min'
-      "Minimal certificate validity for clients.",
-    min server_not_after AS 'server.expiration.min'
-      "Minimal certificate validity for servers."
+    min client_not_after AS 'client.expiry.min'
+      "The minimum expiry date of the client certificates.",
+    min server_not_after AS 'server.expiry.min'
+      "The minimum expiry date of the server certificates.",
+    min (client_not_after - now) AS 'client.validity.min'
+      "The minimum duration before expiration of client certificates.",
+    min (server_not_after - now) AS 'server.validity.min'
+      "The minimum duration before expiration of server certificates."
   GROUP BY start // u32(time_step), application
   COMMIT AFTER
     in.start > out.start + 2 * time_step
