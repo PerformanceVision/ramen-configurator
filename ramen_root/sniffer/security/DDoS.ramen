@@ -5,6 +5,8 @@ PARAMETERS
   false_pos_rate DEFAULT TO 0.1; -- 10% of false positives
   -- TODO: also remember durations?
 
+RUN IF COALESCE(variant("extra_tables") = "all", false);
+
 DEFINE 'new peers'
 --  "Approximation of the number of new unique clients and socket pairs."
 AS
