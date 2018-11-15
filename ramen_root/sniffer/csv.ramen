@@ -596,10 +596,10 @@ DEFINE citrix_raw AS
   EVENT STARTING AT capture_begin * 1e-6
     AND STOPPING AT capture_end * 1e-6;
 
-DEFINE citrix AS
+DEFINE citrix_channels AS
   FROM citrix_raw
   SELECT
-    "citrix" AS metric,
+    "citrix-channels" AS metric,
     (capture_begin / 1e6) {seconds(rel)} AS start,
     (capture_end / 1e6) {seconds(rel)} AS stop,
     COALESCE(ip(ip4_client), ip(u128(ip6_client)), 0.0.0.0) AS ip_client,
@@ -672,10 +672,10 @@ DEFINE citrix_chanless_raw AS
   EVENT STARTING AT capture_begin * 1e-6
     AND STOPPING AT capture_end * 1e-6;
 
-DEFINE citrix_chanless AS
+DEFINE citrix AS
   FROM citrix_chanless_raw
   SELECT
-    "citrix-chanless" AS metric,
+    "citrix" AS metric,
     (capture_begin / 1e6) {seconds(rel)} AS start,
     (capture_end / 1e6) {seconds(rel)} AS stop,
     COALESCE(ip(ip4_client), ip(u128(ip6_client)), 0.0.0.0) AS ip_client,

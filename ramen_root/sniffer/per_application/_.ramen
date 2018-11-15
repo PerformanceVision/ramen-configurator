@@ -320,10 +320,10 @@ AS
     in.start > out.start + 2 * time_step
   FACTOR application;
 
-DEFINE citrix
-  "Citrix metrics per application and time step."
+DEFINE citrix_channels
+  "Citrix-Channels  metrics per application and time step."
 AS
-  FROM ../../csv/citrix
+  FROM ../../csv/citrix_channels
   SELECT
     -- Time
     (start // u32(time_step)) * u32(time_step) AS start,
@@ -394,10 +394,10 @@ AS
     in.start > out.start + 2 * time_step
   FACTOR application;
 
-DEFINE citrix_chanless
-  "'Citrix-Chaless' metrics per application and time step."
+DEFINE citrix
+  "Citrix metrics per application and time step."
 AS
-  FROM ../../csv/citrix_chanless
+  FROM ../../csv/citrix
   SELECT
     -- Time
     (start // u32(time_step)) * u32(time_step) AS start,

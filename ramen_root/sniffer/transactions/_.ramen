@@ -67,7 +67,7 @@ DEFINE http_hits AS
 
 DEFINE citrix_mix AS
   FROM ../../csv/citrix,
-       ../../csv/citrix_chanless
+       ../../csv/citrix_channels
   MERGE TIMEOUT AFTER 5s
   WHERE
     start > merge.greatest.start - 3min AND
