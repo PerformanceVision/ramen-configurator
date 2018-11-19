@@ -130,7 +130,7 @@ let sync_programs debug ramen_cmd root_dir persist_dir uncompress
 let send_email from rcpts =
   Printf.sprintf
     "/bin/echo -e '\
-       Subject: '${hostname}': '${name}'\\n\
+       Subject: [PVX Alerting] from '${hostname}' / '${name}'\\n\
        From: %s\\n\
        To: %s\\n\
        \\n\
