@@ -273,7 +273,7 @@ AS
     out.start + time_step AS stop,
     application DOC "Application",
     -- Volumes
-    sum 1 AS _count,
+    sum 1 {} AS _count,
     _count / time_step AS 'hits.per_sec' "Queries per second.",
     sum u32(NOT contributed) / time_step AS 'pages.per_sec'
       "Pages per second.",
@@ -513,7 +513,7 @@ AS
     out.start + time_step AS stop,
     application DOC "Application",
     -- Volumes
-    sum 1 AS _count,
+    sum 1 {} AS _count,
     _count / time_step AS 'queries.per_sec'
       "SMB queries per second.",
     sum u32(is_error) / _count AS 'errors.ratio'
@@ -565,7 +565,7 @@ AS
     out.start + time_step AS stop,
     application DOC "Application",
     -- Volumes
-    sum 1 AS _count,
+    sum 1 {} AS _count,
     _count / time_step AS 'queries.per_sec' "SQL queries per second.",
     sum u32(timeouted) / _count AS 'timeout_ratio'
       "Ratio of transactions that timed out during capture.",
@@ -612,7 +612,7 @@ AS
     out.start + time_step AS stop,
     application DOC "Application",
     -- Volumes
-    sum 1 AS _count,
+    sum 1 {} AS _count,
     sum u32(is_starting) / time_step AS 'calls.per_secs'
       "Number of (new) calls per second.",
     sum u32(had_voice) / _count AS 'has_voice.ratio'

@@ -43,7 +43,7 @@ AS
     icmp_code DOC "ICMP code of packets.",
     error_ip_server DOC "Server IP in the error message.",
     error_port_server DOC "Server port in the error message.",
-    sum 1 AS count "Number of ICMP messages with that type, code, IP and port."
+    sum 1 {} AS count "Number of ICMP messages with that type, code, IP and port."
   COMMIT AFTER in.start > out.start + time_step * 1.3
   FACTORS icmp_type, icmp_code;
 
