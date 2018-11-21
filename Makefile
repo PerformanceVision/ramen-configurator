@@ -115,7 +115,7 @@ install-workers: $(INSTALLED_WORKERS)
 	@echo 'Installing workers into $(prefix)$(lib_dir)'
 	@install -d '$(prefix)$(lib_dir)'
 	@for f in $(INSTALLED_WORKERS) ; do \
-		install -d "$(prefix)$(lib_dir)/$$(dirname $$f)" ; \
+	  install -d "$(prefix)$(lib_dir)/$$(dirname $$f)" ; \
 	  install "$$f" "$(prefix)$(lib_dir)/$$f" ; \
 	done
 
