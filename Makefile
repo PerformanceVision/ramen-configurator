@@ -119,7 +119,14 @@ install-workers: $(INSTALLED_WORKERS)
 	  install "$$f" "$(prefix)$(lib_dir)/$$f" ; \
 	done
 
-install: install-bin install-workers
+install-conf: experiments.config
+	@echo "Installing configuration samples into $(prefix)$(lib_dir)"
+	@install -d "$(prefix)$(lib_dir)"
+	@for f in $^ ; do \
+	  install "$$f" "$(prefix)$(lib_dir)/$$f" ; \
+	done
+
+install: install-bin install-workers install-conf
 
 uninstall:
 	@echo Uninstalling

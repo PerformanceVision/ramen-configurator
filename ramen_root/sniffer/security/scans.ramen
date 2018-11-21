@@ -8,7 +8,7 @@ PARAMETERS
   top_size DEFAULT TO 20,
   top_max_size DEFAULT TO 100k;
 
-RUN IF COALESCE(variant("extra_tables") = "all", false);
+RUN IF COALESCE(variant("Scan_detector") = "on", false);
 
 -- Start by filtering all entries but the new ones
 DEFINE new_triplets AS
