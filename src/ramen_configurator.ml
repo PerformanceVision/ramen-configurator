@@ -20,7 +20,8 @@ let run_program debug ramen_cmd persist_dir ?as_ fname params =
     fname (Option.map_default (fun as_ -> " (as: "^ as_ ^")") "" as_)
     (List.print (Tuple2.print String.print String.print)) params ;
   if !dry_run then !logger.info "nope" else
-    Printf.sprintf2 "%s run%s --replace --persist-dir %s%s %a %s"
+    Printf.sprintf2
+      "%s run%s --replace --kill-if-disabled --persist-dir %s%s %a %s"
       (shell_quote ramen_cmd)
       (if debug then " --debug" else "")
       (shell_quote persist_dir)
