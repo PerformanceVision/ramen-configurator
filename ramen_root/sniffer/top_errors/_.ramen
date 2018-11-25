@@ -35,7 +35,7 @@ AS
     start // time_step
   SELECT
     -- Time info:
-    (start // time_step) * time_step AS start,
+    truncate(start, time_step) AS start,
     out.start + time_step AS stop,
 
     -- Error description:
@@ -84,7 +84,7 @@ AS
   GROUP BY ip_server, start // time_step
   SELECT
     -- Time info:
-    (start // time_step) * time_step AS start,
+    truncate(start, time_step) AS start,
     out.start + time_step AS stop,
     -- Data:
     ip_server AS ip,

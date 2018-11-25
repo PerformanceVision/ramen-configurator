@@ -125,7 +125,7 @@ AS
   WHERE start > merge.greatest.start - 3min
   GROUP BY application, protocol, success, start // time_step
   SELECT
-    (start // time_step) * time_step AS start,
+    truncate(start, time_step) AS start,
     out.start + time_step AS stop,
     application, protocol,
     success DOC "Does the response indicate success?",

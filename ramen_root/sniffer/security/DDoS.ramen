@@ -18,7 +18,7 @@ AS
   MERGE TIMEOUT AFTER 5s
   WHERE start > merge.greatest.start - 3min
   SELECT
-    (start // avg_win) * avg_win AS start,
+    truncate(start, avg_win) AS start,
     out.start + avg_win AS stop,
     min start, max stop,
     -- Traffic (of any kind) we haven't seen in the last hour.

@@ -101,7 +101,7 @@ AS
 
     -- Time info
     min start AS _min_start,
-    (_min_start // time_step) * time_step AS start,
+    truncate(_min_start, time_step) AS start,
     out.start + time_step AS stop,
 
     -- Volumetry

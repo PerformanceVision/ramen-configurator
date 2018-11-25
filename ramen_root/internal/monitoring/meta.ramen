@@ -21,7 +21,7 @@ AS
   WHERE not (worker starts with "monitoring/meta/")
   SELECT
     worker,
-    (start // time_step) * time_step AS start,
+    truncate(start, time_step) AS start,
     out.start + time_step AS stop,
 
     max max_event_time AS max_event_time

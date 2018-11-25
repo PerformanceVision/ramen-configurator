@@ -16,7 +16,7 @@ AS
   FROM ../../csv/tcp
   SELECT
     -- Time
-    (start // u32(time_step)) * u32(time_step) AS start,
+    truncate(start, time_step) AS start,
     out.start + time_step AS stop,
     application DOC "Application",
     -- Volumes
@@ -151,7 +151,7 @@ AS
       "Average servers to clients data transfer time minus its standard deviation."
   WHERE
     ip_external IS NULL -- Exclude netflow
-  GROUP BY start // u32(time_step), application
+  GROUP BY start // time_step, application
   COMMIT AFTER
     in.start > out.start + 2 * time_step
   FACTOR application;
@@ -162,7 +162,7 @@ AS
   FROM ../../csv/udp
   SELECT
     -- Time
-    (start // u32(time_step)) * u32(time_step) AS start,
+    truncate(start, time_step) AS start,
     out.start + time_step AS stop,
     application DOC "Application",
     -- Volumes
@@ -176,7 +176,7 @@ AS
       "Packets per second from server."
   WHERE
     ip_external IS NULL -- Exclude netflow
-  GROUP BY start // u32(time_step), application
+  GROUP BY start // time_step, application
   COMMIT AFTER
     in.start > out.start + 2 * time_step
   FACTOR application;
@@ -187,7 +187,7 @@ AS
   FROM ../../csv/icmp
   SELECT
     -- Time
-    (start // u32(time_step)) * u32(time_step) AS start,
+    truncate(start, time_step) AS start,
     out.start + time_step AS stop,
     application DOC "Application",
     -- Volumes
@@ -212,7 +212,7 @@ AS
       AS 'error.fragmentation.per_sec' "Fragmentation errors per second.",
     sum u32(icmp_type = 3) / time_step
       AS 'error.unreachable.per_sec' "Any kind of ICMP unreachable errors per second."
-  GROUP BY start // u32(time_step), application
+  GROUP BY start // time_step, application
   COMMIT AFTER
     in.start > out.start + 2 * time_step
   FACTOR application;
@@ -223,7 +223,7 @@ AS
   FROM '../../csv/other-ip'
   SELECT
     -- Time
-    (start // u32(time_step)) * u32(time_step) AS start,
+    truncate(start, time_step) AS start,
     out.start + time_step AS stop,
     application DOC "Application",
     -- Volumes
@@ -235,7 +235,7 @@ AS
       "Packets per second from client.",
     sum traffic_packets_server / time_step AS 'server.packets.per_sec'
       "Packets per second from server."
-  GROUP BY start // u32(time_step), application
+  GROUP BY start // time_step, application
   COMMIT AFTER
     in.start > out.start + 2 * time_step
   FACTOR application;
@@ -246,7 +246,7 @@ AS
   FROM '../../csv/non-ip'
   SELECT
     -- Time
-    (start // u32(time_step)) * u32(time_step) AS start,
+    truncate(start, time_step) AS start,
     out.start + time_step AS stop,
     application DOC "Application",
     -- Volumes
@@ -258,7 +258,7 @@ AS
       "Packets per second from client.",
     sum traffic_packets_server / time_step AS 'server.packets.per_sec'
       "Packets per second from server."
-  GROUP BY start // u32(time_step), application
+  GROUP BY start // time_step, application
   COMMIT AFTER
     in.start > out.start + 2 * time_step
   FACTOR application;
@@ -269,7 +269,7 @@ AS
   FROM ../../csv/http
   SELECT
     -- Time
-    (start // u32(time_step)) * u32(time_step) AS start,
+    truncate(start, time_step) AS start,
     out.start + time_step AS stop,
     application DOC "Application",
     -- Volumes
@@ -315,7 +315,7 @@ AS
     -- Server DTT:
     resp_end - resp_begin AS _sdtt,
     avg _sdtt AS 'server.dtt.avg' "Average server DTT."
-  GROUP BY start // u32(time_step), application
+  GROUP BY start // time_step, application
   COMMIT AFTER
     in.start > out.start + 2 * time_step
   FACTOR application;
@@ -326,7 +326,7 @@ AS
   FROM ../../csv/citrix_channels
   SELECT
     -- Time
-    (start // u32(time_step)) * u32(time_step) AS start,
+    truncate(start, time_step) AS start,
     out.start + time_step AS stop,
     application DOC "Application",
     -- Volumes:
@@ -389,7 +389,7 @@ AS
       "Average servers to clients data transfer time plus its standard deviation.",
     'server.dtt.avg' - _sdtt_stddev AS 'server.dtt.avg - σ'
       "Average servers to clients data transfer time minus its standard deviation."
-  GROUP BY start // u32(time_step), application
+  GROUP BY start // time_step, application
   COMMIT AFTER
     in.start > out.start + 2 * time_step
   FACTOR application;
@@ -400,7 +400,7 @@ AS
   FROM ../../csv/citrix
   SELECT
     -- Time
-    (start // u32(time_step)) * u32(time_step) AS start,
+    truncate(start, time_step) AS start,
     out.start + time_step AS stop,
     application DOC "Application",
     -- Volumes:
@@ -498,7 +498,7 @@ AS
       "Average clients to servers data transfer time plus its standard deviation.",
     'server.dtt.avg' - _sdtt_stddev AS 'server.dtt.avg - σ'
       "Average clients to servers data transfer time minus its standard deviation."
-  GROUP BY start // u32(time_step), application
+  GROUP BY start // time_step, application
   COMMIT AFTER
     in.start > out.start + 2 * time_step
   FACTOR application;
@@ -509,7 +509,7 @@ AS
   FROM ../../csv/smb
   SELECT
     -- Time
-    (start // u32(time_step)) * u32(time_step) AS start,
+    truncate(start, time_step) AS start,
     out.start + time_step AS stop,
     application DOC "Application",
     -- Volumes
@@ -550,7 +550,7 @@ AS
     avg _sdtt AS 'server.dtt.avg' "Average server DTT.",
     95th percentile (sample(1000, _sdtt)) AS 'server.dtt_95th'
       "Approximate 95th percentile of server DTT."
-  GROUP BY start // u32(time_step), application
+  GROUP BY start // time_step, application
   COMMIT AFTER
     in.start > out.start + 2 * time_step
   FACTOR application;
@@ -561,7 +561,7 @@ AS
   FROM ../../csv/sql
   SELECT
     -- Time
-    (start // u32(time_step)) * u32(time_step) AS start,
+    truncate(start, time_step) AS start,
     out.start + time_step AS stop,
     application DOC "Application",
     -- Volumes
@@ -597,7 +597,7 @@ AS
     avg _sdtt AS 'server.dtt.avg' "Average server DTT.",
     95th percentile (sample(1000, _sdtt)) AS 'server.dtt.95th'
       "Approximate 95th percentile of server DTT."
-  GROUP BY start // u32(time_step), application
+  GROUP BY start // time_step, application
   COMMIT AFTER
     in.start > out.start + 2 * time_step
   FACTOR application;
@@ -608,7 +608,7 @@ AS
   FROM ../../csv/voip
   SELECT
     -- Time
-    (start // u32(time_step)) * u32(time_step) AS start,
+    truncate(start, time_step) AS start,
     out.start + time_step AS stop,
     application DOC "Application",
     -- Volumes
@@ -752,7 +752,7 @@ AS
       "Average approximate mean opinion score (MOS) over all calls.",
     95th percentile (sample(1000, _mos)) AS 'mos.95th'
       "Approximate 95th percentile of the mean opinion score (MOS)."
-  GROUP BY start // u32(time_step), application
+  GROUP BY start // time_step, application
   COMMIT AFTER
     in.start > out.start + 2 * time_step
   FACTOR application;
@@ -763,7 +763,7 @@ AS
   FROM ../../csv/tls
   SELECT
     -- Time
-    (start // u32(time_step)) * u32(time_step) AS start,
+    truncate(start, time_step) AS start,
     out.start + time_step AS stop,
     application DOC "Application",
     -- Volumes
@@ -800,7 +800,7 @@ AS
       "The minimum duration before expiration of client certificates.",
     min (server_not_after - now) AS 'server.validity.min'
       "The minimum duration before expiration of server certificates."
-  GROUP BY start // u32(time_step), application
+  GROUP BY start // time_step, application
   COMMIT AFTER
     in.start > out.start + 2 * time_step
   FACTOR application;

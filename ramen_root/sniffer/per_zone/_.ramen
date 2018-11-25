@@ -392,7 +392,7 @@ AS
     start > merge.greatest.start - 3min
   SELECT
     -- Time
-    (start // u32(time_step)) * u32(time_step) AS start,
+    truncate(start, time_step) AS start,
     out.start + time_step AS stop,
     zone,
     -- Volumes
@@ -467,7 +467,7 @@ AS
       "Average out then in round trip time plus its standard deviation.",
     'in.rtt.avg' - _rtt_stddev_in AS 'in.rtt.avg - σ'
       "Average out then in round trip time minus its standard deviation."
-  GROUP BY start // u32(time_step), zone
+  GROUP BY start // time_step, zone
   COMMIT AFTER
     in.start > out.start + 2 * time_step
   FACTOR zone;
