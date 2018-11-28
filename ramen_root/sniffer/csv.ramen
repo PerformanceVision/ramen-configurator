@@ -51,42 +51,42 @@ DEFINE tcp_raw AS
      retrans_traffic_bytes_server u64? {bytes},
      retrans_payload_bytes_client u64? {bytes}, -- 40
      retrans_payload_bytes_server u64? {bytes},
-     syn_count_client u32?,
-     fin_count_client u32?,
-     fin_count_server u32?,
-     rst_count_client u32?,
-     rst_count_server u32?,
-     timeout_count u32,
-     close_count u32?,
-     dupack_count_client u32?,
-     dupack_count_server u32?,-- 50
-     zero_window_count_client u32?,
-     zero_window_count_server u32?,
+     syn_count_client u32? {},
+     fin_count_client u32? {},
+     fin_count_server u32? {},
+     rst_count_client u32? {},
+     rst_count_server u32? {},
+     timeout_count u32 {},
+     close_count u32? {},
+     dupack_count_client u32? {},
+     dupack_count_server u32? {},-- 50
+     zero_window_count_client u32? {},
+     zero_window_count_server u32? {},
      -- Some counts can be null although the sums cannot ...
-     ct_count u32?,
+     ct_count u32? {},
      ct_sum u64 {microseconds},
      ct_square_sum u128 {microseconds^2},
-     rt_count_server u32?,
-     rt_sum_server u64,
-     rt_square_sum_server u128,
-     rtt_count_client u32?,
-     rtt_sum_client u64,                -- 60 TODO: microseconds
-     rtt_square_sum_client u128,        -- TODO: microseconds^2
-     rtt_count_server u32?,
-     rtt_sum_server u64,                -- TODO: microseconds
-     rtt_square_sum_server u128,        -- TODO: microseconds^2
-     rd_count_client u32?,
-     rd_sum_client u64,
-     rd_square_sum_client u128,
-     rd_count_server u32?,
-     rd_sum_server u64,
-     rd_square_sum_server u128,         -- 70
-     dtt_count_client u32?,
-     dtt_sum_client u64,                -- TODO: microseconds
-     dtt_square_sum_client u128,        -- TODO: microseconds^2
-     dtt_count_server u32?,
-     dtt_sum_server u64,                -- TODO: microseconds
-     dtt_square_sum_server u128,        -- TODO: microseconds^2
+     rt_count_server u32? {},
+     rt_sum_server u64 {microseconds},
+     rt_square_sum_server u128 {microseconds^2},
+     rtt_count_client u32? {},
+     rtt_sum_client u64 {microseconds}, -- 60
+     rtt_square_sum_client u128 {microseconds^2},
+     rtt_count_server u32? {},
+     rtt_sum_server u64 {microseconds},
+     rtt_square_sum_server u128 {microseconds^2},
+     rd_count_client u32? {},
+     rd_sum_client u64 {microseconds},
+     rd_square_sum_client u128 {microseconds^2},
+     rd_count_server u32? {},
+     rd_sum_server u64 {microseconds},
+     rd_square_sum_server u128 {microseconds^2},-- 70
+     dtt_count_client u32? {},
+     dtt_sum_client u64 {microseconds},
+     dtt_square_sum_client u128 {microseconds^2},
+     dtt_count_server u32? {},
+     dtt_sum_server u64 {microseconds},
+     dtt_square_sum_server u128 {microseconds^2},
      dcerpc_uuid string?)
   EVENT STARTING AT capture_begin * 1e-6
     AND STOPPING AT capture_end * 1e-6;
@@ -207,12 +207,12 @@ DEFINE udp AS
     -- the many UDP protocols that are supported?)
     traffic_packets_client AS payload_packets_client,
     traffic_packets_server AS payload_packets_server,
-    u32(0) AS rtt_count_client,
+    u32(0) {} AS rtt_count_client,
     0. {seconds} AS rtt_sum_client,
-    u32(0) AS rtt_count_server,
+    u32(0) {} AS rtt_count_server,
     0. {seconds} AS rtt_sum_server,
-    u32(0) AS rd_count_client,
-    u32(0) AS rd_count_server,
+    u32(0) {} AS rd_count_client,
+    u32(0) {} AS rd_count_server,
     *;
 
 DEFINE icmp_raw AS
@@ -279,12 +279,12 @@ DEFINE icmp AS
     traffic_packets_server AS payload_packets_server,
     traffic_bytes_client AS payload_bytes_client,
     traffic_bytes_client AS payload_bytes_server,
-    u32(0) AS rtt_count_client,
+    u32(0) {} AS rtt_count_client,
     0. {seconds} AS rtt_sum_client,
-    u32(0) AS rtt_count_server,
+    u32(0) {} AS rtt_count_server,
     0. {seconds} AS rtt_sum_server,
-    u32(0) AS rd_count_client,
-    u32(0) AS rd_count_server,
+    u32(0) {} AS rd_count_client,
+    u32(0) {} AS rd_count_server,
     *;
 
 DEFINE 'other-ip_raw' AS
@@ -335,12 +335,12 @@ DEFINE 'other-ip' AS
     traffic_packets_server AS payload_packets_server,
     traffic_bytes_client AS payload_bytes_client,
     traffic_bytes_server AS payload_bytes_server,
-    u32(0) AS rtt_count_client,
+    u32(0) {} AS rtt_count_client,
     0. {seconds} AS rtt_sum_client,
-    u32(0) AS rtt_count_server,
+    u32(0) {} AS rtt_count_server,
     0. {seconds} AS rtt_sum_server,
-    u32(0) AS rd_count_client,
-    u32(0) AS rd_count_server,
+    u32(0) {} AS rd_count_client,
+    u32(0) {} AS rd_count_server,
     *;
 
 DEFINE 'non-ip_raw' AS
@@ -409,18 +409,18 @@ DEFINE dns_raw AS
      query_type u16,
      query_class u16,
      error_code u8,
-     error_count u32,                   -- 20
+     error_count u32 {},                -- 20
      answer_type u16,
      answer_class u16,
      capture_file string?,
      connection_uuid string?,
      traffic_bytes_client u64 {bytes},
      traffic_bytes_server u64 {bytes},
-     traffic_packets_client u32,
-     traffic_packets_server u32,
-     rt_count_server u32,
-     rt_sum_server u64,       -- 30
-     rt_square_sum_server u128)
+     traffic_packets_client u32 {},
+     traffic_packets_server u32 {},
+     rt_count_server u32 {},
+     rt_sum_server u64 {microseconds},       -- 30
+     rt_square_sum_server u128 {microseconds^2})
   EVENT STARTING AT capture_begin * 1e-6
     AND STOPPING AT capture_end * 1e-6;
 
@@ -479,44 +479,44 @@ DEFINE http_raw AS
      ajax bool,
      ip4_orig_client u32?,
      ip6_orig_client i128?,
-     page_count u32 {pages},  -- 0 or 1 iff a page
+     page_count u32 {},  -- 0 or 1 iff a page
      _hardcoded_one_facepalm bool,
-     query_begin u64,
-     query_end u64,
+     query_begin u64 {microseconds},
+     query_end u64 {microseconds},
      query_method u8,
      query_headers u32 {bytes},
      query_payload u32 {bytes},         -- 40
      query_pkts u32,
      query_content string?,
      query_content_length u32? {bytes},
-     query_content_length_count u32 {bytes},
+     query_content_length_count u32 {},
      query_mime_type string?,
-     resp_begin u64?,
-     resp_end u64?,
+     resp_begin u64? {microseconds},
+     resp_end u64? {microseconds},
      resp_code u32?,
      resp_headers u32 {bytes},
      resp_payload u32 {bytes},          -- 50
      resp_pkts u32,
      resp_content string?,
      resp_content_length u32? {bytes},
-     resp_content_length_count u32 {bytes},
+     resp_content_length_count u32 {},
      resp_mime_type string?,
      tot_volume_query u32? {bytes},
      tot_volume_response u32? {bytes},
-     tot_count u32, -- aka page_hit_count
-     tot_errors u16,
-     tot_timeouts u16,         -- 60
-     tot_begin u64,
-     tot_end u64,
-     tot_load_time u64,
-     tot_load_time_squared u128,
-     rt_count_server u32,
-     rt_sum_server u64,
-     rt_square_sum_server u128,
-     dtt_sum_client u64,
-     dtt_square_sum_client u128,
-     dtt_sum_server u64,                -- 70
-     dtt_square_sum_server u128,
+     tot_count u32 {}, -- aka page_hit_count
+     tot_errors u16 {},
+     tot_timeouts u16 {},       -- 60
+     tot_begin u64 {microseconds},
+     tot_end u64 {microseconds},
+     tot_load_time u64 {microseconds},
+     tot_load_time_squared u128 {microseconds^2},
+     rt_count_server u32 {},
+     rt_sum_server u64 {microseconds},
+     rt_square_sum_server u128 {microseconds^2},
+     dtt_sum_client u64 {microseconds},
+     dtt_square_sum_client u128 {microseconds^2},
+     dtt_sum_server u64 {microseconds}, -- 70
+     dtt_square_sum_server u128 {microseconds^2},
      application u32)
   EVENT STARTING AT capture_begin * 1e-6
     AND STOPPING AT capture_end * 1e-6;
@@ -581,15 +581,15 @@ DEFINE citrix_raw AS
      num_compressed_server u32,
      payloads_client u32 {bytes},
      payloads_server u32 {bytes},
-     rt_count_server u32,
-     rt_sum_server u64,                 -- 30
-     rt_square_sum_server u128,
-     dtt_count_client u32,
-     dtt_sum_client u64,
-     dtt_square_sum_client u128,
-     dtt_count_server u32,
-     dtt_sum_server u64,
-     dtt_square_sum_server u128,
+     rt_count_server u32 {},
+     rt_sum_server u64 {microseconds},  -- 30
+     rt_square_sum_server u128 {microseconds^2},
+     dtt_count_client u32 {},
+     dtt_sum_client u64 {microseconds},
+     dtt_square_sum_client u128 {microseconds^2},
+     dtt_count_server u32 {},
+     dtt_sum_server u64 {microseconds},
+     dtt_square_sum_server u128 {microseconds^2},
      username string?,
      domain string?,
      citrix_application string?)        -- 40
@@ -649,23 +649,23 @@ DEFINE citrix_chanless_raw AS
      num_keep_alives_server u32,
      payloads_client u32 {bytes},
      payloads_server u32 {bytes},       -- 30
-     rt_count_server u32,
-     rt_sum_server u64,
-     rt_square_sum_server u128,
-     dtt_count_client u32,
-     dtt_sum_client u64,
-     dtt_square_sum_client u128,
-     dtt_count_server u32,
-     dtt_sum_server u64,
-     dtt_square_sum_server u128,
-     login_time_count u32,
-     login_time_sum u64,
-     login_time_square_sum u128,        -- 40
-     launch_time_count u32,
-     launch_time_sum u64,
-     launch_time_square_sum u128,
-     num_aborts u32,
-     num_timeouts u32,
+     rt_count_server u32 {},
+     rt_sum_server u64 {microseconds},
+     rt_square_sum_server u128 {microseconds^2},
+     dtt_count_client u32 {},
+     dtt_sum_client u64 {microseconds},
+     dtt_square_sum_client u128 {microseconds^2},
+     dtt_count_server u32 {},
+     dtt_sum_server u64 {microseconds},
+     dtt_square_sum_server u128 {microseconds^2},
+     login_time_count u32 {},
+     login_time_sum u64 {microseconds},
+     login_time_square_sum u128 {microseconds^2},-- 40
+     launch_time_count u32 {},
+     launch_time_sum u64 {microseconds},
+     launch_time_square_sum u128 {microseconds^2},
+     num_aborts u32 {},
+     num_timeouts u32 {},
      username string?,
      domain string?,
      citrix_application string?)
@@ -745,15 +745,15 @@ DEFINE smb_raw AS
      query_write_bytes u32 {bytes},
      resp_read_bytes u32 {bytes},
      resp_write_bytes u32 {bytes},
-     rt_count_server u32,
-     rt_sum_server u64,
-     rt_square_sum_server u128,
-     dtt_count_client u32,              -- 50
-     dtt_sum_client u64,
-     dtt_square_sum_client u128,
-     dtt_count_server u32,
-     dtt_sum_server u64,
-     dtt_square_sum_server u128,
+     rt_count_server u32 {},
+     rt_sum_server u64 {microseconds},
+     rt_square_sum_server u128 {microseconds^2},
+     dtt_count_client u32 {},              -- 50
+     dtt_sum_client u64 {microseconds},
+     dtt_square_sum_client u128 {microseconds^2},
+     dtt_count_server u32 {},
+     dtt_sum_server u64 {microseconds},
+     dtt_square_sum_server u128 {microseconds^2},
      application u32)
   EVENT STARTING AT capture_begin * 1e-6
     AND STOPPING AT capture_end * 1e-6;
@@ -822,15 +822,15 @@ DEFINE sql_raw AS
      resp_end u64?,
      resp_payload u32 {bytes},
      resp_pkts u32,
-     rt_count_server u32,
-     rt_sum_server u64,
-     rt_square_sum_server u128,         -- 40
-     dtt_count_client u32,
-     dtt_sum_client u64,
-     dtt_square_sum_client u128,
-     dtt_count_server u32,
-     dtt_sum_server u64,
-     dtt_square_sum_server u128,
+     rt_count_server u32 {},
+     rt_sum_server u64 {microseconds},
+     rt_square_sum_server u128 {microseconds^2},-- 40
+     dtt_count_client u32 {},
+     dtt_sum_client u64 {microseconds},
+     dtt_square_sum_client u128 {microseconds^2},
+     dtt_count_server u32 {},
+     dtt_sum_server u64 {microseconds},
+     dtt_square_sum_server u128 {microseconds^2},
      application u32)
   EVENT STARTING AT capture_begin * 1e-6
     AND STOPPING AT capture_end * 1e-6;
@@ -907,47 +907,47 @@ DEFINE voip_raw AS
      callee_codec string?,
      sign_bytes_client u32 {bytes},
      sign_bytes_server u32 {bytes},
-     sign_count_client u32,
-     sign_count_server u32,
+     sign_count_client u32 {},
+     sign_count_server u32 {},
      sign_payload_client u32 {bytes},
      sign_payload_server u32 {bytes},
      -- v29 specs say these are client/server but junkie seems to do the right
      -- thing here, that is: callee/caller:
      rtp_rtcp_bytes_caller u32 {bytes}, -- 50
      rtp_rtcp_bytes_callee u32 {bytes},
-     rtp_rtcp_count_caller u32,
-     rtp_rtcp_count_callee u32,
+     rtp_rtcp_count_caller u32 {},
+     rtp_rtcp_count_callee u32 {},
      rtp_rtcp_payload_caller u32 {bytes},
      rtp_rtcp_payload_callee u32 {bytes},
-     rt_count_server u32,
-     rt_sum_server u64,
-     rt_square_sum_server u128,
-     jitter_count_caller u32,
-     jitter_sum_caller u64,             -- 60
-     jitter_square_sum_caller u128,
-     jitter_count_callee u32,
-     jitter_sum_callee u64,
-     jitter_square_sum_callee u128,
-     rtt_count_caller u32,
-     rtt_sum_caller u64,
-     rtt_square_sum_caller u128,
-     rtt_count_callee u32,
-     rtt_sum_callee u64,
-     rtt_square_sum_callee u128,        -- 70
-     loss_callee2caller_alt_count u32,
-     loss_caller2callee_alt_count u32,
-     sign_rtt_count_client u32,
-     sign_rtt_sum_client u64,
-     sign_rtt_square_sum_client u128,
-     sign_rtt_count_server u32,
-     sign_rtt_sum_server u64,
-     sign_rtt_square_sum_server u128,
-     sign_rd_count_client u32,
-     sign_rd_sum_client u64,            -- 80
-     sign_rd_square_sum_client u128,
-     sign_rd_count_server u32,
-     sign_rd_sum_server u64,
-     sign_rd_square_sum_server u128)
+     rt_count_server u32 {},
+     rt_sum_server u64 {microseconds},
+     rt_square_sum_server u128 {microseconds^2},
+     jitter_count_caller u32 {},
+     jitter_sum_caller u64 {microseconds},-- 60
+     jitter_square_sum_caller u128 {microseconds^2},
+     jitter_count_callee u32 {},
+     jitter_sum_callee u64 {microseconds},
+     jitter_square_sum_callee u128 {microseconds^2},
+     rtt_count_caller u32 {},
+     rtt_sum_caller u64 {microseconds},
+     rtt_square_sum_caller u128 {microseconds^2},
+     rtt_count_callee u32 {},
+     rtt_sum_callee u64 {microseconds},
+     rtt_square_sum_callee u128 {microseconds^2},-- 70
+     loss_callee2caller_alt_count u32 {},
+     loss_caller2callee_alt_count u32 {},
+     sign_rtt_count_client u32 {},
+     sign_rtt_sum_client u64 {microseconds},
+     sign_rtt_square_sum_client u128 {microseconds^2},
+     sign_rtt_count_server u32 {},
+     sign_rtt_sum_server u64 {microseconds},
+     sign_rtt_square_sum_server u128 {microseconds^2},
+     sign_rd_count_client u32 {},
+     sign_rd_sum_client u64 {microseconds},-- 80
+     sign_rd_square_sum_client u128 {microseconds^2},
+     sign_rd_count_server u32 {},
+     sign_rd_sum_server u64 {microseconds},
+     sign_rd_square_sum_server u128 {microseconds^2})
   EVENT STARTING AT capture_begin * 1e-6
     AND STOPPING AT capture_end * 1e-6;
 
@@ -1036,16 +1036,16 @@ DEFINE tls_raw AS
      traffic_bytes_server u64 {bytes},
      payload_bytes_client u64 {bytes},
      payload_bytes_server u64 {bytes},
-     dtt_count_client u32,
-     dtt_sum_client u64,
-     dtt_square_sum_client u128,
-     dtt_count_server u32,
-     dtt_sum_server u64,                -- 50
-     dtt_square_sum_server u128,
-     rt_count_server u32,
-     rt_sum_server u64,
-     rt_square_sum_server u128,
-     ct_count u32?,
+     dtt_count_client u32 {},
+     dtt_sum_client u64 {microseconds},
+     dtt_square_sum_client u128 {microseconds^2},
+     dtt_count_server u32 {},
+     dtt_sum_server u64 {microseconds}, -- 50
+     dtt_square_sum_server u128 {microseconds^2},
+     rt_count_server u32 {},
+     rt_sum_server u64 {microseconds},
+     rt_square_sum_server u128 {microseconds^2},
+     ct_count u32? {},
      ct_sum u64 {microseconds},
      ct_square_sum u128 {microseconds^2})
   EVENT STARTING AT capture_begin * 1e-6
