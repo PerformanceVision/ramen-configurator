@@ -63,8 +63,7 @@ AS
       "Average connection time.",
     IF _sum_ct_count > 0 THEN
       sqrt (sum ct_square_sum / _sum_ct_count -
-            (_sum_ct_sum / _sum_ct_count)^2)
-      AS _ct_stddev "Standard deviation of the connection time.",
+            (_sum_ct_sum / _sum_ct_count)^2) AS _ct_stddev,
     'ct.avg' + _ct_stddev AS 'ct.avg + σ'
       "Average connection time plus its standard deviation.",
     'ct.avg' - _ct_stddev AS 'ct.avg - σ'
@@ -75,15 +74,14 @@ AS
     _sum_rt_count_server / time_step AS 'server.rt.count.per_sec'
       "Number of query/response pairs per second.",
     IF _sum_rt_count_server > 0 THEN
-      _sum_rt_sum_server / _sum_rt_count_server AS 'srt.avg'
+      _sum_rt_sum_server / _sum_rt_count_server AS 'server.rt.avg'
       "Average response time.",
     IF _sum_rt_count_server > 0 THEN
       sqrt (sum rt_square_sum_server / _sum_rt_count_server -
-            (_sum_rt_sum_server / _sum_rt_count_server)^2)
-      AS _srt_stddev "Standard deviation of the response time.",
-    'srt.avg' + _srt_stddev AS 'srt.avg + σ'
+            (_sum_rt_sum_server / _sum_rt_count_server)^2) AS _srt_stddev,
+    'server.rt.avg' + _srt_stddev AS 'server.rt.avg + σ'
       "Average response time plus its standard deviation.",
-    'srt.avg' - _srt_stddev AS 'srt.avg - σ'
+    'server.rt.avg' - _srt_stddev AS 'server.rt.avg - σ'
       "Average response time minus its standard deviation.",
     -- Average Round Trip Time CSC
     sum rtt_count_server AS _sum_rtt_count_server,
@@ -231,9 +229,9 @@ AS
       "Bytes per second from client.",
     sum traffic_bytes_server / time_step AS 'server.traffic.per_sec'
       "Bytes per second from server.",
-    sum traffic_packets_client / time_step AS 'client.packets.per_sec'
+    sum traffic_packets_client / time_step AS 'client.pdus.per_sec'
       "Packets per second from client.",
-    sum traffic_packets_server / time_step AS 'server.packets.per_sec'
+    sum traffic_packets_server / time_step AS 'server.pdus.per_sec'
       "Packets per second from server."
   GROUP BY start // time_step, application
   COMMIT AFTER
@@ -254,9 +252,9 @@ AS
       "Bytes per second from client.",
     sum traffic_bytes_server / time_step AS 'server.traffic.per_sec'
       "Bytes per second from server.",
-    sum traffic_packets_client / time_step AS 'client.packets.per_sec'
+    sum traffic_packets_client / time_step AS 'client.pdus.per_sec'
       "Packets per second from client.",
-    sum traffic_packets_server / time_step AS 'server.packets.per_sec'
+    sum traffic_packets_server / time_step AS 'server.pdus.per_sec'
       "Packets per second from server."
   GROUP BY start // time_step, application
   COMMIT AFTER
@@ -277,7 +275,7 @@ AS
     _count / time_step AS 'hits.per_sec' "Queries per second.",
     sum u32(NOT contributed) / time_step AS 'pages.per_sec'
       "Pages per second.",
-    sum query_payload / time_step AS 'request.payload.per_sec'
+    sum query_payload / time_step AS 'query.payload.per_sec'
       "Payload bytes per second in queries.",
     sum resp_payload / time_step AS 'response.payload.per_sec'
       "Payload bytes per second in responses.",
@@ -307,7 +305,6 @@ AS
     avg _cdtt AS 'client.dtt.avg' "Average client DTT.",
     -- Response time:
     resp_begin - query_end AS _rt,
-    min _rt AS 'hit.rt.min' "Minimum response time.",
     max _rt AS 'hit.rt.max' "Maximum response time.",
     avg _rt AS 'hit.rt.avg' "Average response time.",
     95th percentile (sample(1000, _rt)) AS 'hit.rt.95th'
@@ -347,15 +344,15 @@ AS
     _sum_rt_count_server / time_step AS 'server.rt.count.per_sec'
       "Measured response times per second.",
     IF _sum_rt_count_server > 0 THEN
-      _sum_rt_sum_server / _sum_rt_count_server AS 'srt.avg'
+      _sum_rt_sum_server / _sum_rt_count_server AS 'server.rt.avg'
       "Average response time.",
     IF _sum_rt_count_server > 0 THEN
       sqrt (sum rt_square_sum_server / _sum_rt_count_server -
             (_sum_rt_sum_server / _sum_rt_count_server)^2) AS _srt_stddev
       "Standard deviation of the response times.",
-    'srt.avg' + _srt_stddev AS 'srt.avg + σ'
+    'server.rt.avg' + _srt_stddev AS 'server.rt.avg + σ'
       "Average response time plus its standard deviation.",
-    'srt.avg' - _srt_stddev AS 'srt.avg - σ'
+    'server.rt.avg' - _srt_stddev AS 'server.rt.avg - σ'
       "Average response time minus its standard deviation.",
     -- Average Data Transfer Time C2S
     sum dtt_count_client AS _sum_dtt_count_client,
@@ -424,15 +421,15 @@ AS
     _sum_rt_count_server / time_step AS 'server.rt.count.per_sec'
       "Measured response times per second.",
     IF _sum_rt_count_server > 0 THEN
-      _sum_rt_sum_server / _sum_rt_count_server AS 'srt.avg'
+      _sum_rt_sum_server / _sum_rt_count_server AS 'server.rt.avg'
       "Average response time.",
     IF _sum_rt_count_server > 0 THEN
       sqrt (sum rt_square_sum_server / _sum_rt_count_server -
             (_sum_rt_sum_server / _sum_rt_count_server)^2) AS _srt_stddev
       "Standard deviation of the response time.",
-    'srt.avg' + _srt_stddev AS 'srt.avg + σ'
+    'server.rt.avg' + _srt_stddev AS 'server.rt.avg + σ'
       "Average response time plus its standard deviation.",
-    'srt.avg' - _srt_stddev AS 'srt.avg - σ'
+    'server.rt.avg' - _srt_stddev AS 'server.rt.avg - σ'
       "Average response time minus its standard deviation.",
     -- Average Login Time:
     sum login_time_count AS _sum_login_time_count,
@@ -450,7 +447,7 @@ AS
       "Average login time plus its standard deviation.",
     'login.time.avg' - _login_time_stddev AS 'login.time.avg - σ'
       "Average login time minus its standard deviation.",
-    -- Average Launch Time:
+    -- Launch Times:
     sum launch_time_count AS _sum_launch_time_count,
     sum launch_time_sum AS _sum_launch_time_sum,
     _sum_launch_time_count / time_step AS 'launch.time.per_sec'
@@ -518,37 +515,23 @@ AS
       "SMB queries per second.",
     sum u32(is_error) / _count AS 'errors.ratio'
       "Error ratio.",
-    sum u32(is_warning) / _count AS 'warning.ratio'
+    sum u32(is_warning) / _count AS 'warnings.ratio'
       "Warning ratio.",
-    sum query_payload / time_step AS 'request.payload.per_sec'
+    sum query_payload / time_step AS 'query.payload.per_sec'
       "Payload bytes per second in queries.",
     sum resp_payload / time_step AS 'response.payload.per_sec'
       "Payload bytes per second in responses.",
-    sum query_write_bytes / time_step AS 'request.write_bytes.per_sec'
-      "Bytes per second in write queries.",
-    sum resp_read_bytes / time_step AS 'response.read_bytes.per_sec'
-      "Bytes per second in read responses.",
     -- Timings:
-    -- Client DTT:
-    query_end - query_begin AS _cdtt,
-    min _cdtt AS 'client.dtt.min' "Minimum client DTT.",
-    max _cdtt AS 'client.dtt.max' "Maximum client DTT.",
-    avg _cdtt AS 'client.dtt.avg' "Average client DTT.",
-    95th percentile (sample(1000, _cdtt)) AS 'client.dtt_95th'
-      "Approximate 95th percentile of client DTT.",
     -- Response time:
     resp_begin - query_end AS _rt,
-    min _rt AS 'server.rt.min' "Minimum response time.",
     max _rt AS 'server.rt.max' "Maximum response time.",
     avg _rt AS 'server.rt.avg' "Average response time.",
-    95th percentile (sample(1000, _rt)) AS 'rt_95th'
+    95th percentile (sample(1000, _rt)) AS 'rt.95th'
       "Approximate 95th percentile of response time.",
     -- Server DTT:
     resp_end - resp_begin AS _sdtt,
-    min _sdtt AS 'server.dtt.min' "Minimum server DTT.",
-    max _sdtt AS 'server.dtt.max' "Maximum server DTT.",
     avg _sdtt AS 'server.dtt.avg' "Average server DTT.",
-    95th percentile (sample(1000, _sdtt)) AS 'server.dtt_95th'
+    95th percentile (sample(1000, _sdtt)) AS 'server.dtt.95th'
       "Approximate 95th percentile of server DTT."
   GROUP BY start // time_step, application
   COMMIT AFTER
@@ -567,33 +550,21 @@ AS
     -- Volumes
     sum 1 {} AS _count,
     _count / time_step AS 'queries.per_sec' "SQL queries per second.",
-    sum u32(timeouted) / _count AS 'timeout.ratio'
-      "Ratio of transactions that timed out during capture.",
     sum u32(is_error) / _count AS 'errors.ratio'
       "Error ratio.",
-    sum query_payload / time_step AS 'request.payload.per_sec'
+    sum query_payload / time_step AS 'query.payload.per_sec'
       "Payload bytes per second in queries.",
     sum resp_payload / time_step AS 'response.payload.per_sec'
       "Payload bytes per second in responses.",
     -- Timings:
-    -- Client DTT:
-    query_end - query_begin AS _cdtt,
-    min _cdtt AS 'client.dtt.min' "Minimum client DTT.",
-    max _cdtt AS 'client.dtt.max' "Maximum client DTT.",
-    avg _cdtt AS 'client.dtt.avg' "Average client DTT.",
-    95th percentile (sample(1000, _cdtt)) AS 'client.dtt.95th'
-      "Approximate 95th percentile of client DTT.",
     -- Response time:
     resp_begin - query_end AS _rt,
-    min _rt AS 'server.rt.min' "Minimum response time.",
     max _rt AS 'server.rt.max' "Maximum response time.",
     avg _rt AS 'server.rt.avg' "Average response time.",
     95th percentile (sample(1000, _rt)) AS 'server.rt.95th'
       "Approximate 95th percentile of response time.",
     -- Server DTT:
     resp_end - resp_begin AS _sdtt,
-    min _sdtt AS 'server.dtt.min' "Minimum server DTT.",
-    max _sdtt AS 'server.dtt.max' "Maximum server DTT.",
     avg _sdtt AS 'server.dtt.avg' "Average server DTT.",
     95th percentile (sample(1000, _sdtt)) AS 'server.dtt.95th'
       "Approximate 95th percentile of server DTT."
@@ -642,15 +613,15 @@ AS
     _sum_rt_count_server / time_step AS 'server.rt.count.per_sec'
       "Measured server response times per second.",
     IF _sum_rt_count_server > 0 THEN
-      _sum_rt_sum_server / _sum_rt_count_server AS 'srt.avg'
+      _sum_rt_sum_server / _sum_rt_count_server AS 'server.rt.avg'
       "Average server response time.",
     IF _sum_rt_count_server > 0 THEN
       sqrt (sum rt_square_sum_server / _sum_rt_count_server -
             (_sum_rt_sum_server / _sum_rt_count_server)^2) AS _srt_stddev
       "Standard deviation of the server response time.",
-    'srt.avg' + _srt_stddev AS 'srt.avg + σ'
+    'server.rt.avg' + _srt_stddev AS 'server.rt.avg + σ'
       "Average response time plus its standard deviation.",
-    'srt.avg' - _srt_stddev AS 'srt.avg - σ'
+    'server.rt.avg' - _srt_stddev AS 'server.rt.avg - σ'
       "Average response time minus its standard deviation.",
     -- Jitter caller
     sum jitter_count_caller AS _sum_jitter_count_caller,
