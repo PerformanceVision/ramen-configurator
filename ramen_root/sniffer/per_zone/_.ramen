@@ -427,14 +427,14 @@ AS
     IF _sum_ct_count > 0 THEN
       _sum_ct_sum / _sum_ct_count AS 'ct.avg'
       "Average connection time.",
-    IF _sum_ct_count > 0 THEN
-      sqrt (sum ct_square_sum / _sum_ct_count -
-            (_sum_ct_sum / _sum_ct_count)^2)
-      AS _ct_stddev "Standard deviation of the connection time.",
-    'ct.avg' + _ct_stddev AS 'ct.avg + σ'
-      "Average connection time plus its standard deviation.",
-    max(0, 'ct.avg' - _ct_stddev) AS 'ct.avg - σ'
-      "Average connection time minus its standard deviation.",
+    --IF _sum_ct_count > 0 THEN
+    --  sqrt (sum ct_square_sum / _sum_ct_count -
+    --        (_sum_ct_sum / _sum_ct_count)^2)
+    --  AS _ct_stddev "Standard deviation of the connection time.",
+    --'ct.avg' + _ct_stddev AS 'ct.avg + σ'
+    --  "Average connection time plus its standard deviation.",
+    --max(0, 'ct.avg' - _ct_stddev) AS 'ct.avg - σ'
+    --  "Average connection time minus its standard deviation.",
     -- Average Round Trip Time out then in
     sum rtt_count_out AS _sum_rtt_count_out,
     sum rtt_sum_out AS _sum_rtt_sum_out,
@@ -443,14 +443,14 @@ AS
     IF _sum_rtt_count_out > 0 THEN
       _sum_rtt_sum_out / _sum_rtt_count_out AS 'out.rtt.avg'
       "Average in then out round trip time.",
-    IF _sum_rtt_count_out > 0 THEN
-      sqrt (sum rtt_square_sum_out / _sum_rtt_count_out -
-            (_sum_rtt_sum_out / _sum_rtt_count_out)^2) AS _rtt_stddev_out
-      "Standard deviation of the in then out round trip time.",
-    'out.rtt.avg' + _rtt_stddev_out AS 'out.rtt.avg + σ'
-      "Average in then out round trip time plus its standard deviation.",
-    max(0, 'out.rtt.avg' - _rtt_stddev_out) AS 'out.rtt.avg - σ'
-      "Average in then out round trip time minus its standard deviation.",
+    --IF _sum_rtt_count_out > 0 THEN
+    --  sqrt (sum rtt_square_sum_out / _sum_rtt_count_out -
+    --        (_sum_rtt_sum_out / _sum_rtt_count_out)^2) AS _rtt_stddev_out
+    --  "Standard deviation of the in then out round trip time.",
+    --'out.rtt.avg' + _rtt_stddev_out AS 'out.rtt.avg + σ'
+    --  "Average in then out round trip time plus its standard deviation.",
+    --max(0, 'out.rtt.avg' - _rtt_stddev_out) AS 'out.rtt.avg - σ'
+    --  "Average in then out round trip time minus its standard deviation.",
     -- Average Round Trip Time in then out
     sum rtt_count_in AS _sum_rtt_count_in,
     sum rtt_sum_in AS _sum_rtt_sum_in,
@@ -458,15 +458,15 @@ AS
       "Measured out then in round trip times per second.",
     IF _sum_rtt_count_in > 0 THEN
       _sum_rtt_sum_in / _sum_rtt_count_in AS 'in.rtt.avg'
-      "Average out then in round trip time.",
-    IF _sum_rtt_count_in > 0 THEN
-      sqrt (sum rtt_square_sum_in / _sum_rtt_count_in -
-            (_sum_rtt_sum_in / _sum_rtt_count_in)^2) AS _rtt_stddev_in
-      "Standard deviation of the out then in round trip time.",
-    'in.rtt.avg' + _rtt_stddev_in AS 'in.rtt.avg + σ'
-      "Average out then in round trip time plus its standard deviation.",
-    max(0, 'in.rtt.avg' - _rtt_stddev_in) AS 'in.rtt.avg - σ'
-      "Average out then in round trip time minus its standard deviation."
+      "Average out then in round trip time."
+    --IF _sum_rtt_count_in > 0 THEN
+    --  sqrt (sum rtt_square_sum_in / _sum_rtt_count_in -
+    --        (_sum_rtt_sum_in / _sum_rtt_count_in)^2) AS _rtt_stddev_in
+    --  "Standard deviation of the out then in round trip time.",
+    --'in.rtt.avg' + _rtt_stddev_in AS 'in.rtt.avg + σ'
+    --  "Average out then in round trip time plus its standard deviation.",
+    --max(0, 'in.rtt.avg' - _rtt_stddev_in) AS 'in.rtt.avg - σ'
+    --  "Average out then in round trip time minus its standard deviation."
   GROUP BY start // time_step, zone
   COMMIT AFTER
     in.start > out.start + 2 * time_step
