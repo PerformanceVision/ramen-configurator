@@ -846,7 +846,7 @@ DEFINE sql AS
     eth(mac_client) AS mac_client,
     eth(mac_server) AS mac_server,
     (query_begin / 1e6) {seconds(rel)} AS query_begin,
-    (query_end / 1e6) {seconds(rel)} AS query_end_,
+    (query_end / 1e6) {seconds(rel)} AS query_end,
     (resp_begin / 1e6) {seconds(rel)} AS resp_begin,
     (resp_end / 1e6) {seconds(rel)} AS resp_end,
     (rt_sum_server / 1e6) {seconds} AS rt_sum_server,
