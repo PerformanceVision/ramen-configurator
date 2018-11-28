@@ -433,7 +433,7 @@ AS
       AS _ct_stddev "Standard deviation of the connection time.",
     'ct.avg' + _ct_stddev AS 'ct.avg + σ'
       "Average connection time plus its standard deviation.",
-    'ct.avg' - _ct_stddev AS 'ct.avg - σ'
+    max(0, 'ct.avg' - _ct_stddev) AS 'ct.avg - σ'
       "Average connection time minus its standard deviation.",
     -- Average Round Trip Time out then in
     sum rtt_count_out AS _sum_rtt_count_out,
@@ -449,7 +449,7 @@ AS
       "Standard deviation of the in then out round trip time.",
     'out.rtt.avg' + _rtt_stddev_out AS 'out.rtt.avg + σ'
       "Average in then out round trip time plus its standard deviation.",
-    'out.rtt.avg' - _rtt_stddev_out AS 'out.rtt.avg - σ'
+    max(0, 'out.rtt.avg' - _rtt_stddev_out) AS 'out.rtt.avg - σ'
       "Average in then out round trip time minus its standard deviation.",
     -- Average Round Trip Time in then out
     sum rtt_count_in AS _sum_rtt_count_in,
@@ -465,7 +465,7 @@ AS
       "Standard deviation of the out then in round trip time.",
     'in.rtt.avg' + _rtt_stddev_in AS 'in.rtt.avg + σ'
       "Average out then in round trip time plus its standard deviation.",
-    'in.rtt.avg' - _rtt_stddev_in AS 'in.rtt.avg - σ'
+    max(0, 'in.rtt.avg' - _rtt_stddev_in) AS 'in.rtt.avg - σ'
       "Average out then in round trip time minus its standard deviation."
   GROUP BY start // time_step, zone
   COMMIT AFTER

@@ -66,7 +66,7 @@ AS
             (_sum_ct_sum / _sum_ct_count)^2) AS _ct_stddev,
     'ct.avg' + _ct_stddev AS 'ct.avg + σ'
       "Average connection time plus its standard deviation.",
-    'ct.avg' - _ct_stddev AS 'ct.avg - σ'
+    max(0, 'ct.avg' - _ct_stddev) AS 'ct.avg - σ'
       "Average connection time minus its standard deviation.",
     -- Average Server Response Time
     sum rt_count_server AS _sum_rt_count_server,
@@ -81,7 +81,7 @@ AS
             (_sum_rt_sum_server / _sum_rt_count_server)^2) AS _srt_stddev,
     'server.rt.avg' + _srt_stddev AS 'server.rt.avg + σ'
       "Average response time plus its standard deviation.",
-    'server.rt.avg' - _srt_stddev AS 'server.rt.avg - σ'
+    max(0, 'server.rt.avg' - _srt_stddev) AS 'server.rt.avg - σ'
       "Average response time minus its standard deviation.",
     -- Average Round Trip Time CSC
     sum rtt_count_server AS _sum_rtt_count_server,
@@ -97,7 +97,7 @@ AS
       "Standard deviation of the client→server→client round trip time.",
     'client.rtt.avg' + _crtt_stddev AS 'client.rtt.avg + σ'
       "Average client→server→client round trip time plus its standard deviation.",
-    'client.rtt.avg' - _crtt_stddev AS 'client.rtt.avg - σ'
+    max(0, 'client.rtt.avg' - _crtt_stddev) AS 'client.rtt.avg - σ'
       "Average client→server→client round trip time minus its standard deviation.",
     -- Average Round Trip Time SCS
     sum rtt_count_client AS _sum_rtt_count_client,
@@ -113,7 +113,7 @@ AS
       "Standard deviation of the server→client→server round trip time.",
     'server.rtt.avg' + _srtt_stddev AS 'server.rtt.avg + σ'
       "Average server→client→server round trip time plus its standard deviation.",
-    'server.rtt.avg' - _srtt_stddev AS 'server.rtt.avg - σ'
+    max(0, 'server.rtt.avg' - _srtt_stddev) AS 'server.rtt.avg - σ'
       "Average server→client→server round trip time minus its standard deviation.",
     -- Average Data Transfer Time C2S
     sum dtt_count_client AS _sum_dtt_count_client,
@@ -129,7 +129,7 @@ AS
       "Standard deviation of the clients to servers data transfer time.",
     'client.dtt.avg' + _cdtt_stddev AS 'client.dtt.avg + σ'
       "Average clients to servers data transfer time plus its standard deviation.",
-    'client.dtt.avg' - _cdtt_stddev AS 'client.dtt.avg - σ'
+    max(0, 'client.dtt.avg' - _cdtt_stddev) AS 'client.dtt.avg - σ'
       "Average clients to servers data transfer time minus its standard deviation.",
     -- Average Data Transfer Time S2C
     sum dtt_count_server AS _sum_dtt_count_server,
@@ -145,7 +145,7 @@ AS
       "Standard deviation of the servers to clients data transfer time.",
     'server.dtt.avg' + _sdtt_stddev AS 'server.dtt.avg + σ'
       "Average servers to clients data transfer time plus its standard deviation.",
-    'server.dtt.avg' - _sdtt_stddev AS 'server.dtt.avg - σ'
+    max(0, 'server.dtt.avg' - _sdtt_stddev) AS 'server.dtt.avg - σ'
       "Average servers to clients data transfer time minus its standard deviation."
   WHERE
     ip_external IS NULL -- Exclude netflow
@@ -352,7 +352,7 @@ AS
       "Standard deviation of the response times.",
     'server.rt.avg' + _srt_stddev AS 'server.rt.avg + σ'
       "Average response time plus its standard deviation.",
-    'server.rt.avg' - _srt_stddev AS 'server.rt.avg - σ'
+    max(0, 'server.rt.avg' - _srt_stddev) AS 'server.rt.avg - σ'
       "Average response time minus its standard deviation.",
     -- Average Data Transfer Time C2S
     sum dtt_count_client AS _sum_dtt_count_client,
@@ -368,7 +368,7 @@ AS
       "Standard deviation of the clients to servers data transfer time.",
     'client.dtt.avg' + _cdtt_stddev AS 'client.dtt.avg + σ'
       "Average clients to servers data transfer time plus its standard deviation.",
-    'client.dtt.avg' - _cdtt_stddev AS 'client.dtt.avg - σ'
+    max(0, 'client.dtt.avg' - _cdtt_stddev) AS 'client.dtt.avg - σ'
       "Average clients to servers data transfer time minus its standard deviation.",
     -- Average Data Transfer Time S2C
     sum dtt_count_server AS _sum_dtt_count_server,
@@ -384,7 +384,7 @@ AS
       "Standard deviation of the servers to clients data transfer time.",
     'server.dtt.avg' + _sdtt_stddev AS 'server.dtt.avg + σ'
       "Average servers to clients data transfer time plus its standard deviation.",
-    'server.dtt.avg' - _sdtt_stddev AS 'server.dtt.avg - σ'
+    max(0, 'server.dtt.avg' - _sdtt_stddev) AS 'server.dtt.avg - σ'
       "Average servers to clients data transfer time minus its standard deviation."
   GROUP BY start // time_step, application
   COMMIT AFTER
@@ -429,7 +429,7 @@ AS
       "Standard deviation of the response time.",
     'server.rt.avg' + _srt_stddev AS 'server.rt.avg + σ'
       "Average response time plus its standard deviation.",
-    'server.rt.avg' - _srt_stddev AS 'server.rt.avg - σ'
+    max(0, 'server.rt.avg' - _srt_stddev) AS 'server.rt.avg - σ'
       "Average response time minus its standard deviation.",
     -- Average Login Time:
     sum login_time_count AS _sum_login_time_count,
@@ -445,7 +445,7 @@ AS
       "Standard deviation of the login time.",
     'login.time.avg' + _login_time_stddev AS 'login.time.avg + σ'
       "Average login time plus its standard deviation.",
-    'login.time.avg' - _login_time_stddev AS 'login.time.avg - σ'
+    max(0, 'login.time.avg' - _login_time_stddev) AS 'login.time.avg - σ'
       "Average login time minus its standard deviation.",
     -- Launch Times:
     sum launch_time_count AS _sum_launch_time_count,
@@ -461,7 +461,7 @@ AS
       "Standard deviation of the launch time.",
     'launch.time.avg' + _launch_time_stddev AS 'launch.time.avg + σ'
       "Average launch time plus its standard deviation.",
-    'launch.time.avg' - _launch_time_stddev AS 'launch.time.avg - σ'
+    max(0, 'launch.time.avg' - _launch_time_stddev) AS 'launch.time.avg - σ'
       "Average launch time minus its standard deviation.",
     -- Average Data Transfer Time C2S
     sum dtt_count_client AS _sum_dtt_count_client,
@@ -477,7 +477,7 @@ AS
       "Standard deviation of the clients to servers data transfer time.",
     'client.dtt.avg' + _cdtt_stddev AS 'client.dtt.avg + σ'
       "Average clients to servers data transfer time plus its standard deviation.",
-    'client.dtt.avg' - _cdtt_stddev AS 'client.dtt.avg - σ'
+    max(0, 'client.dtt.avg' - _cdtt_stddev) AS 'client.dtt.avg - σ'
       "Average clients to servers data transfer time minus its standard deviation.",
     -- Average Data Transfer Time S2C
     sum dtt_count_server AS _sum_dtt_count_server,
@@ -493,7 +493,7 @@ AS
       "Standard deviation of the servers to clients data transfer time.",
     'server.dtt.avg' + _sdtt_stddev AS 'server.dtt.avg + σ'
       "Average clients to servers data transfer time plus its standard deviation.",
-    'server.dtt.avg' - _sdtt_stddev AS 'server.dtt.avg - σ'
+    max(0, 'server.dtt.avg' - _sdtt_stddev) AS 'server.dtt.avg - σ'
       "Average clients to servers data transfer time minus its standard deviation."
   GROUP BY start // time_step, application
   COMMIT AFTER
@@ -621,7 +621,7 @@ AS
       "Standard deviation of the server response time.",
     'server.rt.avg' + _srt_stddev AS 'server.rt.avg + σ'
       "Average response time plus its standard deviation.",
-    'server.rt.avg' - _srt_stddev AS 'server.rt.avg - σ'
+    max(0, 'server.rt.avg' - _srt_stddev) AS 'server.rt.avg - σ'
       "Average response time minus its standard deviation.",
     -- Jitter caller
     sum jitter_count_caller AS _sum_jitter_count_caller,
@@ -637,7 +637,7 @@ AS
       AS _caller_jitter_stddev "Standard deviation of the jitter from caller.",
     'caller.jitter.avg' + _caller_jitter_stddev AS 'caller.jitter.avg + σ'
       "Average jitter from caller plus its standard deviation.",
-    'caller.jitter.avg' - _caller_jitter_stddev AS 'caller.jitter.avg - σ'
+    max(0, 'caller.jitter.avg' - _caller_jitter_stddev) AS 'caller.jitter.avg - σ'
       "Average jitter from caller minus its standard deviation.",
     -- Jitter callee
     sum jitter_count_callee AS _sum_jitter_count_callee,
@@ -653,7 +653,7 @@ AS
       AS _callee_jitter_stddev "Standard deviation of the jitter from callee.",
     'callee.jitter.avg' + _callee_jitter_stddev AS 'callee.jitter.avg + σ'
       "Average jitter from callee plus its standard deviation.",
-    'callee.jitter.avg' - _callee_jitter_stddev AS 'callee.jitter.avg - σ'
+    max(0, 'callee.jitter.avg' - _callee_jitter_stddev) AS 'callee.jitter.avg - σ'
       "Average jitter from callee minus its standard deviation.",
     -- RTT callee→caller→callee
     sum rtt_count_caller AS _sum_rtt_count_caller,
@@ -669,7 +669,7 @@ AS
       "Standard deviation of the callee→caller→callee round trip time.",
     'caller.rtt.avg' + _caller_rtt_stddev AS 'caller.rtt.avg + σ'
       "Average callee→caller→callee round trip time plus its standard deviation.",
-    'caller.rtt.avg' - _caller_rtt_stddev AS 'caller.rtt.avg - σ'
+    max(0, 'caller.rtt.avg' - _caller_rtt_stddev) AS 'caller.rtt.avg - σ'
       "Average callee→caller→callee round trip time minus its standard deviation.",
     -- RTT caller→callee→caller
     sum rtt_count_callee AS _sum_rtt_count_callee,
@@ -685,7 +685,7 @@ AS
       "Standard deviation of the caller→callee→caller round trip time.",
     'callee.rtt.avg' + _callee_rtt_stddev AS 'callee.rtt.avg + σ'
       "Average callee→callee→callee round trip time plus its standard deviation.",
-    'callee.rtt.avg' - _callee_rtt_stddev AS 'callee.rtt.avg - σ'
+    max(0, 'callee.rtt.avg' - _callee_rtt_stddev) AS 'callee.rtt.avg - σ'
       "Average callee→callee→callee round trip time minus its standard deviation.",
     -- Losses (alt count)
     sum loss_callee2caller_alt_count AS _sum_loss_callee2caller_alt_count,
@@ -760,7 +760,7 @@ AS
       AS _ct_stddev "Standard deviation of the connection time.",
     'ct.avg' + _ct_stddev AS 'ct.avg + σ'
       "Average connection time plus its standard deviation.",
-    'ct.avg' - _ct_stddev AS 'ct.avg - σ'
+    max(0, 'ct.avg' - _ct_stddev) AS 'ct.avg - σ'
       "Average connection time minus its standard deviation.",
     -- Certificate expirations
     min client_not_after AS 'client.expiry.min'
