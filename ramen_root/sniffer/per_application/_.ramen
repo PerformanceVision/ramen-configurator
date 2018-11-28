@@ -518,7 +518,7 @@ AS
       "SMB queries per second.",
     sum u32(is_error) / _count AS 'errors.ratio'
       "Error ratio.",
-    sum u32(is_warning) / _count AS 'warning_ratio'
+    sum u32(is_warning) / _count AS 'warning.ratio'
       "Warning ratio.",
     sum query_payload / time_step AS 'request.payload.per_sec'
       "Payload bytes per second in queries.",
@@ -567,7 +567,7 @@ AS
     -- Volumes
     sum 1 {} AS _count,
     _count / time_step AS 'queries.per_sec' "SQL queries per second.",
-    sum u32(timeouted) / _count AS 'timeout_ratio'
+    sum u32(timeouted) / _count AS 'timeout.ratio'
       "Ratio of transactions that timed out during capture.",
     sum u32(is_error) / _count AS 'errors.ratio'
       "Error ratio.",
@@ -617,7 +617,7 @@ AS
       "Number of (new) calls per second.",
     sum u32(had_voice) / _count AS 'has_voice.ratio'
       "Ratio of calls with voice.",
-    sum u32(call_direction_is_out) / _count AS 'outbind_call_ratio'
+    sum u32(call_direction_is_out) / _count AS 'outbind_call.ratio'
       "Ratio of outbound calls.",
     sum sign_bytes_client / time_step AS 'client.sign.bytes.per_sec'
       "Bytes per second from clients signalisation.",
