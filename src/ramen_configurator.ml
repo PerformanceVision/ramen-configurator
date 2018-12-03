@@ -198,7 +198,8 @@ let write_notif_conf fname alert_internal cmds =
           %a
         ]
     }
-  ]
+  ];
+  default_init_schedule_delay = 30;
 }
 |}
     (if alert_internal then "" else "{ name = \"Internal\" ; contacts = [] }; ")
