@@ -23,7 +23,7 @@ RUN IF
 -- We must then go back to the tcp/udp/icmp and other-ip tables, and
 -- takes either client or server columns depending on whether zone_client
 -- or ip_client is smaller.
-DEFINE c2s AS
+DEFINE LAZY c2s AS
   FROM
     ../../csv/tcp,
     ../../csv/udp,
@@ -31,7 +31,7 @@ DEFINE c2s AS
     '../../csv/other-ip'
   MERGE TIMEOUT AFTER 5s
   WHERE
-    start > merge.greatest.start - 3min AND
+    start > merge_greatest.start - 3min AND
     (zone_client < zone_server OR
      zone_client = zone_server AND ip_client <= ip_server)
   SELECT
@@ -53,7 +53,7 @@ DEFINE c2s AS
     rd_count_client AS rd_count_1, rd_count_server AS rd_count_2;
 
 -- In the other way around for the other tuples:
-DEFINE s2c AS
+DEFINE LAZY s2c AS
   FROM
     ../../csv/tcp,
     ../../csv/udp,
@@ -61,7 +61,7 @@ DEFINE s2c AS
     '../../csv/other-ip'
   MERGE TIMEOUT AFTER 5s
   WHERE
-    start > merge.greatest.start - 3min AND
+    start > merge_greatest.start - 3min AND
     (zone_server < zone_client OR
      zone_server = zone_client AND ip_server < ip_client)
   SELECT
@@ -87,12 +87,12 @@ DEFINE s2c AS
 -- accordingly blanks the zone_src/dst.
 -- The number of distinct pairs of hosts is approximated using a single large
 -- rotating bloom filter.
-DEFINE degraded AS
+DEFINE LAZY degraded AS
   FROM c2s, s2c
   MERGE TIMEOUT AFTER 5s
   SELECT
     *,
-    NOT REMEMBER (
+    NOT REMEMBER GLOBALLY (
       false_pos_rate,
       start, -- time
       1h, -- memory duration
@@ -102,16 +102,17 @@ DEFINE degraded AS
       COALESCE(vlan_1, vlan_2, 0), ip_1, ip_2
     ) AS is_new_hosts_pair,
     -- Nullifies the zones if not important:
-    IS zone_1, zone_2 IN TOP top_size OVER top_size*5
-      BY u32(is_new_hosts_pair)
-      AT TIME start FOR THE LAST top_duration
+    IS zone_1, zone_2 IN
+      TOP top_size OVER top_size*5 GLOBALLY
+        BY u32(is_new_hosts_pair)
+        AT TIME start FOR THE LAST top_duration
       AS _important,
     IF _important THEN zone_1 ELSE NULL AS zone_1,
     IF _important THEN zone_2 ELSE NULL AS zone_2;
 
 -- Now that we have reduced that dimension, we can aggregate on
 -- zone_1*zone_2
-DEFINE top
+DEFINE LAZY top
   "Statistics about the most important links in between zones (per number of active hosts)."
 AS
   FROM degraded

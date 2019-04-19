@@ -19,7 +19,7 @@ RUN IF
 
 -- We need to make all CSV similar before merging them:
 
-DEFINE tcp_services AS
+DEFINE LAZY tcp_services AS
   FROM ../../csv/tcp
   SELECT
     start, stop,
@@ -37,7 +37,7 @@ DEFINE tcp_services AS
     ct_count AS connections,
     zero_window_count_server;
 
-DEFINE udp_services AS
+DEFINE LAZY udp_services AS
   FROM ../../csv/udp
   SELECT
     start, stop,
@@ -57,14 +57,14 @@ DEFINE udp_services AS
     0u32 AS zero_window_count_server;
 
 -- Merge all possible CSV together
-DEFINE degraded AS
+DEFINE LAZY degraded AS
   FROM
     tcp_services, udp_services
   MERGE TIMEOUT AFTER 5s
-  WHERE start > merge.greatest.start - 3min
+  WHERE start > merge_greatest.start - 3min
   SELECT
     *,
-    NOT REMEMBER (
+    NOT REMEMBER GLOBALLY (
       false_pos_rate,
       start, -- time
       1h, -- memory duration
@@ -72,9 +72,10 @@ DEFINE degraded AS
       vlan, ip_server, port_server, protocol, ip_client
     ) AS is_new_client,
     -- nullifies the service identity if not important:
-    IS vlan, ip_server, port_server, protocol IN TOP top_size OVER top_size*5
-      BY u32(is_new_client)
-      AT TIME start FOR THE LAST top_duration
+    IS vlan, ip_server, port_server, protocol IN
+      TOP top_size OVER top_size*5 GLOBALLY
+        BY u32(is_new_client)
+        AT TIME start FOR THE LAST top_duration
       AS _important,
     -- Note: This would fail to typecheck with the internal typechecker
     -- without the casts around the NULLs because of a bug in CASE/NULL:
@@ -87,7 +88,7 @@ DEFINE degraded AS
     IF _important THEN protocol ELSE string(NULL) AS protocol;
 
 -- Aggregate on service, per minute:
-DEFINE top
+DEFINE LAZY top
   "Per minute statistics about the most important services (per number of clients)."
 AS
   FROM degraded
@@ -120,11 +121,12 @@ AS
     min _avg_response_time DOC "Approximate minimum response time.",
     max _avg_response_time DOC "Approximate maximum response time.",
     -- Also some percentiles (of the avgs!):
-    90th percentile (sample(1000, _avg_response_time)) as avg_response_time_90th
+    [90; 95; 99] percentile (sample(1000, _avg_response_time)) AS _avg_response_time_percs,
+    1st _avg_response_time_percs AS avg_response_time_90th
       "Approximate 90th percentile of response times.",
-    95th percentile (sample(1000, _avg_response_time)) as avg_response_time_95th
+    2nd _avg_response_time_percs AS avg_response_time_95th
       "Approximate 95th percentile of response times.",
-    99th percentile (sample(1000, _avg_response_time)) as avg_response_time_99th
+    3rd _avg_response_time_percs AS avg_response_time_99th
       "Approximate 99th percentile of response times.",
 
     -- RTT from client

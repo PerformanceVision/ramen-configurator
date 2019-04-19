@@ -10,7 +10,7 @@ RUN IF
     time_step <= 10min AND variant("run_time_steps") IN ["up_to_10min"; "up_to_1hour"] OR
     variant("run_time_steps") = "up_to_1hour", false);
 
-DEFINE tcp
+DEFINE LAZY tcp
   "TCP metrics per application and time step."
 AS
   FROM ../../csv/tcp
@@ -154,7 +154,7 @@ AS
     in.start > out.start + 2 * time_step
   FACTOR application;
 
-DEFINE udp
+DEFINE LAZY udp
   "UDP metrics per application and time step."
 AS
   FROM ../../csv/udp
@@ -179,7 +179,7 @@ AS
     in.start > out.start + 2 * time_step
   FACTOR application;
 
-DEFINE icmp
+DEFINE LAZY icmp
   "ICMP metrics per application and time step."
 AS
   FROM ../../csv/icmp
@@ -215,7 +215,7 @@ AS
     in.start > out.start + 2 * time_step
   FACTOR application;
 
-DEFINE 'other-ip'
+DEFINE LAZY 'other-ip'
   "'Other-ip' metrics per application and time step."
 AS
   FROM '../../csv/other-ip'
@@ -238,7 +238,7 @@ AS
     in.start > out.start + 2 * time_step
   FACTOR application;
 
-DEFINE 'non-ip'
+DEFINE LAZY 'non-ip'
   "Non-IP metrics per application and time step."
 AS
   FROM '../../csv/non-ip'
@@ -261,7 +261,7 @@ AS
     in.start > out.start + 2 * time_step
   FACTOR application;
 
-DEFINE http
+DEFINE LAZY http
   "HTTP metrics per application and time step."
 AS
   FROM ../../csv/http
@@ -317,7 +317,7 @@ AS
     in.start > out.start + 2 * time_step
   FACTOR application;
 
-DEFINE citrix_channels
+DEFINE LAZY citrix_channels
   "Citrix-Channels  metrics per application and time step."
 AS
   FROM ../../csv/citrix_channels
@@ -391,7 +391,7 @@ AS
     in.start > out.start + 2 * time_step
   FACTOR application;
 
-DEFINE citrix
+DEFINE LAZY citrix
   "Citrix metrics per application and time step."
 AS
   FROM ../../csv/citrix
@@ -500,7 +500,7 @@ AS
     in.start > out.start + 2 * time_step
   FACTOR application;
 
-DEFINE smb
+DEFINE LAZY smb
   "SMB metrics per application and time step."
 AS
   FROM ../../csv/smb
@@ -538,7 +538,7 @@ AS
     in.start > out.start + 2 * time_step
   FACTOR application;
 
-DEFINE sql
+DEFINE LAZY sql
   "SQL metrics per application and time step."
 AS
   FROM ../../csv/sql
@@ -573,7 +573,7 @@ AS
     in.start > out.start + 2 * time_step
   FACTOR application;
 
-DEFINE voip
+DEFINE LAZY voip
   "VoIP metrics per application and time step."
 AS
   FROM ../../csv/voip
@@ -728,7 +728,7 @@ AS
     in.start > out.start + 2 * time_step
   FACTOR application;
 
-DEFINE tls
+DEFINE LAZY tls
   "TLS metrics per application and time step."
 AS
   FROM ../../csv/tls

@@ -1,7 +1,7 @@
 # Configuration
 
 VERSION = 2.8.21
-RAMEN_VERSION = 3.0.44
+RAMEN_VERSION = 3.4.0
 
 DUPS_IN = $(shell ocamlfind ocamlc -where)/compiler-libs
 OCAMLOPT   = OCAMLPATH=$(OCAMLPATH) OCAMLRUNPARAM= OCAMLFIND_IGNORE_DUPS_IN="$(DUPS_IN)" ocamlfind ocamlopt
@@ -52,7 +52,7 @@ all: $(INSTALLED) src/findcsv
 
 %.x: %.ramen
 	@echo 'Compiling ramen program $@'
-	@ramen compile --root=ramen_root $<
+	@ramen compile -L ramen_root $<
 
 # Dependencies
 
@@ -183,7 +183,7 @@ clean-comp:
 	@find ramen_root/ -\( \
 	  -name '*.x' -o -name '*.ml' -o -name '*.cmx' -o -name '*.annot' -o \
 	  -name '*.s' -o -name '*.cmi' -o -name '*.o' -o -name '*.smt2' -o \
-	  -name '*.smt2.no_opt' \
+	  -name '*.smt2.no_opt' -o -name '*.cmt' -o -name '*.cc' \
 	-\) -delete
 
 clean: clean-comp

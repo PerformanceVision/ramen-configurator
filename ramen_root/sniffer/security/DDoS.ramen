@@ -7,7 +7,7 @@ PARAMETERS
 
 RUN IF COALESCE(variant("DDoS_detector") = "on", false);
 
-DEFINE 'new peers'
+DEFINE LAZY 'new peers'
 --  "Approximation of the number of new unique clients and socket pairs."
 AS
   FROM
@@ -16,7 +16,7 @@ AS
     ../../csv/icmp,
     '../../csv/other-ip'
   MERGE TIMEOUT AFTER 5s
-  WHERE start > merge.greatest.start - 3min
+  WHERE start > merge_greatest.start - 3min
   SELECT
     truncate(start, avg_win) AS start,
     out.start + avg_win AS stop,
@@ -37,17 +37,17 @@ AS
         "Approximate number of new clients (as in: hosts that were not clients of anything for at least one hour)"
   GROUP BY start // avg_win
   COMMIT AFTER
-    in.start > out.min_start  + 2 * u64(avg_win);
+    in.start > out.min_start + 2 * u64(avg_win);
 
-DEFINE 'new peers: DDoS predictions' AS
+DEFINE LAZY 'new peers: DDoS predictions' AS
   FROM 'new peers'
   SELECT
     start,
     num_new_cnxs_per_sec,
-    smooth(num_new_cnxs_per_sec) AS pred_0_num_new_cnxs_per_sec,
-    fit(5, num_new_cnxs_per_sec) AS pred_1_num_new_cnxs_per_sec,
-    5-ma(num_new_cnxs_per_sec) AS pred_2_num_new_cnxs_per_sec,
-    lag(num_new_cnxs_per_sec) AS pred_3_num_new_cnxs_per_sec,
+    smooth globally(num_new_cnxs_per_sec) AS pred_0_num_new_cnxs_per_sec,
+    fit globally(5, num_new_cnxs_per_sec) AS pred_1_num_new_cnxs_per_sec,
+    5-ma globally(num_new_cnxs_per_sec) AS pred_2_num_new_cnxs_per_sec,
+    lag globally(num_new_cnxs_per_sec) AS pred_3_num_new_cnxs_per_sec,
     IF num_new_cnxs_per_sec > 1 THEN (abs(pred_3_num_new_cnxs_per_sec - num_new_cnxs_per_sec) /
        max(abs pred_3_num_new_cnxs_per_sec, abs num_new_cnxs_per_sec) +
      abs(pred_2_num_new_cnxs_per_sec - num_new_cnxs_per_sec) /
@@ -58,10 +58,10 @@ DEFINE 'new peers: DDoS predictions' AS
        max(abs pred_0_num_new_cnxs_per_sec, abs num_new_cnxs_per_sec)) / 4 ELSE 0
         AS abnormality_num_new_cnxs_per_sec,
     num_new_clients_per_sec,
-    smooth(num_new_clients_per_sec) AS pred_0_num_new_clients_per_sec,
-    fit(5, num_new_clients_per_sec) AS pred_1_num_new_clients_per_sec,
-    5-ma(num_new_clients_per_sec) AS pred_2_num_new_clients_per_sec,
-    lag(num_new_clients_per_sec) AS pred_3_num_new_clients_per_sec,
+    smooth globally(num_new_clients_per_sec) AS pred_0_num_new_clients_per_sec,
+    fit globally(5, num_new_clients_per_sec) AS pred_1_num_new_clients_per_sec,
+    5-ma globally(num_new_clients_per_sec) AS pred_2_num_new_clients_per_sec,
+    lag globally(num_new_clients_per_sec) AS pred_3_num_new_clients_per_sec,
     IF num_new_clients_per_sec > 1 THEN (abs(pred_3_num_new_clients_per_sec - num_new_clients_per_sec) /
        max(abs pred_3_num_new_clients_per_sec, abs num_new_clients_per_sec) +
      abs(pred_2_num_new_clients_per_sec - num_new_clients_per_sec) /
@@ -79,10 +79,9 @@ DEFINE 'new peers: DDoS anomalies' AS
     (abnormality_num_new_clients_per_sec > 0.75 OR
      abnormality_num_new_cnxs_per_sec > 0.75) AS abnormality,
     5-ma float(abnormality) AS _recent_abnormality,
-    NOT (HYSTERESIS (_recent_abnormality, 3/5, 4/5)) AS firing
-  NOTIFY "Security - Possible DDoS detected" WITH
-    "${firing}" AS firing,
+    NOT (HYSTERESIS (_recent_abnormality, 3/5, 4/5)) AS firing,
     0.1 * abs(_recent_abnormality - 3/5) AS certainty,
     "possible DDoS" AS desc
+  NOTIFY "Security - Possible DDoS detected"
   AND KEEP ALL
   AFTER firing != COALESCE(previous.firing, false);

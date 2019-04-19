@@ -15,18 +15,19 @@ RUN IF
     ), false);
 
 -- Top of type * code * error_ip_server * error_port every time_step
-DEFINE icmp_degraded AS
+DEFINE LAZY icmp_degraded AS
   FROM ../../csv/icmp
   SELECT
     start, stop,
-    IS icmp_type, icmp_code, error_ip_server, error_port_server IN TOP top_size
+    IS icmp_type, icmp_code, error_ip_server, error_port_server IN
+      TOP top_size GLOBALLY
       AT TIME start FOR THE LAST top_duration AS _important,
     -- degrade the key of not important:
     icmp_type, icmp_code,
     IF _important THEN error_ip_server AS error_ip_server,
     IF _important THEN error_port_server AS error_port_server;
 
-DEFINE icmp
+DEFINE LAZY icmp
   "Top ICMP errors."
 AS
   FROM icmp_degraded
@@ -48,18 +49,22 @@ AS
   FACTORS icmp_type, icmp_code;
 
 -- Select the worse TCP servers:
-DEFINE tcp_degraded AS
+DEFINE LAZY tcp_degraded AS
   FROM ../../csv/tcp
   SELECT
     start, stop,
-    (IS ip_server IN TOP top_size BY zero_window_count_server
-      AT TIME start FOR THE LAST top_duration) OR
-    (IS ip_server IN TOP top_size BY (dupack_count_client + dupack_count_server)
-      AT TIME start FOR THE LAST top_duration) OR
-    (IS ip_server IN TOP top_size BY (retrans_traffic_bytes_client + retrans_traffic_bytes_server)
-      AT TIME start FOR THE LAST top_duration) OR
-    (IS ip_server IN TOP top_size BY (rst_count_server + timeout_count)
-      AT TIME start FOR THE LAST top_duration)
+    (IS ip_server IN
+      TOP top_size GLOBALLY BY zero_window_count_server
+        AT TIME start FOR THE LAST top_duration) OR
+    (IS ip_server IN
+      TOP top_size GLOBALLY BY (dupack_count_client + dupack_count_server)
+        AT TIME start FOR THE LAST top_duration) OR
+    (IS ip_server IN
+      TOP top_size GLOBALLY BY (retrans_traffic_bytes_client + retrans_traffic_bytes_server)
+        AT TIME start FOR THE LAST top_duration) OR
+    (IS ip_server IN
+      TOP top_size GLOBALLY BY (rst_count_server + timeout_count)
+        AT TIME start FOR THE LAST top_duration)
       AS _important,
     -- The data
     traffic_bytes_client, traffic_bytes_server,
@@ -77,7 +82,7 @@ DEFINE tcp_degraded AS
     -- Degraded non important ip_server:
     IF _important THEN ip_server AS ip_server;
 
-DEFINE tcp
+DEFINE LAZY tcp
   "Worse TCP servers."
 AS
   FROM tcp_degraded

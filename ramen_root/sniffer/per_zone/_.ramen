@@ -10,7 +10,7 @@ RUN IF
 
 -- TCP
 
-DEFINE c2s_tcp AS
+DEFINE LAZY c2s_tcp AS
   FROM ../../csv/tcp
   SELECT
     start, stop,
@@ -60,7 +60,7 @@ DEFINE c2s_tcp AS
     -- Those are significant for both directions regardless of where is the client:
     timeout_count, close_count, ct_count, ct_sum, ct_square_sum;
 
-DEFINE s2c_tcp AS
+DEFINE LAZY s2c_tcp AS
   FROM ../../csv/tcp
   WHERE zone_client <> zone_client
   SELECT
@@ -110,7 +110,7 @@ DEFINE s2c_tcp AS
 
 -- UDP
 
-DEFINE c2s_udp AS
+DEFINE LAZY c2s_udp AS
   FROM ../../csv/udp
   SELECT
     start, stop,
@@ -142,7 +142,7 @@ DEFINE c2s_udp AS
     0u32 AS timeout_count, 0u32 AS close_count,
     0u32 AS ct_count, 0. AS ct_sum, 0. AS ct_square_sum;
 
-DEFINE s2c_udp AS
+DEFINE LAZY s2c_udp AS
   FROM ../../csv/udp
   WHERE zone_client <> zone_client
   SELECT
@@ -177,7 +177,7 @@ DEFINE s2c_udp AS
 
 -- ICMP
 
-DEFINE c2s_icmp AS
+DEFINE LAZY c2s_icmp AS
   FROM ../../csv/icmp
   SELECT
     start, stop,
@@ -209,7 +209,7 @@ DEFINE c2s_icmp AS
     0u32 AS timeout_count, 0u32 AS close_count,
     0u32 AS ct_count, 0. AS ct_sum, 0. AS ct_square_sum;
 
-DEFINE s2c_icmp AS
+DEFINE LAZY s2c_icmp AS
   FROM ../../csv/icmp
   WHERE zone_client <> zone_client
   SELECT
@@ -244,7 +244,7 @@ DEFINE s2c_icmp AS
 
 -- OtherIP
 
-DEFINE c2s_other_ip AS
+DEFINE LAZY c2s_other_ip AS
   FROM '../../csv/other-ip'
   SELECT
     start, stop,
@@ -276,7 +276,7 @@ DEFINE c2s_other_ip AS
     0u32 AS timeout_count, 0u32 AS close_count,
     0u32 AS ct_count, 0. AS ct_sum, 0. AS ct_square_sum;
 
-DEFINE s2c_other_ip AS
+DEFINE LAZY s2c_other_ip AS
   FROM '../../csv/other-ip'
   WHERE zone_client <> zone_client
   SELECT
@@ -311,7 +311,7 @@ DEFINE s2c_other_ip AS
 
 -- NonIP
 
-DEFINE c2s_non_ip AS
+DEFINE LAZY c2s_non_ip AS
   FROM '../../csv/non-ip'
   SELECT
     start, stop,
@@ -343,7 +343,7 @@ DEFINE c2s_non_ip AS
     0u32 AS timeout_count, 0u32 AS close_count,
     0u32 AS ct_count, 0. AS ct_sum, 0. AS ct_square_sum;
 
-DEFINE s2c_non_ip AS
+DEFINE LAZY s2c_non_ip AS
   FROM '../../csv/non-ip'
   WHERE zone_client <> zone_client
   SELECT
@@ -378,7 +378,7 @@ DEFINE s2c_non_ip AS
 
 -- Finally:
 
-DEFINE traffic
+DEFINE LAZY traffic
   "Traffic characteristics per destination zone."
 AS
   FROM
@@ -389,7 +389,7 @@ AS
     c2s_non_ip, s2c_non_ip
   MERGE TIMEOUT AFTER 5s
   WHERE
-    start > merge.greatest.start - 3min
+    start > merge_greatest.start - 3min
   SELECT
     -- Time
     truncate(start, time_step) AS start,

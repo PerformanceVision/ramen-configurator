@@ -2,9 +2,9 @@
 
 PARAMETERS
   -- Duration for which histograms are grown:
-  time_step DEFAULTS TO 350s,
+  time_step DEFAULTS TO 350s;
   -- width of the histograms:
-  num_buckets DEFAULTS TO 20;
+--  num_buckets DEFAULTS TO 20;
 
 RUN IF
   COALESCE(
@@ -16,7 +16,7 @@ RUN IF
 
 -- TODO: add the query / response sizes
 
-DEFINE tcp_connections AS
+DEFINE LAZY tcp_connections AS
   FROM ../../csv/tcp
   WHERE ct_count > 0
   SELECT
@@ -28,7 +28,7 @@ DEFINE tcp_connections AS
     string(ip_server) AS query,
     true AS success;
 
-DEFINE tcp_generic AS
+DEFINE LAZY tcp_generic AS
   FROM ../../csv/tcp
   WHERE rt_count_server > 0
   SELECT
@@ -40,7 +40,7 @@ DEFINE tcp_generic AS
     string(ip_server) AS query,
     true AS success;
 
-DEFINE dns_resolutions AS
+DEFINE LAZY dns_resolutions AS
   FROM ../../csv/dns WHERE
     query_type = 1 -- A
     OR query_type = 28 -- AAA
@@ -53,7 +53,7 @@ DEFINE dns_resolutions AS
     query_name || (IF query_type <> 1 THEN " (AAA)" ELSE "") AS query,
     error_count = 0 AS success;
 
-DEFINE http_hits AS
+DEFINE LAZY http_hits AS
   FROM ../../csv/http
   WHERE resp_begin IS NOT NULL
   SELECT
@@ -65,12 +65,12 @@ DEFINE http_hits AS
     NOT timeouted AND COALESCE(resp_code < 400, false) AS success,
     1 AS count;
 
-DEFINE citrix_mix AS
+DEFINE LAZY citrix_mix AS
   FROM ../../csv/citrix,
        ../../csv/citrix_channels
   MERGE TIMEOUT AFTER 5s
   WHERE
-    start > merge.greatest.start - 3min AND
+    start > merge_greatest.start - 3min AND
     rt_count_server > 0
   SELECT
     start,
@@ -82,7 +82,7 @@ DEFINE citrix_mix AS
       COALESCE("(" || citrix_application || ")", "") AS query,
     true AS success;
 
-DEFINE smb_mix AS
+DEFINE LAZY smb_mix AS
   FROM ../../csv/smb
   WHERE resp_begin IS NOT NULL
   SELECT
@@ -94,7 +94,7 @@ DEFINE smb_mix AS
     COALESCE(status = 0, false) AS success, -- TODO
     1 AS count;
 
-DEFINE sql_queries AS
+DEFINE LAZY sql_queries AS
   FROM ../../csv/sql
   WHERE resp_begin IS NOT NULL
   SELECT
@@ -110,7 +110,7 @@ DEFINE sql_queries AS
 -- TOP selecting for each group the worse queries, and then in the next node we
 -- could aggregate per application, protocol, success and query.
 
-DEFINE 'response times'
+DEFINE LAZY 'response times'
   "Aggregation of all possible queries/responses"
 AS
   FROM
@@ -122,7 +122,7 @@ AS
     citrix_mix,
     smb_mix
   MERGE TIMEOUT AFTER 5s
-  WHERE start > merge.greatest.start - 3min
+  WHERE start > merge_greatest.start - 3min
   GROUP BY application, protocol, success, start // time_step
   SELECT
     truncate(start, time_step) AS start,

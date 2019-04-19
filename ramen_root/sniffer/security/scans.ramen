@@ -12,15 +12,15 @@ PARAMETERS
 RUN IF COALESCE(variant("Scan_detector") = "on", false);
 
 -- Start by filtering all entries but the new ones
-DEFINE new_triplets AS
+DEFINE LAZY new_triplets AS
   FROM
     ../../csv/tcp,
     ../../csv/udp
   MERGE TIMEOUT AFTER 5s
   WHERE
-    start > merge.greatest.start - 3min AND
+    start > merge_greatest.start - 3min AND
     -- TODO: we could filter out by max_num_packets up here
-    NOT REMEMBER (
+    NOT REMEMBER GLOBALLY (
       false_pos_rate, start, 1h,
       -- We do not take into account IP proto, so a ping on a TCP port
       -- grants you a free ping on the same UDP port.
@@ -31,10 +31,11 @@ DEFINE new_triplets AS
     -- We could do better than that and look at RST but we do not have that for
     -- TCP - wait for https://github.com/rixed/ramen/issues/50
     traffic_packets_client + traffic_packets_server AS num_packets,
-    IS ip_client, ip_server IN TOP top_size OVER top_max_size FOR THE LAST 1h
+    IS ip_client, ip_server IN
+      TOP top_size OVER top_max_size GLOBALLY FOR THE LAST 1h
       AS is_important;
 
-DEFINE 'top port scans'
+DEFINE LAZY 'top port scans'
 --  "Detection of port scanners."
 AS
   FROM new_triplets
@@ -56,20 +57,21 @@ DEFINE port_scan_alert AS
     i32(port_count) AS int_port_count,
     format_time("%Y-%m-%d %H:%M:%S", start) AS date_start,
     format_time("%Y-%m-%d %H:%M:%S", stop) AS date_stop,
+    0.1 * reldiff(port_count, max_ports) AS certainty,
+    "${ip_client} has probed at least ${int_port_count} ports of ${ip_server} from ${date_start} to ${date_stop}"
+      AS desc,
+    "${ip_client},${ip_server}" AS ips,
+    "${port_count}" AS values,
+    "${max_ports}" AS thresholds,
     *
   WHEN
     port_count > max_ports AND
     -- Try to remember the offenders for some time:
-    NOT REMEMBER(0.01, start, alert_memory,
+    NOT REMEMBER GLOBALLY(0.01, start, alert_memory,
           IF port_count > max_ports THEN ip_client) |? false
-  NOTIFY "Security - Port-Scan from ${ip_client} to ${ip_server}" WITH
-    0.1 * reldiff(port_count, max_ports) AS certainty,
-    "${ip_client} has probed at least ${int_port_count} ports of ${ip_server} from ${date_start} to ${date_stop}" AS desc,
-    "${ip_client},${ip_server}" AS ips,
-    "${port_count}" AS values,
-    "${max_ports}" AS thresholds;
+  NOTIFY "Security - Port-Scan from ${ip_client} to ${ip_server}";
 
-DEFINE new_pairs AS
+DEFINE LAZY new_pairs AS
   FROM
     ../../csv/tcp,
     ../../csv/udp,
@@ -77,8 +79,8 @@ DEFINE new_pairs AS
     '../../csv/other-ip'
   MERGE TIMEOUT AFTER 5s
   WHEN
-    start > merge.greatest.start - 3min AND
-    NOT REMEMBER (
+    start > merge_greatest.start - 3min AND
+    NOT REMEMBER GLOBALLY (
       false_pos_rate, start, 1h,
       -- An IP scanner could use varying proto/port to detect host
       -- presence so we just care about src and dst here:
@@ -87,10 +89,11 @@ DEFINE new_pairs AS
     start, stop,
     traffic_packets_client + traffic_packets_server AS num_packets,
     ip_client,
-    IS ip_client IN TOP top_size OVER top_max_size FOR THE LAST 1h
+    IS ip_client IN
+      TOP top_size OVER top_max_size GLOBALLY FOR THE LAST 1h
       AS is_important;
 
-DEFINE 'top ip scans'
+DEFINE LAZY 'top ip scans'
 --  "Detection of host scanners."
 AS
   FROM new_pairs
@@ -112,15 +115,16 @@ DEFINE ip_scan_alert AS
     i32(ip_count) AS int_ip_count,
     format_time("%Y-%m-%d %H:%M:%S", start) AS date_start,
     format_time("%Y-%m-%d %H:%M:%S", stop) AS date_stop,
+    0.1 * reldiff(ip_count, max_hosts) AS certainty,
+    "${ip_client} has probed at least ${int_ip_count} hosts from ${date_start} to ${date_stop}"
+      AS desc,
+    "${ip_client}" AS ips,
+    "${ip_count}" AS values,
+    "${max_hosts}" AS thresholds,
     *
   WHEN
     ip_count > max_hosts AND
     -- Try to remember the offenders for some time:
-    NOT REMEMBER(0.01, start, alert_memory,
+    NOT REMEMBER GLOBALLY(0.01, start, alert_memory,
           IF ip_count > max_hosts THEN ip_client) |? false
-  NOTIFY "Security - IP-Scan from ${ip_client}" WITH
-    0.1 * reldiff(ip_count, max_hosts) AS certainty,
-    "${ip_client} has probed at least ${int_ip_count} hosts from ${date_start} to ${date_stop}" AS desc,
-    "${ip_client}" AS ips,
-    "${ip_count}" AS values,
-    "${max_hosts}" AS thresholds;
+  NOTIFY "Security - IP-Scan from ${ip_client}";
