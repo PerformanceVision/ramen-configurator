@@ -9,7 +9,10 @@ DEFINE tcp_raw AS
   READ AND DELETE IF csv_delete
        FILES csv_prefix || "tcp_v29.*csv" || (IF csv_compressed THEN ".lz4" ELSE "")
        PREPROCESS WITH (IF csv_compressed THEN "lz4 -d -c" ELSE "")
-       SEPARATOR "\t" NULL "<NULL>"
+       SEPARATOR "\t"
+       NULL "\\N"
+       NO QUOTES
+       ESCAPE WITH "\\"
     (poller string,                     -- 1
      capture_begin u64,
      capture_end u64,
@@ -155,7 +158,10 @@ DEFINE udp_raw AS
   READ AND DELETE IF csv_delete
        FILES csv_prefix || "udp_v29.*csv" || (IF csv_compressed THEN ".lz4" ELSE "")
        PREPROCESS WITH (IF csv_compressed THEN "lz4 -d -c" ELSE "")
-       SEPARATOR "\t" NULL "<NULL>"
+       SEPARATOR "\t"
+       NULL "\\N"
+       NO QUOTES
+       ESCAPE WITH "\\"
     (poller string,                     -- 1
      capture_begin u64,
      capture_end u64,
@@ -219,7 +225,10 @@ DEFINE icmp_raw AS
   READ AND DELETE IF csv_delete
        FILES csv_prefix || "icmp_v29.*csv" || (IF csv_compressed THEN ".lz4" ELSE "")
        PREPROCESS WITH (IF csv_compressed THEN "lz4 -d -c" ELSE "")
-       SEPARATOR "\t" NULL "<NULL>"
+       SEPARATOR "\t"
+       NULL "\\N"
+       NO QUOTES
+       ESCAPE WITH "\\"
     (poller string,                     -- 1
      capture_begin u64,
      capture_end u64,
@@ -291,7 +300,10 @@ DEFINE 'other-ip_raw' AS
   READ AND DELETE IF csv_delete
        FILES csv_prefix || "other_ip_v29.*csv" || (IF csv_compressed THEN ".lz4" ELSE "")
        PREPROCESS WITH (IF csv_compressed THEN "lz4 -d -c" ELSE "")
-       SEPARATOR "\t" NULL "<NULL>"
+       SEPARATOR "\t"
+       NULL "\\N"
+       NO QUOTES
+       ESCAPE WITH "\\"
     (poller string,                     -- 1
      capture_begin u64,
      capture_end u64,
@@ -347,7 +359,10 @@ DEFINE 'non-ip_raw' AS
   READ AND DELETE IF csv_delete
        FILES csv_prefix || "non_ip_v29.*csv" || (IF csv_compressed THEN ".lz4" ELSE "")
        PREPROCESS WITH (IF csv_compressed THEN "lz4 -d -c" ELSE "")
-       SEPARATOR "\t" NULL "<NULL>"
+       SEPARATOR "\t"
+       NULL "\\N"
+       NO QUOTES
+       ESCAPE WITH "\\"
     (poller string,                     -- 1
      capture_begin u64,
      capture_end u64,
@@ -389,7 +404,10 @@ DEFINE dns_raw AS
   READ AND DELETE IF csv_delete
        FILES csv_prefix || "dns_v29.*csv" || (IF csv_compressed THEN ".lz4" ELSE "")
        PREPROCESS WITH (IF csv_compressed THEN "lz4 -d -c" ELSE "")
-       SEPARATOR "\t" NULL "<NULL>"
+       SEPARATOR "\t"
+       NULL "\\N"
+       NO QUOTES
+       ESCAPE WITH "\\"
     (poller string,                     -- 1
      capture_begin u64,
      capture_end u64,
@@ -445,7 +463,10 @@ DEFINE http_raw AS
   READ AND DELETE IF csv_delete
        FILES csv_prefix || "http_v29.*csv" || (IF csv_compressed THEN ".lz4" ELSE "")
        PREPROCESS WITH (IF csv_compressed THEN "lz4 -d -c" ELSE "")
-       SEPARATOR "\t" NULL "<NULL>"
+       SEPARATOR "\t"
+       NULL "\\N"
+       NO QUOTES
+       ESCAPE WITH "\\"
     (poller string,                     -- 1
      capture_begin u64,
      capture_end u64,
@@ -552,7 +573,10 @@ DEFINE citrix_raw AS
   READ AND DELETE IF csv_delete
        FILES csv_prefix || "citrix_v29.*csv" || (IF csv_compressed THEN ".lz4" ELSE "")
        PREPROCESS WITH (IF csv_compressed THEN "lz4 -d -c" ELSE "")
-       SEPARATOR "\t" NULL "<NULL>"
+       SEPARATOR "\t"
+       NULL "\\N"
+       NO QUOTES
+       ESCAPE WITH "\\"
     (poller string,                     -- 1
      capture_begin u64,
      capture_end u64,
@@ -618,7 +642,10 @@ DEFINE citrix_chanless_raw AS
   READ AND DELETE IF csv_delete
        FILES csv_prefix || "citrix_chanless_v29.*csv" || (IF csv_compressed THEN ".lz4" ELSE "")
        PREPROCESS WITH (IF csv_compressed THEN "lz4 -d -c" ELSE "")
-       SEPARATOR "\t" NULL "<NULL>"
+       SEPARATOR "\t"
+       NULL "\\N"
+       NO QUOTES
+       ESCAPE WITH "\\"
     (poller string,                     -- 1
      capture_begin u64,
      capture_end u64,
@@ -698,7 +725,10 @@ DEFINE smb_raw AS
   READ AND DELETE IF csv_delete
        FILES csv_prefix || "smb_v29.*csv" || (IF csv_compressed THEN ".lz4" ELSE "")
        PREPROCESS WITH (IF csv_compressed THEN "lz4 -d -c" ELSE "")
-       SEPARATOR "\t" NULL "<NULL>"
+       SEPARATOR "\t"
+       NULL "\\N"
+       NO QUOTES
+       ESCAPE WITH "\\"
     (poller string,                     -- 1
      capture_begin u64,
      capture_end u64,
@@ -784,7 +814,10 @@ DEFINE sql_raw AS
   READ AND DELETE IF csv_delete
        FILES csv_prefix || "sql_v29.*csv" || (IF csv_compressed THEN ".lz4" ELSE "")
        PREPROCESS WITH (IF csv_compressed THEN "lz4 -d -c" ELSE "")
-       SEPARATOR "\t" NULL "<NULL>"
+       SEPARATOR "\t"
+       NULL "\\N"
+       NO QUOTES
+       ESCAPE WITH "\\"
     (poller string,                     -- 1
      capture_begin u64,
      capture_end u64,
@@ -861,7 +894,10 @@ DEFINE voip_raw AS
   READ AND DELETE IF csv_delete
        FILES csv_prefix || "voip_v29.*csv" || (IF csv_compressed THEN ".lz4" ELSE "")
        PREPROCESS WITH (IF csv_compressed THEN "lz4 -d -c" ELSE "")
-       SEPARATOR "\t" NULL "<NULL>"
+       SEPARATOR "\t"
+       NULL "\\N"
+       NO QUOTES
+       ESCAPE WITH "\\"
     (poller string,                     -- 1
      capture_begin u64,
      capture_end u64,
@@ -990,7 +1026,10 @@ DEFINE tls_raw AS
   READ AND DELETE IF csv_delete
        FILES csv_prefix || "tls_v29.*csv" || (IF csv_compressed THEN ".lz4" ELSE "")
        PREPROCESS WITH (IF csv_compressed THEN "lz4 -d -c" ELSE "")
-       SEPARATOR "\t" NULL "<NULL>"
+       SEPARATOR "\t"
+       NULL "\\N"
+       NO QUOTES
+       ESCAPE WITH "\\"
     (poller string,                     -- 1
      capture_begin u64,
      capture_end u64,
