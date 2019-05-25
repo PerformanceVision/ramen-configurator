@@ -10,7 +10,7 @@ DEFINE tcp_raw AS
        FILES csv_prefix || "tcp_v29.*csv" || (IF csv_compressed THEN ".lz4" ELSE "")
        PREPROCESS WITH (IF csv_compressed THEN "lz4 -d -c" ELSE "")
        SEPARATOR "\t"
-       NULL "\\N"
+       NULL "<NULL>"
        NO QUOTES
        ESCAPE WITH "\\"
     (poller string,                     -- 1
@@ -159,7 +159,7 @@ DEFINE udp_raw AS
        FILES csv_prefix || "udp_v29.*csv" || (IF csv_compressed THEN ".lz4" ELSE "")
        PREPROCESS WITH (IF csv_compressed THEN "lz4 -d -c" ELSE "")
        SEPARATOR "\t"
-       NULL "\\N"
+       NULL "<NULL>"
        NO QUOTES
        ESCAPE WITH "\\"
     (poller string,                     -- 1
@@ -226,7 +226,7 @@ DEFINE icmp_raw AS
        FILES csv_prefix || "icmp_v29.*csv" || (IF csv_compressed THEN ".lz4" ELSE "")
        PREPROCESS WITH (IF csv_compressed THEN "lz4 -d -c" ELSE "")
        SEPARATOR "\t"
-       NULL "\\N"
+       NULL "<NULL>"
        NO QUOTES
        ESCAPE WITH "\\"
     (poller string,                     -- 1
@@ -301,7 +301,7 @@ DEFINE 'other-ip_raw' AS
        FILES csv_prefix || "other_ip_v29.*csv" || (IF csv_compressed THEN ".lz4" ELSE "")
        PREPROCESS WITH (IF csv_compressed THEN "lz4 -d -c" ELSE "")
        SEPARATOR "\t"
-       NULL "\\N"
+       NULL "<NULL>"
        NO QUOTES
        ESCAPE WITH "\\"
     (poller string,                     -- 1
@@ -360,7 +360,7 @@ DEFINE 'non-ip_raw' AS
        FILES csv_prefix || "non_ip_v29.*csv" || (IF csv_compressed THEN ".lz4" ELSE "")
        PREPROCESS WITH (IF csv_compressed THEN "lz4 -d -c" ELSE "")
        SEPARATOR "\t"
-       NULL "\\N"
+       NULL "<NULL>"
        NO QUOTES
        ESCAPE WITH "\\"
     (poller string,                     -- 1
@@ -405,7 +405,7 @@ DEFINE dns_raw AS
        FILES csv_prefix || "dns_v29.*csv" || (IF csv_compressed THEN ".lz4" ELSE "")
        PREPROCESS WITH (IF csv_compressed THEN "lz4 -d -c" ELSE "")
        SEPARATOR "\t"
-       NULL "\\N"
+       NULL "<NULL>"
        NO QUOTES
        ESCAPE WITH "\\"
     (poller string,                     -- 1
@@ -464,7 +464,7 @@ DEFINE http_raw AS
        FILES csv_prefix || "http_v29.*csv" || (IF csv_compressed THEN ".lz4" ELSE "")
        PREPROCESS WITH (IF csv_compressed THEN "lz4 -d -c" ELSE "")
        SEPARATOR "\t"
-       NULL "\\N"
+       NULL "<NULL>"
        NO QUOTES
        ESCAPE WITH "\\"
     (poller string,                     -- 1
@@ -574,7 +574,7 @@ DEFINE citrix_raw AS
        FILES csv_prefix || "citrix_v29.*csv" || (IF csv_compressed THEN ".lz4" ELSE "")
        PREPROCESS WITH (IF csv_compressed THEN "lz4 -d -c" ELSE "")
        SEPARATOR "\t"
-       NULL "\\N"
+       NULL "<NULL>"
        NO QUOTES
        ESCAPE WITH "\\"
     (poller string,                     -- 1
@@ -643,7 +643,7 @@ DEFINE citrix_chanless_raw AS
        FILES csv_prefix || "citrix_chanless_v29.*csv" || (IF csv_compressed THEN ".lz4" ELSE "")
        PREPROCESS WITH (IF csv_compressed THEN "lz4 -d -c" ELSE "")
        SEPARATOR "\t"
-       NULL "\\N"
+       NULL "<NULL>"
        NO QUOTES
        ESCAPE WITH "\\"
     (poller string,                     -- 1
@@ -726,7 +726,7 @@ DEFINE smb_raw AS
        FILES csv_prefix || "smb_v29.*csv" || (IF csv_compressed THEN ".lz4" ELSE "")
        PREPROCESS WITH (IF csv_compressed THEN "lz4 -d -c" ELSE "")
        SEPARATOR "\t"
-       NULL "\\N"
+       NULL "<NULL>"
        NO QUOTES
        ESCAPE WITH "\\"
     (poller string,                     -- 1
@@ -815,7 +815,7 @@ DEFINE sql_raw AS
        FILES csv_prefix || "sql_v29.*csv" || (IF csv_compressed THEN ".lz4" ELSE "")
        PREPROCESS WITH (IF csv_compressed THEN "lz4 -d -c" ELSE "")
        SEPARATOR "\t"
-       NULL "\\N"
+       NULL "<NULL>"
        NO QUOTES
        ESCAPE WITH "\\"
     (poller string,                     -- 1
@@ -895,7 +895,7 @@ DEFINE voip_raw AS
        FILES csv_prefix || "voip_v29.*csv" || (IF csv_compressed THEN ".lz4" ELSE "")
        PREPROCESS WITH (IF csv_compressed THEN "lz4 -d -c" ELSE "")
        SEPARATOR "\t"
-       NULL "\\N"
+       NULL "<NULL>"
        NO QUOTES
        ESCAPE WITH "\\"
     (poller string,                     -- 1
@@ -1027,7 +1027,7 @@ DEFINE tls_raw AS
        FILES csv_prefix || "tls_v29.*csv" || (IF csv_compressed THEN ".lz4" ELSE "")
        PREPROCESS WITH (IF csv_compressed THEN "lz4 -d -c" ELSE "")
        SEPARATOR "\t"
-       NULL "\\N"
+       NULL "<NULL>"
        NO QUOTES
        ESCAPE WITH "\\"
     (poller string,                     -- 1
