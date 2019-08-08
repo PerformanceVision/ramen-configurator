@@ -27,14 +27,14 @@ RAMEN_SOURCES = \
 	ramen_root/sniffer/top_errors/_.ramen
 
 INSTALLED_BIN = src/ramen_configurator
-INSTALLED_WORKERS = $(RAMEN_SOURCES:.ramen=.x)
-INSTALLED = $(INSTALLED_BIN) $(INSTALLED_WORKERS)
+CHECK_COMPILATION = $(RAMEN_SOURCES:.ramen=.x)
+INSTALLED = $(INSTALLED_BIN) $(RAMEN_SOURCES)
 
 bin_dir ?= /usr/bin/
 lib_dir ?= /var/lib/
 conf_dir ?= /etc/ramen/
 
-all: $(INSTALLED) src/findcsv
+all: $(INSTALLED) $(CHECK_COMPILATION) src/findcsv
 
 # Generic rules
 
@@ -111,10 +111,10 @@ install-bin: $(INSTALLED_BIN)
 	@install -d '$(prefix)$(bin_dir)'
 	@install $(INSTALLED_BIN) '$(prefix)$(bin_dir)'/
 
-install-workers: $(INSTALLED_WORKERS)
-	@echo 'Installing workers into $(prefix)$(lib_dir)'
+install-sources: $(RAMEN_SOURCES)
+	@echo 'Installing Ramen sources into $(prefix)$(lib_dir)'
 	@install -d '$(prefix)$(lib_dir)'
-	@for f in $(INSTALLED_WORKERS) ; do \
+	@for f in $(RAMEN_SOURCES) ; do \
 	  install -d "$(prefix)$(lib_dir)/$$(dirname $$f)" ; \
 	  install "$$f" "$(prefix)$(lib_dir)/$$f" ; \
 	done
@@ -126,7 +126,7 @@ install-conf: experiments.config
 	  install "$$f" "$(prefix)$(lib_dir)/$$f" ; \
 	done
 
-install: install-bin install-workers install-conf
+install: install-bin install-sources install-conf
 
 uninstall:
 	@echo Uninstalling

@@ -35,3 +35,4 @@ ramen_root/**/*.ml
 ramen_root/**/*.x
 ramen_root/**/*.smt2
 ramen_root/**/*.smt2.no_opt
+ramen_root/**/*.info

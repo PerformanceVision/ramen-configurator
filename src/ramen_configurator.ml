@@ -15,16 +15,16 @@ let run_cmd cmd =
     failwith
   ) else output
 
-let run_program debug ramen_cmd persist_dir ?as_ fname params =
+let run_program debug ramen_cmd confserver_url ?as_ fname params =
   !logger.info "Running program %s%s with parameters %a"
     fname (Option.map_default (fun as_ -> " (as: "^ as_ ^")") "" as_)
     (List.print (Tuple2.print String.print String.print)) params ;
   if !dry_run then !logger.info "nope" else
     Printf.sprintf2
-      "%s run%s --replace --kill-if-disabled --persist-dir %s%s %a %s"
+      "%s run%s --replace --confserver %s%s %a %s"
       (shell_quote ramen_cmd)
       (if debug then " --debug" else "")
-      (shell_quote persist_dir)
+      (shell_quote confserver_url)
       (Option.map_default (fun as_ -> " --as "^ shell_quote as_) "" as_)
       (List.print ~first:"" ~last:"" ~sep:" " (fun oc (n, v) ->
         Printf.fprintf oc "-p %s" (shell_quote (n ^"="^ v)))) params
@@ -39,18 +39,18 @@ let chop_placeholder s =
   dirname
 
 (* Run that file and return the names it's running under: *)
-let run_file debug ramen_cmd root_dir persist_dir no_ext params =
-  let fname = root_dir ^"/"^ no_ext ^".x" in
+let run_file debug ramen_cmd root_dir confserver_url no_ext params =
+  let fname = root_dir ^"/"^ no_ext ^".ramen" in
   let as_ = no_ext in
   if Hashtbl.is_empty params then (
-    run_program debug ramen_cmd persist_dir ~as_ fname [] ;
+    run_program debug ramen_cmd confserver_url ~as_ fname [] ;
     Set.String.singleton as_
   ) else (
     Hashtbl.fold (fun uniq_name params rs ->
       let as_ =
         if uniq_name = "" then as_ else
           chop_placeholder as_ ^"/"^ uniq_name in
-      run_program debug ramen_cmd persist_dir ~as_ fname params ;
+      run_program debug ramen_cmd confserver_url ~as_ fname params ;
       Set.String.add as_ rs
     ) params Set.String.empty)
 
@@ -58,10 +58,10 @@ let run_file debug ramen_cmd root_dir persist_dir no_ext params =
  * TODO: configurator should have its own namespace ("configurator/"?) that's
  * non editable (by convention) to the user (or API), so that we can freely
  * kill programs in there. *)
-let get_running ramen_cmd persist_dir path =
-  Printf.sprintf2 "%s ps -p --persist-dir %s %s"
+let get_running ramen_cmd confserver_url path =
+  Printf.sprintf2 "%s ps -p --confserver %s %s"
     (shell_quote ramen_cmd)
-    (shell_quote persist_dir)
+    (shell_quote confserver_url)
     (shell_quote path) |>
   run_cmd |>
   String.nsplit ~by:"\n" |>
@@ -74,22 +74,22 @@ let get_running ramen_cmd persist_dir path =
     | x, _ -> Some x) |>
   Set.String.of_list
 
-let kill ramen_cmd persist_dir prog =
+let kill ramen_cmd confserver_url prog =
   !logger.info "Killing program %s" prog ;
   if !dry_run then !logger.info "nope" else
-    Printf.sprintf "%s kill --persist-dir %s %s"
+    Printf.sprintf "%s kill --confserver %s %s"
       (shell_quote ramen_cmd)
-      (shell_quote persist_dir)
+      (shell_quote confserver_url)
       (shell_quote prog) |>
     run_cmd |> ignore
 
-let sync_programs debug ramen_cmd root_dir persist_dir uncompress
+let sync_programs debug ramen_cmd root_dir confserver_url uncompress
                   csv_prefix csv_delete =
   let no_params = Hashtbl.create 0 in
-  let old_running = get_running ramen_cmd persist_dir "sniffer/*" in
+  let old_running = get_running ramen_cmd confserver_url "sniffer/*" in
   let new_running = ref Set.String.empty in
   let comp n p =
-    let rs = run_file debug ramen_cmd root_dir persist_dir n p in
+    let rs = run_file debug ramen_cmd root_dir confserver_url n p in
     new_running := Set.String.union rs !new_running in
   comp "internal/monitoring/meta" no_params ;
   let params =
@@ -119,7 +119,7 @@ let sync_programs debug ramen_cmd root_dir persist_dir uncompress
   !logger.debug "New: %a" (Set.String.print String.print) !new_running ;
   let to_kill = Set.String.diff old_running !new_running in
   !logger.info "To Kill: %a" (Set.String.print String.print) to_kill ;
-  Set.String.iter (kill ramen_cmd persist_dir) to_kill
+  Set.String.iter (kill ramen_cmd confserver_url) to_kill
 
 (* Note: When executing a shell command, all substitutions are shell-quoted
  * and there is no way around it (FIXME: proper templating language that
@@ -223,7 +223,7 @@ let sync_notif_conf =
       write_notif_conf notif_conf_file alert_internal cmds ;
       prev_cmds := Some cmds)
 
-let start debug monitor ramen_cmd root_dir persist_dir db_name
+let start debug monitor ramen_cmd root_dir confserver_url db_name
           uncompress csv_prefix csv_delete
           alert_internal
           notif_conf_file dry_run_ =
@@ -232,7 +232,7 @@ let start debug monitor ramen_cmd root_dir persist_dir db_name
   let open Conf_of_sqlite in
   let db = get_db db_name in
   let update_programs () =
-    sync_programs debug ramen_cmd root_dir persist_dir uncompress
+    sync_programs debug ramen_cmd root_dir confserver_url uncompress
                   csv_prefix csv_delete
   and update_notif_conf () =
     if notif_conf_file <> "" then
@@ -273,11 +273,11 @@ let root_dir =
                    ~env [ "root" ] in
   Arg.(value (opt string "." i))
 
-let persist_dir =
-  let env = Term.env_info "RAMEN_PERSIST_DIR" in
-  let i = Arg.info ~doc:"Path where ramen stores its state"
-                   ~env [ "persist-dir" ] in
-  Arg.(value (opt string "/tmp/ramen" i))
+let confserver_url =
+  let env = Term.env_info "RAMEN_CONFSERVER" in
+  let i = Arg.info ~doc:"Start the configuration synchronization service"
+                   ~env [ "confserver" ] in
+  Arg.(value (opt ~vopt:"localhost" string "" i))
 
 let uncompress_opt =
   let i = Arg.info ~doc:"CSV are compressed with lz4"
@@ -320,7 +320,7 @@ let start_cmd =
       $ monitor
       $ ramen_cmd
       $ root_dir
-      $ persist_dir
+      $ confserver_url
       $ db_name
       $ uncompress_opt
       $ csv_prefix
