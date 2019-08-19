@@ -138,9 +138,10 @@ let send_email from rcpts =
        '${desc}'\\n\
        \\n\
        (certainty: '${certainty_percent}'%%)\\n\
-     ' | sendmail %s"
+     ' | sendmail -f %s %s"
      from
      rcpts
+     (shell_quote from)
      (shell_quote rcpts)
 
 let send_trap sink =
