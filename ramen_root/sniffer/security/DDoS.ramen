@@ -2,7 +2,8 @@
 
 PARAMETERS
   avg_win DEFAULTS TO 2min,
-  false_pos_rate DEFAULT TO 0.1; -- 10% of false positives
+  false_pos_rate DEFAULT TO 0.1, -- 10% of false positives
+  whitelist Cidr[]?; -- Those won't be frowned upon
   -- TODO: also remember durations?
 
 RUN IF COALESCE(variant("DDoS_detector") = "on", false);
@@ -16,7 +17,9 @@ AS
     ../../csv/icmp,
     '../../csv/other-ip'
   MERGE TIMEOUT AFTER 5s
-  WHERE start > merge_greatest.start - 3min
+  WHERE
+    start > merge_greatest.start - 3min AND
+    COALESCE(ip_client NOT IN whitelist, true)
   SELECT
     truncate(start, avg_win) AS start,
     out.start + avg_win AS stop,

@@ -7,7 +7,8 @@ PARAMETERS
   max_num_packets DEFAULT TO 3, -- above that it's not a probe
   top_size DEFAULT TO 20,
   top_max_size DEFAULT TO 100k,
-  alert_memory DEFAULT TO 24h; -- How long to not alert again about the same client
+  alert_memory DEFAULT TO 24h, -- How long to not alert again about the same client
+  whitelist Cidr[]?; -- Those won't be frowned upon
 
 RUN IF COALESCE(variant("Scan_detector") = "on", false);
 
@@ -19,6 +20,9 @@ DEFINE LAZY new_triplets AS
   MERGE TIMEOUT AFTER 5s
   WHERE
     start > merge_greatest.start - 3min AND
+    -- TODO: Without short-cutting the AND then the remember will still be
+    --       fed with those clients, wasting bits in the bloom filter:
+    COALESCE(ip_client NOT IN whitelist, true) AND
     -- TODO: we could filter out by max_num_packets up here
     NOT REMEMBER GLOBALLY (
       false_pos_rate, start, 1h,
@@ -80,6 +84,7 @@ DEFINE LAZY new_pairs AS
   MERGE TIMEOUT AFTER 5s
   WHEN
     start > merge_greatest.start - 3min AND
+    COALESCE(ip_client NOT IN whitelist, true) AND
     NOT REMEMBER GLOBALLY (
       false_pos_rate, start, 1h,
       -- An IP scanner could use varying proto/port to detect host
