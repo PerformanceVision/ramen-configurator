@@ -138,7 +138,7 @@ AS
       "Measured servers to clients data transfer time per second.",
     IF _sum_dtt_count_server > 0 THEN
       _sum_dtt_sum_server / _sum_dtt_count_server AS 'server.dtt.avg'
-      "Average servers to clients data transfer time."
+      "Average servers to clients data transfer time.",
     --IF _sum_dtt_count_server > 0 THEN
     --  sqrt (sum dtt_square_sum_server / _sum_dtt_count_server -
     --        (_sum_dtt_sum_server / _sum_dtt_count_server)^2) AS _sdtt_stddev
@@ -147,6 +147,9 @@ AS
     --  "Average servers to clients data transfer time plus its standard deviation.",
     --max(0, 'server.dtt.avg' - _sdtt_stddev) AS 'server.dtt.avg - σ'
     --  "Average servers to clients data transfer time minus its standard deviation."
+    'server.rtt.avg' + 'client.rtt.avg' + 'server.rt.avg' +
+    COALESCE('client.dtt.avg', 0) + 'server.dtt.avg' AS 'user.experience'
+      "Average End User Response Time."
   WHERE
     ip_external IS NULL -- Exclude netflow
   GROUP BY start // time_step, application
