@@ -1,0 +1,331 @@
+-- vim: ft=sql expandtab
+
+-- CSV come with all kind of types and field discrepencies.
+-- First, we want to cast all those types into proper ramen types.
+-- Then, we are going to sum tcp, udp, and all other metrics that
+-- together form the whole traffic, so that we can compute the volumetry
+-- and assess the overall quality of services.
+-- Unfortunately, only TCP comes with any metric that bear any relation to
+-- quality of service. We blanks these metrics for other sources below:
+
+DEFINE tcp AS
+  FROM ../csv/tcp
+  SELECT
+    "tcp" AS metric,
+    (capture_begin / 1e6) {seconds(rel)} AS start,
+    (capture_end / 1e6) {seconds(rel)} AS stop,
+    COALESCE(ip(ip4_client), ip(peek u128 ip6_client), 0.0.0.0) AS ip_client,
+    COALESCE(ip(ip4_server), ip(peek u128 ip6_server), 0.0.0.0) AS ip_server,
+    IF ip4_external IS NULL THEN peek u128 ip6_external ELSE ip4_external AS ip_external,
+    eth(mac_client) AS mac_client,
+    eth(mac_server) AS mac_server,
+    (ct_sum / 1e6) {seconds} AS ct_sum,
+    (ct_square_sum / 1e12) {seconds^2} AS ct_square_sum,
+    (rt_sum_server / 1e6) {seconds} AS rt_sum_server,
+    (rt_square_sum_server / 1e12) {seconds^2} AS rt_square_sum_server,
+    (rtt_sum_client / 1e6) {seconds} AS rtt_sum_client,
+    (rtt_square_sum_client / 1e12) {seconds^2} AS rtt_square_sum_client,
+    (rtt_sum_server / 1e6) {seconds} AS rtt_sum_server,
+    (rtt_square_sum_server / 1e12) {seconds^2} AS rtt_square_sum_server,
+    (rd_sum_client / 1e6) {seconds} AS rd_sum_client,
+    (rd_square_sum_client / 1e12) {seconds^2} AS rd_square_sum_client,
+    (rd_sum_server / 1e6) {seconds} AS rd_sum_server,
+    (rd_square_sum_server / 1e12) {seconds^2} AS rd_square_sum_server,
+    (dtt_sum_client / 1e6) {seconds} AS dtt_sum_client,
+    (dtt_square_sum_client / 1e12) {seconds^2} AS dtt_square_sum_client,
+    (dtt_sum_server / 1e6) {seconds} AS dtt_sum_server,
+    (dtt_square_sum_server / 1e12) {seconds^2} AS dtt_square_sum_server,
+    -- Also fix NULL counters:
+    COALESCE(ct_count, 0) AS ct_count,
+    COALESCE(close_count, 0) AS close_count,
+    COALESCE(rt_count_server, 0) AS rt_count_server,
+    COALESCE(rtt_count_client, 0) AS rtt_count_client,
+    COALESCE(rtt_count_server, 0) AS rtt_count_server,
+    COALESCE(rd_count_client, 0) AS rd_count_client,
+    COALESCE(rd_count_server, 0) AS rd_count_server,
+    COALESCE(dtt_count_client, 0) AS dtt_count_client,
+    COALESCE(dtt_count_server, 0) AS dtt_count_server,
+    COALESCE(dupack_count_client, 0) AS dupack_count_client,
+    COALESCE(dupack_count_server, 0) AS dupack_count_server,
+    COALESCE(zero_window_count_client, 0) AS zero_window_count_client,
+    COALESCE(zero_window_count_server, 0) AS zero_window_count_server,
+    COALESCE(syn_count_client, 0) AS syn_count_client,
+    COALESCE(rst_count_client, 0) AS rst_count_client,
+    COALESCE(rst_count_server, 0) AS rst_count_server,
+    COALESCE(fin_count_client, 0) AS fin_count_client,
+    COALESCE(fin_count_server, 0) AS fin_count_server,
+    COALESCE(retrans_traffic_bytes_client, 0) AS retrans_traffic_bytes_client,
+    COALESCE(retrans_traffic_bytes_server, 0) AS retrans_traffic_bytes_server,
+    COALESCE(retrans_payload_bytes_client, 0) AS retrans_payload_bytes_client,
+    COALESCE(retrans_payload_bytes_server, 0) AS retrans_payload_bytes_server,
+    *; -- -ip4_client -ip6_client etc
+
+DEFINE udp AS
+  FROM ../csv/udp
+  SELECT
+    "udp" AS metric,
+    (capture_begin / 1e6) {seconds(rel)} AS start,
+    (capture_end / 1e6) {seconds(rel)} AS stop,
+    COALESCE(ip(ip4_client), ip(peek u128 ip6_client), 0.0.0.0) AS ip_client,
+    COALESCE(ip(ip4_server), ip(peek u128 ip6_server), 0.0.0.0) AS ip_server,
+    IF ip4_external IS NULL THEN peek u128 ip6_external ELSE ip4_external AS ip_external,
+    eth(mac_client) AS mac_client,
+    eth(mac_server) AS mac_server,
+    -- Also extend it to have some of the same measures as in TCP:
+    -- (Note: Shouldn't we be able to cram at least an RTT in here, from
+    -- the many UDP protocols that are supported?)
+    traffic_packets_client AS payload_packets_client,
+    traffic_packets_server AS payload_packets_server,
+    u32(0) {} AS rtt_count_client,
+    0. {seconds} AS rtt_sum_client,
+    u32(0) {} AS rtt_count_server,
+    0. {seconds} AS rtt_sum_server,
+    u32(0) {} AS rd_count_client,
+    u32(0) {} AS rd_count_server,
+    *;
+
+DEFINE icmp AS
+  FROM ../csv/icmp
+  SELECT
+    "icmp" AS metric,
+    (capture_begin / 1e6) {seconds(rel)} AS start,
+    (capture_end / 1e6) {seconds(rel)} AS stop,
+    COALESCE(ip(ip4_client), ip(peek u128 ip6_client), 0.0.0.0) AS ip_client,
+    COALESCE(ip(ip4_server), ip(peek u128 ip6_server), 0.0.0.0) AS ip_server,
+    IF ip4_external IS NULL THEN peek u128 ip6_external ELSE ip4_external AS ip_external,
+    eth(mac_client) AS mac_client,
+    eth(mac_server) AS mac_server,
+    COALESCE(ip(error_ip4_client), ip(peek u128 error_ip6_client), 0.0.0.0) AS error_ip_client,
+    COALESCE(ip(error_ip4_server), ip(peek u128 error_ip6_server), 0.0.0.0) AS error_ip_server,
+    -- Also extend with no data.
+    traffic_packets_client AS payload_packets_client,
+    traffic_packets_server AS payload_packets_server,
+    traffic_bytes_client AS payload_bytes_client,
+    traffic_bytes_client AS payload_bytes_server,
+    u32(0) {} AS rtt_count_client,
+    0. {seconds} AS rtt_sum_client,
+    u32(0) {} AS rtt_count_server,
+    0. {seconds} AS rtt_sum_server,
+    u32(0) {} AS rd_count_client,
+    u32(0) {} AS rd_count_server,
+    *;
+
+DEFINE 'other-ip' AS
+  FROM '../csv/other-ip'
+  SELECT
+    "other-ip" AS metric,
+    (capture_begin / 1e6) {seconds(rel)} AS start,
+    (capture_end / 1e6) {seconds(rel)} AS stop,
+    COALESCE(ip(ip4_client), ip(peek u128 ip6_client), 0.0.0.0) AS ip_client,
+    COALESCE(ip(ip4_server), ip(peek u128 ip6_server), 0.0.0.0) AS ip_server,
+    eth(mac_client) AS mac_client,
+    eth(mac_server) AS mac_server,
+    traffic_packets_client AS payload_packets_client,
+    traffic_packets_server AS payload_packets_server,
+    traffic_bytes_client AS payload_bytes_client,
+    traffic_bytes_server AS payload_bytes_server,
+    u32(0) {} AS rtt_count_client,
+    0. {seconds} AS rtt_sum_client,
+    u32(0) {} AS rtt_count_server,
+    0. {seconds} AS rtt_sum_server,
+    u32(0) {} AS rd_count_client,
+    u32(0) {} AS rd_count_server,
+    *;
+
+DEFINE 'non-ip' AS
+  FROM '../csv/non-ip'
+  SELECT
+    "non-ip" AS metric,
+    (capture_begin / 1e6) {seconds(rel)} AS start,
+    (capture_end / 1e6) {seconds(rel)} AS stop,
+    eth(mac_client) AS mac_client,
+    eth(mac_server) AS mac_server,
+    traffic_packets_client AS payload_packets_client,
+    traffic_packets_server AS payload_packets_server,
+    traffic_bytes_client AS payload_bytes_client,
+    traffic_bytes_server AS payload_bytes_server,
+    *;
+
+DEFINE dns AS
+  FROM ../csv/dns
+  SELECT
+    "dns" AS metric,
+    (capture_begin / 1e6) {seconds(rel)} AS start,
+    (capture_end / 1e6) {seconds(rel)} AS stop,
+    COALESCE(ip(ip4_client), ip(peek u128 ip6_client), 0.0.0.0) AS ip_client,
+    COALESCE(ip(ip4_server), ip(peek u128 ip6_server), 0.0.0.0) AS ip_server,
+    eth(mac_client) AS mac_client,
+    eth(mac_server) AS mac_server,
+    (rt_sum_server / 1e6) {seconds} AS rt_sum_server,
+    (rt_square_sum_server / 1e12) {seconds^2} AS rt_square_sum_server,
+    *;
+
+DEFINE http AS
+  FROM ../csv/http
+  SELECT
+    "http" AS metric,
+    (capture_begin / 1e6) {seconds(rel)} AS start,
+    (capture_end / 1e6) {seconds(rel)} AS stop,
+    COALESCE(ip(ip4_client), ip(peek u128 ip6_client), 0.0.0.0) AS ip_client,
+    COALESCE(ip(ip4_server), ip(peek u128 ip6_server), 0.0.0.0) AS ip_server,
+    COALESCE(ip(ip4_orig_client), ip(peek u128 ip6_orig_client), 0.0.0.0) AS ip_orig_client,
+    eth(mac_client) AS mac_client,
+    eth(mac_server) AS mac_server,
+    (query_begin / 1e6) {seconds(rel)} AS query_begin,
+    (query_end / 1e6) {seconds(rel)} AS query_end,
+    (resp_begin / 1e6) {seconds(rel)} AS resp_begin,
+    (resp_end / 1e6) {seconds(rel)} AS resp_end,
+    (tot_begin / 1e6) {seconds(rel)} AS tot_begin,
+    (tot_end / 1e6) {seconds(rel)} AS tot_end,
+    (tot_load_time / 1e6) {seconds} AS tot_load_time,
+    (tot_load_time_squared / 1e12) {seconds^2} AS tot_load_time_squared,
+    (rt_sum_server / 1e6) {seconds} AS rt_sum_server,
+    (rt_square_sum_server / 1e12) {seconds^2} AS rt_square_sum_server,
+    (dtt_sum_client / 1e6) {seconds} AS dtt_sum_client,
+    (dtt_square_sum_client / 1e12) {seconds^2} AS dtt_square_sum_client,
+    (dtt_sum_server / 1e6) {seconds} AS dtt_sum_server,
+    (dtt_square_sum_server / 1e12) {seconds^2} AS dtt_square_sum_server,
+    *;
+
+DEFINE citrix_channels AS
+  FROM ../csv/citrix
+  SELECT
+    "citrix-channels" AS metric,
+    (capture_begin / 1e6) {seconds(rel)} AS start,
+    (capture_end / 1e6) {seconds(rel)} AS stop,
+    COALESCE(ip(ip4_client), ip(peek u128 ip6_client), 0.0.0.0) AS ip_client,
+    COALESCE(ip(ip4_server), ip(peek u128 ip6_server), 0.0.0.0) AS ip_server,
+    eth(mac_client) AS mac_client,
+    eth(mac_server) AS mac_server,
+    (rt_sum_server / 1e6) {seconds} AS rt_sum_server,
+    (rt_square_sum_server / 1e12) {seconds^2} AS rt_square_sum_server,
+    (dtt_sum_client / 1e6) {seconds} AS dtt_sum_client,
+    (dtt_square_sum_client / 1e12) {seconds^2} AS dtt_square_sum_client,
+    (dtt_sum_server / 1e6) {seconds} AS dtt_sum_server,
+    (dtt_square_sum_server / 1e12) {seconds^2} AS dtt_square_sum_server,
+    *;
+
+DEFINE citrix AS
+  FROM ../csv/citrix_chanless
+  SELECT
+    "citrix" AS metric,
+    (capture_begin / 1e6) {seconds(rel)} AS start,
+    (capture_end / 1e6) {seconds(rel)} AS stop,
+    COALESCE(ip(ip4_client), ip(peek u128 ip6_client), 0.0.0.0) AS ip_client,
+    COALESCE(ip(ip4_server), ip(peek u128 ip6_server), 0.0.0.0) AS ip_server,
+    eth(mac_client) AS mac_client,
+    eth(mac_server) AS mac_server,
+    (rt_sum_server / 1e6) {seconds} AS rt_sum_server,
+    (rt_square_sum_server / 1e12) {seconds^2} AS rt_square_sum_server,
+    (dtt_sum_client / 1e6) {seconds} AS dtt_sum_client,
+    (dtt_square_sum_client / 1e12) {seconds^2} AS dtt_square_sum_client,
+    (dtt_sum_server / 1e6) {seconds} AS dtt_sum_server,
+    (dtt_square_sum_server / 1e12) {seconds^2} AS dtt_square_sum_server,
+    (login_time_sum / 1e6) {seconds} AS login_time_sum,
+    (login_time_square_sum / 1e12) {seconds^2} AS login_time_square_sum,
+    (launch_time_sum / 1e6) {seconds} AS launch_time_sum,
+    (launch_time_square_sum / 1e12) {seconds^2} AS launch_time_square_sum,
+    *;
+
+DEFINE smb AS
+  FROM ../csv/smb
+  SELECT
+    "smb" AS metric,
+    (capture_begin / 1e6) {seconds(rel)} AS start,
+    (capture_end / 1e6) {seconds(rel)} AS stop,
+    COALESCE(ip(ip4_client), ip(peek u128 ip6_client), 0.0.0.0) AS ip_client,
+    COALESCE(ip(ip4_server), ip(peek u128 ip6_server), 0.0.0.0) AS ip_server,
+    eth(mac_client) AS mac_client,
+    eth(mac_server) AS mac_server,
+    (query_begin / 1e6) {seconds(rel)} AS query_begin,
+    (query_end / 1e6) {seconds(rel)} AS query_end,
+    (resp_begin / 1e6) {seconds(rel)} AS resp_begin,
+    (resp_end / 1e6) {seconds(rel)} AS resp_end,
+    (rt_sum_server / 1e6) {seconds} AS rt_sum_server,
+    (rt_square_sum_server / 1e12) {seconds^2} AS rt_square_sum_server,
+    (dtt_sum_client / 1e6) {seconds} AS dtt_sum_client,
+    (dtt_square_sum_client / 1e12) {seconds^2} AS dtt_square_sum_client,
+    (dtt_sum_server / 1e6) {seconds} AS dtt_sum_server,
+    (dtt_square_sum_server / 1e12) {seconds^2} AS dtt_square_sum_server,
+    *;
+
+DEFINE sql AS
+  FROM ../csv/sql
+  SELECT
+    "sql" AS metric,
+    (capture_begin / 1e6) {seconds(rel)} AS start,
+    (capture_end / 1e6) {seconds(rel)} AS stop,
+    COALESCE(ip(ip4_client), ip(peek u128 ip6_client), 0.0.0.0) AS ip_client,
+    COALESCE(ip(ip4_server), ip(peek u128 ip6_server), 0.0.0.0) AS ip_server,
+    eth(mac_client) AS mac_client,
+    eth(mac_server) AS mac_server,
+    (query_begin / 1e6) {seconds(rel)} AS query_begin,
+    (query_end / 1e6) {seconds(rel)} AS query_end,
+    (resp_begin / 1e6) {seconds(rel)} AS resp_begin,
+    (resp_end / 1e6) {seconds(rel)} AS resp_end,
+    (rt_sum_server / 1e6) {seconds} AS rt_sum_server,
+    (rt_square_sum_server / 1e12) {seconds^2} AS rt_square_sum_server,
+    (dtt_sum_client / 1e6) {seconds} AS dtt_sum_client,
+    (dtt_square_sum_client / 1e12) {seconds^2} AS dtt_square_sum_client,
+    (dtt_sum_server / 1e6) {seconds} AS dtt_sum_server,
+    (dtt_square_sum_server / 1e12) {seconds^2} AS dtt_square_sum_server,
+    *;
+
+DEFINE voip AS
+  FROM ../csv/voip
+  SELECT
+    "voip" AS metric,
+    (capture_begin / 1e6) {seconds(rel)} AS start,
+    (capture_end / 1e6) {seconds(rel)} AS stop,
+    COALESCE(ip(ip4_client), ip(peek u128 ip6_client), 0.0.0.0) AS ip_client,
+    COALESCE(ip(ip4_server), ip(peek u128 ip6_server), 0.0.0.0) AS ip_server,
+    eth(mac_client) AS mac_client,
+    eth(mac_server) AS mac_server,
+    COALESCE(ip(ip4_caller), ip(peek u128 ip6_caller), 0.0.0.0) AS ip_caller,
+    eth(caller_mac) AS mac_caller,
+    COALESCE(ip(ip4_callee), ip(peek u128 ip6_callee), 0.0.0.0) AS ip_callee,
+    eth(callee_mac) AS mac_callee,
+    (rtp_duration / 1e6) {seconds} AS rtp_duration,
+    (rt_sum_server / 1e6) {seconds} AS rt_sum_server,
+    (rt_square_sum_server / 1e12) {seconds^2} AS rt_square_sum_server,
+    (jitter_sum_caller / 1e6) {seconds} AS jitter_sum_caller,
+    (jitter_square_sum_caller / 1e12) {seconds^2} AS jitter_square_sum_caller,
+    (jitter_sum_callee / 1e6) {seconds} AS jitter_sum_callee,
+    (jitter_square_sum_callee / 1e12) {seconds^2} AS jitter_square_sum_callee,
+    (rtt_sum_caller / 1e6) {seconds} AS rtt_sum_caller,
+    (rtt_square_sum_caller / 1e12) {seconds^2} AS rtt_square_sum_caller,
+    (rtt_sum_callee / 1e6) {seconds} AS rtt_sum_callee,
+    (rtt_square_sum_callee / 1e12) {seconds^2} AS rtt_square_sum_callee,
+    (sign_rtt_sum_client / 1e6) {seconds} AS sign_rtt_sum_client,
+    (sign_rtt_square_sum_client / 1e12) {seconds^2} AS sign_rtt_square_sum_client,
+    (sign_rtt_sum_server / 1e6) {seconds} AS sign_rtt_sum_server,
+    (sign_rtt_square_sum_server / 1e12) {seconds^2} AS sign_rtt_square_sum_server,
+    (sign_rd_sum_client / 1e6) {seconds} AS sign_rd_sum_client,
+    (sign_rd_square_sum_client / 1e12) {seconds^2} AS sign_rd_square_sum_client,
+    (sign_rd_sum_server / 1e6) {seconds} AS sign_rd_sum_server,
+    (sign_rd_square_sum_server / 1e12) {seconds^2} AS sign_rd_square_sum_server,
+    *;
+
+DEFINE tls AS
+  FROM ../csv/tls
+  SELECT
+    "tls" AS metric,
+    (capture_begin / 1e6) {seconds} AS start,
+    (capture_end / 1e6) {seconds} AS stop,
+    COALESCE(ip(ip4_client), ip(peek u128 ip6_client), 0.0.0.0) AS ip_client,
+    COALESCE(ip(ip4_server), ip(peek u128 ip6_server), 0.0.0.0) AS ip_server,
+    eth(mac_client) AS mac_client,
+    eth(mac_server) AS mac_server,
+    bool(resumed) AS resumed,
+    bool(decrypted) AS decrypted,
+    (ct_sum / 1e6) {seconds} AS ct_sum,
+    (ct_square_sum / 1e12) {seconds^2} AS ct_square_sum,
+    (rt_sum_server / 1e6) {seconds} AS rt_sum_server,
+    (rt_square_sum_server / 1e12) {seconds^2} AS rt_square_sum_server,
+    (dtt_sum_client / 1e6) {seconds} AS dtt_sum_client,
+    (dtt_square_sum_client / 1e12) {seconds^2} AS dtt_square_sum_client,
+    (dtt_sum_server / 1e6) {seconds} AS dtt_sum_server,
+    (dtt_square_sum_server / 1e12) {seconds^2} AS dtt_square_sum_server,
+    -- Also fix NULL counters:
+    COALESCE(ct_count, 0) AS ct_count,
+    *;

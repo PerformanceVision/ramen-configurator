@@ -16,7 +16,7 @@ RUN IF
 
 -- Top of type * code * error_ip_server * error_port every time_step
 DEFINE LAZY icmp_degraded AS
-  FROM ../../csv/icmp
+  FROM ../../metrics/icmp
   SELECT
     start, stop,
     IS icmp_type, icmp_code, error_ip_server, error_port_server IN
@@ -50,7 +50,7 @@ AS
 
 -- Select the worse TCP servers:
 DEFINE LAZY tcp_degraded AS
-  FROM ../../csv/tcp
+  FROM ../../metrics/tcp
   SELECT
     start, stop,
     (IS ip_server IN

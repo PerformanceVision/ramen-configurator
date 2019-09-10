@@ -20,7 +20,7 @@ RUN IF
 -- We need to make all CSV similar before merging them:
 
 DEFINE LAZY tcp_services AS
-  FROM ../../csv/tcp
+  FROM ../../metrics/tcp
   SELECT
     start, stop,
     COALESCE(vlan_server, vlan_client, 0) AS vlan,
@@ -38,7 +38,7 @@ DEFINE LAZY tcp_services AS
     zero_window_count_server;
 
 DEFINE LAZY udp_services AS
-  FROM ../../csv/udp
+  FROM ../../metrics/udp
   SELECT
     start, stop,
     COALESCE(vlan_server, vlan_client, 0) AS vlan,

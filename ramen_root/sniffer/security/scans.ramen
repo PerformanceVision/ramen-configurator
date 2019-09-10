@@ -15,8 +15,8 @@ RUN IF COALESCE(variant("Scan_detector") = "on", false);
 -- Start by filtering all entries but the new ones
 DEFINE LAZY new_triplets AS
   FROM
-    ../../csv/tcp,
-    ../../csv/udp
+    ../../metrics/tcp,
+    ../../metrics/udp
   MERGE TIMEOUT AFTER 5s
   WHERE
     start > merge_greatest.start - 3min AND
@@ -77,10 +77,10 @@ DEFINE port_scan_alert AS
 
 DEFINE LAZY new_pairs AS
   FROM
-    ../../csv/tcp,
-    ../../csv/udp,
-    ../../csv/icmp,
-    '../../csv/other-ip'
+    ../../metrics/tcp,
+    ../../metrics/udp,
+    ../../metrics/icmp,
+    '../../metrics/other-ip'
   MERGE TIMEOUT AFTER 5s
   WHEN
     start > merge_greatest.start - 3min AND

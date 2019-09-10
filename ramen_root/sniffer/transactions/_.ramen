@@ -17,7 +17,7 @@ RUN IF
 -- TODO: add the query / response sizes
 
 DEFINE LAZY tcp_connections AS
-  FROM ../../csv/tcp
+  FROM ../../metrics/tcp
   WHERE ct_count > 0
   SELECT
     start,  -- approximation
@@ -29,7 +29,7 @@ DEFINE LAZY tcp_connections AS
     true AS success;
 
 DEFINE LAZY tcp_generic AS
-  FROM ../../csv/tcp
+  FROM ../../metrics/tcp
   WHERE rt_count_server > 0
   SELECT
     start,
@@ -41,7 +41,7 @@ DEFINE LAZY tcp_generic AS
     true AS success;
 
 DEFINE LAZY dns_resolutions AS
-  FROM ../../csv/dns WHERE
+  FROM ../../metrics/dns WHERE
     query_type = 1 -- A
     OR query_type = 28 -- AAA
   SELECT
@@ -54,7 +54,7 @@ DEFINE LAZY dns_resolutions AS
     error_count = 0 AS success;
 
 DEFINE LAZY http_hits AS
-  FROM ../../csv/http
+  FROM ../../metrics/http
   WHERE resp_begin IS NOT NULL
   SELECT
     start,
@@ -66,8 +66,8 @@ DEFINE LAZY http_hits AS
     1 AS count;
 
 DEFINE LAZY citrix_mix AS
-  FROM ../../csv/citrix,
-       ../../csv/citrix_channels
+  FROM ../../metrics/citrix,
+       ../../metrics/citrix_channels
   MERGE TIMEOUT AFTER 5s
   WHERE
     start > merge_greatest.start - 3min AND
@@ -83,7 +83,7 @@ DEFINE LAZY citrix_mix AS
     true AS success;
 
 DEFINE LAZY smb_mix AS
-  FROM ../../csv/smb
+  FROM ../../metrics/smb
   WHERE resp_begin IS NOT NULL
   SELECT
     start,
@@ -95,7 +95,7 @@ DEFINE LAZY smb_mix AS
     1 AS count;
 
 DEFINE LAZY sql_queries AS
-  FROM ../../csv/sql
+  FROM ../../metrics/sql
   WHERE resp_begin IS NOT NULL
   SELECT
     start,

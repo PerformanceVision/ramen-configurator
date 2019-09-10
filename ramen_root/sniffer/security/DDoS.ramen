@@ -12,10 +12,10 @@ DEFINE LAZY 'new peers'
 --  "Approximation of the number of new unique clients and socket pairs."
 AS
   FROM
-    ../../csv/tcp,
-    ../../csv/udp,
-    ../../csv/icmp,
-    '../../csv/other-ip'
+    ../../metrics/tcp,
+    ../../metrics/udp,
+    ../../metrics/icmp,
+    '../../metrics/other-ip'
   MERGE TIMEOUT AFTER 5s
   WHERE
     start > merge_greatest.start - 3min AND

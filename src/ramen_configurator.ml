@@ -3,6 +3,7 @@ open RamenLog
 open RamenHelpers
 
 let dry_run = ref false
+let identity_file = ref ""
 
 let run_cmd cmd =
   !logger.debug "Running: %s" cmd ;
@@ -20,9 +21,10 @@ let compile_program debug ramen_cmd confserver_url fname src_path =
     fname src_path ;
   if !dry_run then !logger.info "nope" else
     Printf.sprintf
-      "%s compile%s --confserver %s %s --as %s"
+      "%s compile%s%s --confserver %s --replace %s --as %s"
       (shell_quote ramen_cmd)
       (if debug then " --debug" else "")
+      (if !identity_file <> "" then " -i "^ !identity_file else "")
       (shell_quote confserver_url)
       (shell_quote fname)
       (shell_quote src_path) |>
@@ -34,9 +36,10 @@ let run_program debug ramen_cmd confserver_url ?as_ fname params =
     (List.print (Tuple2.print String.print String.print)) params ;
   if !dry_run then !logger.info "nope" else
     Printf.sprintf2
-      "%s run%s --replace --confserver %s%s %a %s"
+      "%s run%s%s --replace --confserver %s%s %a %s"
       (shell_quote ramen_cmd)
       (if debug then " --debug" else "")
+      (if !identity_file <> "" then " -i "^ !identity_file else "")
       (shell_quote confserver_url)
       (Option.map_default (fun as_ -> " --as "^ shell_quote as_) "" as_)
       (List.print ~first:"" ~last:"" ~sep:" " (fun oc (n, v) ->
@@ -52,13 +55,13 @@ let chop_placeholder s =
   dirname
 
 (* Run that file and return the names it's running under: *)
-let run_file debug ramen_cmd root_dir confserver_url no_ext params =
+let run_file debug ramen_cmd root_dir confserver_url no_ext ?src_path params =
   let fname = root_dir ^"/"^ no_ext ^".ramen" in
-  let src_path = no_ext in
+  let src_path = src_path |? no_ext in
   let as_ = no_ext in
   if Hashtbl.is_empty params then (
     compile_program debug ramen_cmd confserver_url fname src_path ;
-    run_program debug ramen_cmd confserver_url ~as_ fname [] ;
+    run_program debug ramen_cmd confserver_url ~as_ src_path [] ;
     Set.String.singleton as_
   ) else (
     compile_program debug ramen_cmd confserver_url fname src_path ;
@@ -66,7 +69,7 @@ let run_file debug ramen_cmd root_dir confserver_url no_ext params =
       let as_ =
         if uniq_name = "" then as_ else
           chop_placeholder as_ ^"/"^ uniq_name in
-      run_program debug ramen_cmd confserver_url ~as_ fname params ;
+      run_program debug ramen_cmd confserver_url ~as_ src_path params ;
       Set.String.add as_ rs
     ) params Set.String.empty)
 
@@ -75,46 +78,61 @@ let run_file debug ramen_cmd root_dir confserver_url no_ext params =
  * non editable (by convention) to the user (or API), so that we can freely
  * kill programs in there. *)
 let get_running ramen_cmd confserver_url path =
-  Printf.sprintf2 "%s ps -p --confserver %s %s"
+  Printf.sprintf2 "%s ps%s --confserver %s %s"
     (shell_quote ramen_cmd)
+    (if !identity_file <> "" then " -i "^ !identity_file else "")
     (shell_quote confserver_url)
     (shell_quote path) |>
   run_cmd |>
   String.nsplit ~by:"\n" |>
   List.filter_map (fun l ->
     if l = "" then None else
-    match String.split ~by:"\t" l with
+    match String.nsplit ~by:"\t" l with
     | exception _ ->
         !logger.error "Cannot find tab in %S" l ;
         None
-    | x, _ -> Some x) |>
+    | _site :: fq :: _ ->
+        (try
+          let pname, _fname = String.rsplit ~by:"/" fq in
+          Some pname
+        with Not_found ->
+          None)
+    | _ ->
+        !logger.error "Invalid output for `ramen ps`: %S" l ;
+        None) |>
   Set.String.of_list
 
 let kill ramen_cmd confserver_url prog =
   !logger.info "Killing program %s" prog ;
   if !dry_run then !logger.info "nope" else
-    Printf.sprintf "%s kill --confserver %s %s"
+    Printf.sprintf "%s kill%s --confserver %s %s"
       (shell_quote ramen_cmd)
+      (if !identity_file <> "" then " -i "^ !identity_file else "")
       (shell_quote confserver_url)
       (shell_quote prog) |>
     run_cmd |> ignore
 
 let sync_programs debug ramen_cmd root_dir confserver_url uncompress
-                  csv_prefix csv_delete security_whitelist =
+                  kafka csv_prefix csv_delete security_whitelist =
   let no_params = Hashtbl.create 0 in
   let old_running = get_running ramen_cmd confserver_url "sniffer/*" in
   let new_running = ref Set.String.empty in
-  let comp n p =
-    let rs = run_file debug ramen_cmd root_dir confserver_url n p in
+  let comp n ?src_path p =
+    let rs = run_file debug ramen_cmd root_dir confserver_url n ?src_path p in
     new_running := Set.String.union rs !new_running in
   comp "internal/monitoring/meta" no_params ;
   let params =
-    Hashtbl.of_list
-      [ "",
-        [ "csv_prefix", dquote csv_prefix ;
-          "csv_delete", string_of_bool csv_delete ;
-          "csv_compressed", string_of_bool uncompress ] ] in
-  comp "sniffer/csv" params ;
+    if kafka then
+      Hashtbl.create 0
+    else
+      Hashtbl.of_list
+        [ "",
+          [ "csv_prefix", dquote csv_prefix ;
+            "csv_delete", string_of_bool csv_delete ;
+            "csv_compressed", string_of_bool uncompress ] ] in
+  let no_ext = "sniffer/"^ (if kafka then "csv_kafka" else "csv_files") in
+  comp no_ext ~src_path:"sniffer/csv"params ;
+  comp "sniffer/metrics" no_params ;
   let aggr_times =
     Hashtbl.of_list [ "1min",  [ "time_step", "60" ] ;
                       "10min", [ "time_step", "600" ] ;
@@ -247,16 +265,18 @@ let sync_notif_conf =
       prev_cmds := Some cmds)
 
 let start debug monitor ramen_cmd root_dir confserver_url db_name
-          uncompress csv_prefix csv_delete
-          alert_internal
-          notif_conf_file dry_run_ =
+          uncompress kafka csv_prefix csv_delete alert_internal
+          notif_conf_file identity_file_ dry_run_ =
   logger := make_logger debug ;
+  identity_file := identity_file_ ;
   dry_run := dry_run_ ;
+  if kafka && (csv_prefix <> "" || csv_delete || uncompress) then
+    failwith "CSV options are not compatible with Kafka" ;
   let db = Conf_of_sqlite.get_db db_name in
   let update_programs () =
     let security_whitelist = Conf_of_sqlite.get_source_params db in
     sync_programs debug ramen_cmd root_dir confserver_url uncompress
-                  csv_prefix csv_delete security_whitelist
+                  kafka csv_prefix csv_delete security_whitelist
   and update_notif_conf () =
     if notif_conf_file <> "" then
       sync_notif_conf db notif_conf_file alert_internal
@@ -298,7 +318,7 @@ let root_dir =
 
 let confserver_url =
   let env = Term.env_info "RAMEN_CONFSERVER" in
-  let i = Arg.info ~doc:"Start the configuration synchronization service"
+  let i = Arg.info ~doc:"Configure remote confserver"
                    ~env [ "confserver" ] in
   Arg.(value (opt ~vopt:"localhost" string "" i))
 
@@ -307,11 +327,16 @@ let uncompress_opt =
                    [ "uncompress" ; "uncompress-csv" ] in
   Arg.(value (flag i))
 
+let kafka =
+  let i = Arg.info ~doc:"Read CSV data from Kafka instead of files."
+            [ "kafka" ] in
+  Arg.(value (flag i))
+
 let csv_prefix =
   let i = Arg.info ~doc:"File glob for the CSV files that comes right \
                          before the metric name"
                    [ "csv" ] in
-  Arg.(required (opt (some string) None i))
+  Arg.(value (opt string "" i))
 
 let csv_delete =
   let i = Arg.info ~doc:"Delete CSV files once injected"
@@ -328,6 +353,12 @@ let alert_internal =
   let i = Arg.info ~doc:"Also send \"Internal\" notifications."
                    [ "alert-internal" ] in
   Arg.(value (flag i))
+
+let identity_file =
+  let env = Term.env_info "RAMEN_CLIENT_IDENTITY" in
+  let i = Arg.info ~doc:"User identity file."
+                   ~docv:"FILE" ~env [ "i" ; "identity" ] in
+  Arg.(value (opt string "" i))
 
 let dry_run =
   let i = Arg.info ~doc:"Just display what would be killed/run"
@@ -346,10 +377,12 @@ let start_cmd =
       $ confserver_url
       $ db_name
       $ uncompress_opt
+      $ kafka
       $ csv_prefix
       $ csv_delete
       $ alert_internal
       $ notif_conf_file
+      $ identity_file
       $ dry_run),
     info "ramen_configurator" ~version ~doc)
 

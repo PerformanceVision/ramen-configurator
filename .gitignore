@@ -36,3 +36,5 @@ ramen_root/**/*.x
 ramen_root/**/*.smt2
 ramen_root/**/*.smt2.no_opt
 ramen_root/**/*.info
+ramen_root/sniffer/csv_files.ramen
+ramen_root/sniffer/csv_kafka.ramen

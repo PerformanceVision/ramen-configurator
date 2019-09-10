@@ -11,7 +11,7 @@ RUN IF
 -- TCP
 
 DEFINE LAZY c2s_tcp AS
-  FROM ../../csv/tcp
+  FROM ../../metrics/tcp
   SELECT
     start, stop,
     -- In this table we consider that the client is source and the client dest.
@@ -61,7 +61,7 @@ DEFINE LAZY c2s_tcp AS
     timeout_count, close_count, ct_count, ct_sum, ct_square_sum;
 
 DEFINE LAZY s2c_tcp AS
-  FROM ../../csv/tcp
+  FROM ../../metrics/tcp
   WHERE zone_client <> zone_client
   SELECT
     start, stop,
@@ -111,7 +111,7 @@ DEFINE LAZY s2c_tcp AS
 -- UDP
 
 DEFINE LAZY c2s_udp AS
-  FROM ../../csv/udp
+  FROM ../../metrics/udp
   SELECT
     start, stop,
     zone_server AS zone,
@@ -143,7 +143,7 @@ DEFINE LAZY c2s_udp AS
     0u32 AS ct_count, 0. AS ct_sum, 0. AS ct_square_sum;
 
 DEFINE LAZY s2c_udp AS
-  FROM ../../csv/udp
+  FROM ../../metrics/udp
   WHERE zone_client <> zone_client
   SELECT
     start, stop,
@@ -178,7 +178,7 @@ DEFINE LAZY s2c_udp AS
 -- ICMP
 
 DEFINE LAZY c2s_icmp AS
-  FROM ../../csv/icmp
+  FROM ../../metrics/icmp
   SELECT
     start, stop,
     zone_server AS zone,
@@ -210,7 +210,7 @@ DEFINE LAZY c2s_icmp AS
     0u32 AS ct_count, 0. AS ct_sum, 0. AS ct_square_sum;
 
 DEFINE LAZY s2c_icmp AS
-  FROM ../../csv/icmp
+  FROM ../../metrics/icmp
   WHERE zone_client <> zone_client
   SELECT
     start, stop,
@@ -245,7 +245,7 @@ DEFINE LAZY s2c_icmp AS
 -- OtherIP
 
 DEFINE LAZY c2s_other_ip AS
-  FROM '../../csv/other-ip'
+  FROM '../../metrics/other-ip'
   SELECT
     start, stop,
     zone_server AS zone,
@@ -277,7 +277,7 @@ DEFINE LAZY c2s_other_ip AS
     0u32 AS ct_count, 0. AS ct_sum, 0. AS ct_square_sum;
 
 DEFINE LAZY s2c_other_ip AS
-  FROM '../../csv/other-ip'
+  FROM '../../metrics/other-ip'
   WHERE zone_client <> zone_client
   SELECT
     start, stop,
@@ -312,7 +312,7 @@ DEFINE LAZY s2c_other_ip AS
 -- NonIP
 
 DEFINE LAZY c2s_non_ip AS
-  FROM '../../csv/non-ip'
+  FROM '../../metrics/non-ip'
   SELECT
     start, stop,
     zone_server AS zone,
@@ -344,7 +344,7 @@ DEFINE LAZY c2s_non_ip AS
     0u32 AS ct_count, 0. AS ct_sum, 0. AS ct_square_sum;
 
 DEFINE LAZY s2c_non_ip AS
-  FROM '../../csv/non-ip'
+  FROM '../../metrics/non-ip'
   WHERE zone_client <> zone_client
   SELECT
     start, stop,

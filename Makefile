@@ -16,7 +16,9 @@ PACKAGES = \
 
 RAMEN_SOURCES = \
 	ramen_root/internal/monitoring/meta.ramen \
-	ramen_root/sniffer/csv.ramen \
+	ramen_root/sniffer/csv_files.ramen \
+	ramen_root/sniffer/csv_kafka.ramen \
+	ramen_root/sniffer/metrics.ramen \
 	ramen_root/sniffer/security/scans.ramen \
 	ramen_root/sniffer/security/DDoS.ramen \
 	ramen_root/sniffer/top_zones/_.ramen \
@@ -38,7 +40,7 @@ all: $(INSTALLED) $(CHECK_COMPILATION) src/findcsv
 
 # Generic rules
 
-.SUFFIXES: .ml .mli .cmi .cmx .cmxs .annot .html .adoc .ramen .x
+.SUFFIXES: .ml .mli .cmi .cmx .cmxs .annot .html .adoc .ramen .x .php
 .PHONY: clean all dep install uninstall reinstall doc deb tarball \
         docker-latest docker-push
 
@@ -54,6 +56,21 @@ all: $(INSTALLED) $(CHECK_COMPILATION) src/findcsv
 	@echo 'Compiling ramen program $@'
 	@ramen compile -L ramen_root $<
 
+# That one use parents "../csv" to find out types:
+ramen_root/sniffer/metrics.x: ramen_root/sniffer/metrics.ramen ramen_root/sniffer/csv_files.x
+	@echo 'Compiling ramen program $@'
+	@ln -sf csv_files.x ramen_root/sniffer/csv.x
+	@ramen compile -L ramen_root $<
+
+# Source files templating
+
+%.ramen: %.php ramen_root/sniffer/csv_v30.php
+	@echo 'Expanding $@'
+	@php -n $< > $@ || true
+	@if grep -e Warning -e 'Parse error:' $@ ; then \
+	  rm $@ ;\
+	fi
+
 # Dependencies
 
 CONFIGURATOR_SOURCES = \
@@ -64,15 +81,16 @@ CONFIGURATOR_SOURCES = \
 FINDCSV_SOURCES = \
 	src/RamenLog.ml src/RamenHelpers.ml src/findcsv.ml
 
-ramen_root/sniffer/security/scans.x: ramen_root/sniffer/csv.x
-ramen_root/sniffer/security/DDoS.x: ramen_root/sniffer/csv.x
-ramen_root/sniffer/top_zones/_.x: ramen_root/sniffer/csv.x
-ramen_root/sniffer/per_zone/_.x: ramen_root/sniffer/csv.x
-ramen_root/sniffer/per_zone/_.x: ramen_root/sniffer/csv.x
-ramen_root/sniffer/top_servers/_.x: ramen_root/sniffer/csv.x
-ramen_root/sniffer/per_application/_.x: ramen_root/sniffer/csv.x
-ramen_root/sniffer/transactions/_.x: ramen_root/sniffer/csv.x
-ramen_root/sniffer/top_errors/_.x: ramen_root/sniffer/csv.x
+ramen_root/snigger/metrics.x: ramen_root/sniffer/csv.x
+ramen_root/sniffer/security/scans.x: ramen_root/sniffer/metrics.x
+ramen_root/sniffer/security/DDoS.x: ramen_root/sniffer/metrics.x
+ramen_root/sniffer/top_zones/_.x: ramen_root/sniffer/metrics.x
+ramen_root/sniffer/per_zone/_.x: ramen_root/sniffer/metrics.x
+ramen_root/sniffer/per_zone/_.x: ramen_root/sniffer/metrics.x
+ramen_root/sniffer/top_servers/_.x: ramen_root/sniffer/metrics.x
+ramen_root/sniffer/per_application/_.x: ramen_root/sniffer/metrics.x
+ramen_root/sniffer/transactions/_.x: ramen_root/sniffer/metrics.x
+ramen_root/sniffer/top_errors/_.x: ramen_root/sniffer/metrics.x
 
 SOURCES = $(CONFIGURATOR_SOURCES) $(FINDCSV_SOURCES)
 

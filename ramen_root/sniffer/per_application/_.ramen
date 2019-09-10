@@ -13,7 +13,7 @@ RUN IF
 DEFINE LAZY tcp
   "TCP metrics per application and time step."
 AS
-  FROM ../../csv/tcp
+  FROM ../../metrics/tcp
   SELECT
     -- Time
     truncate(start, time_step) AS start,
@@ -160,7 +160,7 @@ AS
 DEFINE LAZY udp
   "UDP metrics per application and time step."
 AS
-  FROM ../../csv/udp
+  FROM ../../metrics/udp
   SELECT
     -- Time
     truncate(start, time_step) AS start,
@@ -185,7 +185,7 @@ AS
 DEFINE LAZY icmp
   "ICMP metrics per application and time step."
 AS
-  FROM ../../csv/icmp
+  FROM ../../metrics/icmp
   SELECT
     -- Time
     truncate(start, time_step) AS start,
@@ -221,7 +221,7 @@ AS
 DEFINE LAZY 'other-ip'
   "'Other-ip' metrics per application and time step."
 AS
-  FROM '../../csv/other-ip'
+  FROM '../../metrics/other-ip'
   SELECT
     -- Time
     truncate(start, time_step) AS start,
@@ -244,7 +244,7 @@ AS
 DEFINE LAZY 'non-ip'
   "Non-IP metrics per application and time step."
 AS
-  FROM '../../csv/non-ip'
+  FROM '../../metrics/non-ip'
   SELECT
     -- Time
     truncate(start, time_step) AS start,
@@ -267,7 +267,7 @@ AS
 DEFINE LAZY http
   "HTTP metrics per application and time step."
 AS
-  FROM ../../csv/http
+  FROM ../../metrics/http
   SELECT
     -- Time
     truncate(start, time_step) AS start,
@@ -323,7 +323,7 @@ AS
 DEFINE LAZY citrix_channels
   "Citrix-Channels  metrics per application and time step."
 AS
-  FROM ../../csv/citrix_channels
+  FROM ../../metrics/citrix_channels
   SELECT
     -- Time
     truncate(start, time_step) AS start,
@@ -397,7 +397,7 @@ AS
 DEFINE LAZY citrix
   "Citrix metrics per application and time step."
 AS
-  FROM ../../csv/citrix
+  FROM ../../metrics/citrix
   SELECT
     -- Time
     truncate(start, time_step) AS start,
@@ -506,7 +506,7 @@ AS
 DEFINE LAZY smb
   "SMB metrics per application and time step."
 AS
-  FROM ../../csv/smb
+  FROM ../../metrics/smb
   SELECT
     -- Time
     truncate(start, time_step) AS start,
@@ -516,9 +516,9 @@ AS
     sum 1 {} AS _count,
     _count / time_step AS 'queries.per_sec'
       "SMB queries per second.",
-    sum u32(is_error) / _count AS 'errors.ratio'
+    sum u32(errors) / _count AS 'errors.ratio'
       "Error ratio.",
-    sum u32(is_warning) / _count AS 'warnings.ratio'
+    sum u32(warnings) / _count AS 'warnings.ratio'
       "Warning ratio.",
     sum query_payload / time_step AS 'query.payload.per_sec'
       "Payload bytes per second in queries.",
@@ -544,7 +544,7 @@ AS
 DEFINE LAZY sql
   "SQL metrics per application and time step."
 AS
-  FROM ../../csv/sql
+  FROM ../../metrics/sql
   SELECT
     -- Time
     truncate(start, time_step) AS start,
@@ -579,7 +579,7 @@ AS
 DEFINE LAZY voip
   "VoIP metrics per application and time step."
 AS
-  FROM ../../csv/voip
+  FROM ../../metrics/voip
   SELECT
     -- Time
     truncate(start, time_step) AS start,
@@ -734,7 +734,7 @@ AS
 DEFINE LAZY tls
   "TLS metrics per application and time step."
 AS
-  FROM ../../csv/tls
+  FROM ../../metrics/tls
   SELECT
     -- Time
     truncate(start, time_step) AS start,
