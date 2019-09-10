@@ -264,6 +264,46 @@ AS
     in.start > out.start + 2 * time_step
   FACTOR application;
 
+DEFINE LAZY dns
+  "DNS metrics per application and time step."
+AS
+  FROM ../../metrics/dns
+  SELECT
+    -- Time
+    truncate(start, time_step) AS start,
+    out.start + time_step AS stop,
+    application DOC "Application",
+    -- Volumes
+    sum traffic_bytes_client AS _sum_traffic_bytes_client,
+    _sum_traffic_bytes_client / time_step AS 'client.traffic.per_sec'
+      "Bytes per second flowing from clients to servers.",
+    sum traffic_bytes_server AS _sum_traffic_bytes_server,
+    _sum_traffic_bytes_server / time_step AS 'server.traffic.per_sec'
+      "Bytes per second flowing from servers to clients.",
+    sum traffic_packets_client / time_step AS 'client.packets.per_sec'
+      "Packets per second flowing from clients to servers.",
+    sum traffic_packets_server / time_step AS 'server.packets.per_sec'
+      "Packets per second flowing from servers to clients.",
+    -- Average Server Response Time
+    sum rt_count_server AS _sum_rt_count_server,
+    sum rt_sum_server AS _sum_rt_sum_server,
+    _sum_rt_count_server / time_step AS 'server.rt.count.per_sec'
+      "Number of query/response pairs per second.",
+    IF _sum_rt_count_server > 0 THEN
+      _sum_rt_sum_server / _sum_rt_count_server AS 'server.rt.avg'
+      "Average response time."
+    --IF _sum_rt_count_server > 0 THEN
+    --  sqrt (sum rt_square_sum_server / _sum_rt_count_server -
+    --        (_sum_rt_sum_server / _sum_rt_count_server)^2) AS _srt_stddev,
+    --'server.rt.avg' + _srt_stddev AS 'server.rt.avg + σ'
+    --  "Average response time plus its standard deviation.",
+    --max(0, 'server.rt.avg' - _srt_stddev) AS 'server.rt.avg - σ'
+    --  "Average response time minus its standard deviation.",
+  GROUP BY start // time_step, application
+  COMMIT AFTER
+    in.start > out.start + 2 * time_step
+  FACTOR application;
+
 DEFINE LAZY http
   "HTTP metrics per application and time step."
 AS
