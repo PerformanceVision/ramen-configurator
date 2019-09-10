@@ -215,3 +215,5 @@ clean: clean-comp
 	@sudo rm -rf debtmp
 	@$(RM) -r tmp
 	@$(RM) ramen_configurator.*.deb ramen_configurator.*.tgz
+	@$(RM) ramen_root/sniffer/csv_files.ramen
+	@$(RM) ramen_root/sniffer/csv_kafka.ramen
