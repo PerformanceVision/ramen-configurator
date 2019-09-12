@@ -114,7 +114,7 @@ let kill ramen_cmd confserver_url prog =
     run_cmd |> ignore
 
 let sync_programs debug ramen_cmd root_dir confserver_url uncompress
-                  kafka csv_prefix csv_delete security_whitelist =
+                  kafka_brokers csv_prefix csv_delete security_whitelist =
   let no_params = Hashtbl.create 0 in
   let old_running = get_running ramen_cmd confserver_url "sniffer/*" in
   let new_running = ref Set.String.empty in
@@ -124,14 +124,14 @@ let sync_programs debug ramen_cmd root_dir confserver_url uncompress
     new_running := Set.String.union rs !new_running in
   comp "internal/monitoring/meta" no_params ;
   let params =
-    if kafka then
-      Hashtbl.create 0
-    else
-      Hashtbl.of_list
-        [ "",
-          [ "csv_prefix", dquote csv_prefix ;
-            "csv_delete", string_of_bool csv_delete ;
-            "csv_compressed", string_of_bool uncompress ] ] in
+    Hashtbl.of_list
+      [ "",
+          if kafka_brokers <> "" then
+            [ "kafka_broker_list", dquote kafka_brokers ]
+          else
+            [ "csv_prefix", dquote csv_prefix ;
+              "csv_delete", string_of_bool csv_delete ;
+              "csv_compressed", string_of_bool uncompress ] ] in
   let fname = "sniffer/"
               ^ (if kafka_brokers <> "" then "csv_kafka" else "csv_files")
               ^ ".ramen" in
@@ -270,18 +270,20 @@ let sync_notif_conf =
       prev_cmds := Some cmds)
 
 let start debug monitor ramen_cmd root_dir confserver_url db_name
-          uncompress kafka csv_prefix csv_delete alert_internal
+          uncompress kafka_brokers csv_prefix csv_delete alert_internal
           notif_conf_file identity_file_ dry_run_ =
   logger := make_logger debug ;
   identity_file := identity_file_ ;
   dry_run := dry_run_ ;
-  if kafka && (csv_prefix <> "" || csv_delete || uncompress) then
+  if kafka_brokers <> "" &&
+     (csv_prefix <> "" || csv_delete || uncompress)
+  then
     failwith "CSV options are not compatible with Kafka" ;
   let db = Conf_of_sqlite.get_db db_name in
   let update_programs () =
     let security_whitelist = Conf_of_sqlite.get_source_params db in
     sync_programs debug ramen_cmd root_dir confserver_url uncompress
-                  kafka csv_prefix csv_delete security_whitelist
+                  kafka_brokers csv_prefix csv_delete security_whitelist
   and update_notif_conf () =
     if notif_conf_file <> "" then
       sync_notif_conf db notif_conf_file alert_internal
@@ -332,10 +334,10 @@ let uncompress_opt =
                    [ "uncompress" ; "uncompress-csv" ] in
   Arg.(value (flag i))
 
-let kafka =
+let kafka_brokers =
   let i = Arg.info ~doc:"Read CSV data from Kafka instead of files."
-            [ "kafka" ] in
-  Arg.(value (flag i))
+            [ "kafka-broers" ] in
+  Arg.(value (opt string "" i))
 
 let csv_prefix =
   let i = Arg.info ~doc:"File glob for the CSV files that comes right \
@@ -382,7 +384,7 @@ let start_cmd =
       $ confserver_url
       $ db_name
       $ uncompress_opt
-      $ kafka
+      $ kafka_brokers
       $ csv_prefix
       $ csv_delete
       $ alert_internal
