@@ -10,8 +10,6 @@ PARAMETERS
   alert_memory DEFAULT TO 24h, -- How long to not alert again about the same client
   whitelist Cidr[]?; -- Those won't be frowned upon
 
-RUN IF COALESCE(variant("Scan_detector") = "on", false);
-
 -- Start by filtering all entries but the new ones
 DEFINE LAZY new_triplets AS
   FROM

@@ -6,8 +6,6 @@ PARAMETERS
   whitelist Cidr[]?; -- Those won't be frowned upon
   -- TODO: also remember durations?
 
-RUN IF COALESCE(variant("DDoS_detector") = "on", false);
-
 DEFINE LAZY 'new peers'
 --  "Approximation of the number of new unique clients and socket pairs."
 AS
