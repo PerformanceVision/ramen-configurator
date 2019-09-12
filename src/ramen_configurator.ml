@@ -55,8 +55,9 @@ let chop_placeholder s =
   dirname
 
 (* Run that file and return the names it's running under: *)
-let run_file debug ramen_cmd root_dir confserver_url no_ext ?src_path params =
-  let fname = root_dir ^"/"^ no_ext ^".ramen" in
+let run_file debug ramen_cmd root_dir confserver_url no_ext
+             ?fname ?src_path params =
+  let fname = root_dir ^"/"^ (fname |? (no_ext ^".ramen")) in
   let src_path = src_path |? no_ext in
   let as_ = no_ext in
   if Hashtbl.is_empty params then (
@@ -117,8 +118,9 @@ let sync_programs debug ramen_cmd root_dir confserver_url uncompress
   let no_params = Hashtbl.create 0 in
   let old_running = get_running ramen_cmd confserver_url "sniffer/*" in
   let new_running = ref Set.String.empty in
-  let comp n ?src_path p =
-    let rs = run_file debug ramen_cmd root_dir confserver_url n ?src_path p in
+  let comp no_ext ?fname ?src_path p =
+    let rs = run_file debug ramen_cmd root_dir confserver_url no_ext
+                      ?fname ?src_path p in
     new_running := Set.String.union rs !new_running in
   comp "internal/monitoring/meta" no_params ;
   let params =
@@ -130,8 +132,11 @@ let sync_programs debug ramen_cmd root_dir confserver_url uncompress
           [ "csv_prefix", dquote csv_prefix ;
             "csv_delete", string_of_bool csv_delete ;
             "csv_compressed", string_of_bool uncompress ] ] in
-  let no_ext = "sniffer/"^ (if kafka then "csv_kafka" else "csv_files") in
-  comp no_ext ~src_path:"sniffer/csv"params ;
+  let fname = "sniffer/"
+              ^ (if kafka_brokers <> "" then "csv_kafka" else "csv_files")
+              ^ ".ramen" in
+  let no_ext = "sniffer/csv" in
+  comp no_ext ~fname ~src_path:no_ext params ;
   comp "sniffer/metrics" no_params ;
   let aggr_times =
     Hashtbl.of_list [ "1min",  [ "time_step", "60" ] ;
