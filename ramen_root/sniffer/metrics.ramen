@@ -8,7 +8,7 @@
 -- Unfortunately, only TCP comes with any metric that bear any relation to
 -- quality of service. We blanks these metrics for other sources below:
 
-DEFINE tcp AS
+DEFINE PERSIST FOR 15min tcp AS
   FROM ../csv/tcp
   SELECT
     "tcp" AS metric,
@@ -60,7 +60,7 @@ DEFINE tcp AS
     COALESCE(retrans_payload_bytes_server, 0) AS retrans_payload_bytes_server,
     *; -- -ip4_client -ip6_client etc
 
-DEFINE udp AS
+DEFINE PERSIST FOR 15min udp AS
   FROM ../csv/udp
   SELECT
     "udp" AS metric,
@@ -84,7 +84,7 @@ DEFINE udp AS
     u32(0) {} AS rd_count_server,
     *;
 
-DEFINE icmp AS
+DEFINE PERSIST FOR 15min icmp AS
   FROM ../csv/icmp
   SELECT
     "icmp" AS metric,
@@ -110,7 +110,7 @@ DEFINE icmp AS
     u32(0) {} AS rd_count_server,
     *;
 
-DEFINE 'other-ip' AS
+DEFINE PERSIST FOR 15min 'other-ip' AS
   FROM '../csv/other-ip'
   SELECT
     "other-ip" AS metric,
@@ -132,7 +132,7 @@ DEFINE 'other-ip' AS
     u32(0) {} AS rd_count_server,
     *;
 
-DEFINE 'non-ip' AS
+DEFINE PERSIST FOR 15min 'non-ip' AS
   FROM '../csv/non-ip'
   SELECT
     "non-ip" AS metric,
@@ -146,7 +146,7 @@ DEFINE 'non-ip' AS
     traffic_bytes_server AS payload_bytes_server,
     *;
 
-DEFINE dns AS
+DEFINE PERSIST FOR 15min dns AS
   FROM ../csv/dns
   SELECT
     "dns" AS metric,
@@ -160,7 +160,7 @@ DEFINE dns AS
     (rt_square_sum_server / 1e12) {seconds^2} AS rt_square_sum_server,
     *;
 
-DEFINE http AS
+DEFINE PERSIST FOR 15min http AS
   FROM ../csv/http
   SELECT
     "http" AS metric,
@@ -187,7 +187,7 @@ DEFINE http AS
     (dtt_square_sum_server / 1e12) {seconds^2} AS dtt_square_sum_server,
     *;
 
-DEFINE citrix_channels AS
+DEFINE PERSIST FOR 15min citrix_channels AS
   FROM ../csv/citrix
   SELECT
     "citrix-channels" AS metric,
@@ -205,7 +205,7 @@ DEFINE citrix_channels AS
     (dtt_square_sum_server / 1e12) {seconds^2} AS dtt_square_sum_server,
     *;
 
-DEFINE citrix AS
+DEFINE PERSIST FOR 15min citrix AS
   FROM ../csv/citrix_chanless
   SELECT
     "citrix" AS metric,
@@ -227,7 +227,7 @@ DEFINE citrix AS
     (launch_time_square_sum / 1e12) {seconds^2} AS launch_time_square_sum,
     *;
 
-DEFINE smb AS
+DEFINE PERSIST FOR 15min smb AS
   FROM ../csv/smb
   SELECT
     "smb" AS metric,
@@ -249,7 +249,7 @@ DEFINE smb AS
     (dtt_square_sum_server / 1e12) {seconds^2} AS dtt_square_sum_server,
     *;
 
-DEFINE sql AS
+DEFINE PERSIST FOR 15min sql AS
   FROM ../csv/sql
   SELECT
     "sql" AS metric,
@@ -271,7 +271,7 @@ DEFINE sql AS
     (dtt_square_sum_server / 1e12) {seconds^2} AS dtt_square_sum_server,
     *;
 
-DEFINE voip AS
+DEFINE PERSIST FOR 15min voip AS
   FROM ../csv/voip
   SELECT
     "voip" AS metric,
@@ -306,7 +306,7 @@ DEFINE voip AS
     (sign_rd_square_sum_server / 1e12) {seconds^2} AS sign_rd_square_sum_server,
     *;
 
-DEFINE tls AS
+DEFINE PERSIST FOR 15min tls AS
   FROM ../csv/tls
   SELECT
     "tls" AS metric,
