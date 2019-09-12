@@ -49,13 +49,13 @@ DEFINE http AS
 
 DEFINE citrix AS
   READ FROM
-    KAFKA TOPIC "pvx.citrix"
+    KAFKA TOPIC "pvx.citrix_channels"
     WITH OPTIONS "metadata.broker.list" = kafka_broker_list
     <?=$citrix?>;
 
 DEFINE citrix_chanless AS
   READ FROM
-    KAFKA TOPIC "pvx.citrix_channels"
+    KAFKA TOPIC "pvx.citrix"
     WITH OPTIONS "metadata.broker.list" = kafka_broker_list
     <?=$citrix_chanless?>;
 
