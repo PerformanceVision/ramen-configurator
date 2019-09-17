@@ -46,7 +46,7 @@ DEFINE LAZY 'new peers: DDoS predictions' AS
     start,
     num_new_cnxs_per_sec,
     smooth globally(num_new_cnxs_per_sec) AS pred_0_num_new_cnxs_per_sec,
-    fit globally(5, num_new_cnxs_per_sec) AS pred_1_num_new_cnxs_per_sec,
+    linreg globally(5, num_new_cnxs_per_sec) AS pred_1_num_new_cnxs_per_sec,
     5-ma globally(num_new_cnxs_per_sec) AS pred_2_num_new_cnxs_per_sec,
     lag globally(num_new_cnxs_per_sec) AS pred_3_num_new_cnxs_per_sec,
     IF num_new_cnxs_per_sec > 1 THEN (abs(pred_3_num_new_cnxs_per_sec - num_new_cnxs_per_sec) /
@@ -60,7 +60,7 @@ DEFINE LAZY 'new peers: DDoS predictions' AS
         AS abnormality_num_new_cnxs_per_sec,
     num_new_clients_per_sec,
     smooth globally(num_new_clients_per_sec) AS pred_0_num_new_clients_per_sec,
-    fit globally(5, num_new_clients_per_sec) AS pred_1_num_new_clients_per_sec,
+    linreg globally(5, num_new_clients_per_sec) AS pred_1_num_new_clients_per_sec,
     5-ma globally(num_new_clients_per_sec) AS pred_2_num_new_clients_per_sec,
     lag globally(num_new_clients_per_sec) AS pred_3_num_new_clients_per_sec,
     IF num_new_clients_per_sec > 1 THEN (abs(pred_3_num_new_clients_per_sec - num_new_clients_per_sec) /
