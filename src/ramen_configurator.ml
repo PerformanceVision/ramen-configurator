@@ -161,6 +161,7 @@ let sync_programs debug ramen_cmd root_dir confserver_url uncompress
     else no_params in
   comp "sniffer/security/DDoS" params ;
   comp "sniffer/security/scans" params ;
+  comp "sniffer/per_application/autodetect" no_params ;
   !logger.debug "Old: %a" (Set.String.print String.print) old_running ;
   !logger.debug "New: %a" (Set.String.print String.print) !new_running ;
   let to_kill = Set.String.diff old_running !new_running in

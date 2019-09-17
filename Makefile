@@ -25,6 +25,7 @@ RAMEN_SOURCES = \
 	ramen_root/sniffer/per_zone/_.ramen \
 	ramen_root/sniffer/top_servers/_.ramen \
 	ramen_root/sniffer/per_application/_.ramen \
+	ramen_root/sniffer/per_application/autodetect.ramen \
 	ramen_root/sniffer/transactions/_.ramen \
 	ramen_root/sniffer/top_errors/_.ramen
 
@@ -56,12 +57,6 @@ all: $(INSTALLED) $(CHECK_COMPILATION) src/findcsv
 	@echo 'Compiling ramen program $@'
 	@ramen compile -L ramen_root $<
 
-# That one use parents "../csv" to find out types:
-ramen_root/sniffer/metrics.x: ramen_root/sniffer/metrics.ramen ramen_root/sniffer/csv_files.x
-	@echo 'Compiling ramen program $@'
-	@ln -sf csv_files.x ramen_root/sniffer/csv.x
-	@ramen compile -L ramen_root $<
-
 # Source files templating
 
 %.ramen: %.php ramen_root/sniffer/csv_v30.php
@@ -91,6 +86,19 @@ ramen_root/sniffer/top_servers/_.x: ramen_root/sniffer/metrics.x
 ramen_root/sniffer/per_application/_.x: ramen_root/sniffer/metrics.x
 ramen_root/sniffer/transactions/_.x: ramen_root/sniffer/metrics.x
 ramen_root/sniffer/top_errors/_.x: ramen_root/sniffer/metrics.x
+ramen_root/sniffer/per_application/autodetect.x: ramen_root/sniffer/per_application/_.x
+
+# That one use parents "../csv" to find out types:
+ramen_root/sniffer/metrics.x: ramen_root/sniffer/metrics.ramen ramen_root/sniffer/csv_files.x
+	@echo 'Compiling ramen program $@'
+	@ln -sf csv_files.x ramen_root/sniffer/csv.x
+	@ramen compile -L ramen_root $<
+
+# Autodetect depends on per_application/10min.x:
+ramen_root/sniffer/per_application/autodetect.x: ramen_root/sniffer/per_application/10min.x
+# Which is just a variation of per_application/_.x:
+ramen_root/sniffer/per_application/10min.x: ramen_root/sniffer/per_application/_.x
+	@ln -sf _.x $@
 
 SOURCES = $(CONFIGURATOR_SOURCES) $(FINDCSV_SOURCES)
 

@@ -1,0 +1,68 @@
+-- vim: ft=sql expandtab
+
+PARAMETERS
+  fitting_points DEFAULTS TO 144; -- 24h of 10min slices
+
+RUN IF COALESCE(variant("run_per_app_aad") = "on", false);
+
+-- Automatic Anomaly Detection per Application
+
+DEFINE tcp_predictors
+  "Predictors on main metrics based on the shape of the traffic."
+AS
+  FROM '../10min/tcp'
+  SELECT
+    start, stop, application,
+    -- Predictors:
+    -- time: hour_of_day, day_of_week,
+    (start // 1h) % 24 AS hour_of_day, -- in UTC, more or less, does not really matter
+    (start // 24h) % 7 AS day_of_week,
+    -- Volumes
+    'client.traffic.per_sec' + 'server.traffic.per_sec' AS total_traffic,
+    'client.packets.per_sec' + 'server.packets.per_sec' AS total_packets,
+    'client.dtt.avg' + 'server.dtt.avg' AS total_dtt,
+    -- syns.per_sec
+    -- TODO: multi-smoothed versions of the predicted (aka baseline)
+
+    -- Predicted:
+    'client.retrans.traffic.ratio' + 'server.retrans.traffic.ratio' AS total_retrans,
+    FIT(LATEST UP TO fitting_points
+          (total_retrans; total_traffic; total_packets; total_dtt;
+           hour_of_day; day_of_week)
+    ) AS previous_retrans,
+
+    FIT(LATEST UP TO fitting_points
+          ('syns.per_sec'; total_traffic; total_packets; total_dtt;
+           hour_of_day; day_of_week)
+    ) AS predicted_syns_per_sec,
+
+    'client.rsts.ratio' + 'server.rsts.ratio' AS total_rsts_ratio,
+    FIT(LATEST UP TO fitting_points
+          (total_rsts_ratio; total_traffic; total_packets; total_dtt;
+           hour_of_day; day_of_week)
+    ) AS predicted_rsts_ratio,
+
+    'client.zero_windows.per_sec' + 'server.zero_windows.per_sec' AS total_zero_windows,
+    FIT(LATEST UP TO fitting_points
+          (total_zero_windows; total_traffic; total_packets; total_dtt;
+           hour_of_day; day_of_week)
+    ) AS predicted_zero_window,
+
+    FIT(LATEST UP TO fitting_points
+          ('ct.avg'; total_traffic; total_packets; total_dtt;
+           hour_of_day; day_of_week)
+    ) AS predicted_ct_avg,
+
+    FIT(LATEST UP TO fitting_points
+          ('server.rt.avg'; total_traffic; total_packets; total_dtt;
+           hour_of_day; day_of_week)
+    ) AS predicted_response_time,
+
+    'client.rtt.avg' + 'server.rtt.avg' AS round_trip_time,
+    FIT(LATEST UP TO fitting_points
+          (round_trip_time; total_traffic; total_packets; total_dtt;
+           hour_of_day; day_of_week)
+    ) AS predicted_round_trip_time
+
+  -- Will output a value for every input in absence of an explicit COMMIT clause:
+  GROUP BY application;

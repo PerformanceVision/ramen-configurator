@@ -7,7 +7,10 @@ PARAMETER time_step {seconds} DEFAULTS TO 60.0;
 RUN IF
   COALESCE(
     time_step <= 1min OR
-    time_step <= 10min AND variant("run_time_steps") IN ["up_to_10min"; "up_to_1hour"] OR
+    time_step <= 10min AND (
+      variant("run_time_steps") IN ["up_to_10min"; "up_to_1hour"] OR
+      COALESCE(variant("run_per_app_aad") = "on", false)
+    ) OR
     variant("run_time_steps") = "up_to_1hour", false);
 
 DEFINE LAZY tcp
