@@ -3,14 +3,14 @@
 PARAMETERS
   fitting_points DEFAULTS TO 144; -- 24h of 10min slices
 
-RUN IF COALESCE(variant("run_per_app_aad") = "on", false);
+RUN IF COALESCE(variant("run_per_app_aad") != "off", false);
 
 -- Automatic Anomaly Detection per Application
 
 DEFINE tcp_predictors
   "Predictors on main metrics based on the shape of the traffic."
 AS
-  FROM '../10min/tcp'
+  FROM '../per_application#10min/tcp'
   SELECT
     start, stop, application,
     -- Predictors:

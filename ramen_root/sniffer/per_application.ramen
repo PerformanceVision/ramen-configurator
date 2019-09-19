@@ -16,7 +16,7 @@ RUN IF
 DEFINE LAZY tcp
   "TCP metrics per application and time step."
 AS
-  FROM ../../metrics/tcp
+  FROM ../metrics/tcp
   SELECT
     -- Time
     truncate(start, time_step) AS start,
@@ -163,7 +163,7 @@ AS
 DEFINE LAZY udp
   "UDP metrics per application and time step."
 AS
-  FROM ../../metrics/udp
+  FROM ../metrics/udp
   SELECT
     -- Time
     truncate(start, time_step) AS start,
@@ -188,7 +188,7 @@ AS
 DEFINE LAZY icmp
   "ICMP metrics per application and time step."
 AS
-  FROM ../../metrics/icmp
+  FROM ../metrics/icmp
   SELECT
     -- Time
     truncate(start, time_step) AS start,
@@ -224,7 +224,7 @@ AS
 DEFINE LAZY 'other-ip'
   "'Other-ip' metrics per application and time step."
 AS
-  FROM '../../metrics/other-ip'
+  FROM '../metrics/other-ip'
   SELECT
     -- Time
     truncate(start, time_step) AS start,
@@ -247,7 +247,7 @@ AS
 DEFINE LAZY 'non-ip'
   "Non-IP metrics per application and time step."
 AS
-  FROM '../../metrics/non-ip'
+  FROM '../metrics/non-ip'
   SELECT
     -- Time
     truncate(start, time_step) AS start,
@@ -270,7 +270,7 @@ AS
 DEFINE LAZY dns
   "DNS metrics per application and time step."
 AS
-  FROM ../../metrics/dns
+  FROM ../metrics/dns
   SELECT
     -- Time
     truncate(start, time_step) AS start,
@@ -310,7 +310,7 @@ AS
 DEFINE LAZY http
   "HTTP metrics per application and time step."
 AS
-  FROM ../../metrics/http
+  FROM ../metrics/http
   SELECT
     -- Time
     truncate(start, time_step) AS start,
@@ -366,7 +366,7 @@ AS
 DEFINE LAZY citrix_channels
   "Citrix-Channels  metrics per application and time step."
 AS
-  FROM ../../metrics/citrix_channels
+  FROM ../metrics/citrix_channels
   SELECT
     -- Time
     truncate(start, time_step) AS start,
@@ -440,7 +440,7 @@ AS
 DEFINE LAZY citrix
   "Citrix metrics per application and time step."
 AS
-  FROM ../../metrics/citrix
+  FROM ../metrics/citrix
   SELECT
     -- Time
     truncate(start, time_step) AS start,
@@ -549,7 +549,7 @@ AS
 DEFINE LAZY smb
   "SMB metrics per application and time step."
 AS
-  FROM ../../metrics/smb
+  FROM ../metrics/smb
   SELECT
     -- Time
     truncate(start, time_step) AS start,
@@ -587,7 +587,7 @@ AS
 DEFINE LAZY sql
   "SQL metrics per application and time step."
 AS
-  FROM ../../metrics/sql
+  FROM ../metrics/sql
   SELECT
     -- Time
     truncate(start, time_step) AS start,
@@ -622,7 +622,7 @@ AS
 DEFINE LAZY voip
   "VoIP metrics per application and time step."
 AS
-  FROM ../../metrics/voip
+  FROM ../metrics/voip
   SELECT
     -- Time
     truncate(start, time_step) AS start,
@@ -777,7 +777,7 @@ AS
 DEFINE LAZY tls
   "TLS metrics per application and time step."
 AS
-  FROM ../../metrics/tls
+  FROM ../metrics/tls
   SELECT
     -- Time
     truncate(start, time_step) AS start,

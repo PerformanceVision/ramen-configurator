@@ -30,29 +30,21 @@ let compile_program debug ramen_cmd confserver_url fname src_path =
       (shell_quote src_path) |>
     run_cmd |> ignore
 
-let run_program debug ramen_cmd confserver_url ?as_ fname params =
-  !logger.info "Running program %s%s with parameters %a"
-    fname (Option.map_default (fun as_ -> " (as: "^ as_ ^")") "" as_)
+let run_program debug ramen_cmd confserver_url as_ params =
+  !logger.info "Running program %s with parameters %a"
+    as_
     (List.print (Tuple2.print String.print String.print)) params ;
   if !dry_run then !logger.info "nope" else
     Printf.sprintf2
-      "%s run%s%s --replace --confserver %s%s %a %s"
+      "%s run%s%s --replace --confserver %s %a %s"
       (shell_quote ramen_cmd)
       (if debug then " --debug" else "")
       (if !identity_file <> "" then " -i "^ !identity_file else "")
       (shell_quote confserver_url)
-      (Option.map_default (fun as_ -> " --as "^ shell_quote as_) "" as_)
       (List.print ~first:"" ~last:"" ~sep:" " (fun oc (n, v) ->
         Printf.fprintf oc "-p %s" (shell_quote (n ^"="^ v)))) params
-      (shell_quote fname) |>
+      (shell_quote as_) |>
     run_cmd |> ignore
-
-let chop_placeholder s =
-  let dirname, placeholder = String.rsplit ~by:"/" s in
-  if placeholder <> "_" && placeholder <> "_/" then
-    Printf.sprintf "Chopped path %S has no placeholder" s |>
-    failwith ;
-  dirname
 
 (* Run that file and return the names it's running under: *)
 let run_file debug ramen_cmd root_dir confserver_url no_ext
@@ -62,15 +54,15 @@ let run_file debug ramen_cmd root_dir confserver_url no_ext
   let as_ = no_ext in
   if Hashtbl.is_empty params then (
     compile_program debug ramen_cmd confserver_url fname src_path ;
-    run_program debug ramen_cmd confserver_url ~as_ src_path [] ;
+    run_program debug ramen_cmd confserver_url as_ [] ;
     Set.String.singleton as_
   ) else (
     compile_program debug ramen_cmd confserver_url fname src_path ;
     Hashtbl.fold (fun uniq_name params rs ->
       let as_ =
-        if uniq_name = "" then as_ else
-          chop_placeholder as_ ^"/"^ uniq_name in
-      run_program debug ramen_cmd confserver_url ~as_ src_path params ;
+        if uniq_name = "" then as_
+                          else as_ ^"#"^ uniq_name in
+      run_program debug ramen_cmd confserver_url as_ params ;
       Set.String.add as_ rs
     ) params Set.String.empty)
 
@@ -142,12 +134,12 @@ let sync_programs debug ramen_cmd root_dir confserver_url uncompress
     Hashtbl.of_list [ "1min",  [ "time_step", "60" ] ;
                       "10min", [ "time_step", "600" ] ;
                       "1hour", [ "time_step", "3600" ] ] in
-  comp "sniffer/top_zones/_" aggr_times ;
-  comp "sniffer/per_zone/_" aggr_times ;
-  comp "sniffer/top_servers/_" aggr_times ;
-  comp "sniffer/per_application/_" aggr_times ;
-  comp "sniffer/transactions/_" aggr_times ;
-  comp "sniffer/top_errors/_" aggr_times ;
+  comp "sniffer/top_zones" aggr_times ;
+  comp "sniffer/per_zone" aggr_times ;
+  comp "sniffer/top_servers" aggr_times ;
+  comp "sniffer/per_application" aggr_times ;
+  comp "sniffer/transactions" aggr_times ;
+  comp "sniffer/top_errors" aggr_times ;
   let open Conf_of_sqlite in
   (* Several bad behavior detectors, regrouped in a "Security" namespace:
    *)
@@ -161,7 +153,7 @@ let sync_programs debug ramen_cmd root_dir confserver_url uncompress
     else no_params in
   comp "sniffer/security/DDoS" params ;
   comp "sniffer/security/scans" params ;
-  comp "sniffer/per_application/autodetect" no_params ;
+  comp "sniffer/autodetect" no_params ;
   !logger.debug "Old: %a" (Set.String.print String.print) old_running ;
   !logger.debug "New: %a" (Set.String.print String.print) !new_running ;
   let to_kill = Set.String.diff old_running !new_running in

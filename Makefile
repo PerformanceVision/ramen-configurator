@@ -21,13 +21,13 @@ RAMEN_SOURCES = \
 	ramen_root/sniffer/metrics.ramen \
 	ramen_root/sniffer/security/scans.ramen \
 	ramen_root/sniffer/security/DDoS.ramen \
-	ramen_root/sniffer/top_zones/_.ramen \
-	ramen_root/sniffer/per_zone/_.ramen \
-	ramen_root/sniffer/top_servers/_.ramen \
-	ramen_root/sniffer/per_application/_.ramen \
-	ramen_root/sniffer/per_application/autodetect.ramen \
-	ramen_root/sniffer/transactions/_.ramen \
-	ramen_root/sniffer/top_errors/_.ramen
+	ramen_root/sniffer/top_zones.ramen \
+	ramen_root/sniffer/per_zone.ramen \
+	ramen_root/sniffer/top_servers.ramen \
+	ramen_root/sniffer/per_application.ramen \
+	ramen_root/sniffer/autodetect.ramen \
+	ramen_root/sniffer/transactions.ramen \
+	ramen_root/sniffer/top_errors.ramen
 
 INSTALLED_BIN = src/ramen_configurator
 CHECK_COMPILATION = $(RAMEN_SOURCES:.ramen=.x)
@@ -79,26 +79,20 @@ FINDCSV_SOURCES = \
 ramen_root/snigger/metrics.x: ramen_root/sniffer/csv.x
 ramen_root/sniffer/security/scans.x: ramen_root/sniffer/metrics.x
 ramen_root/sniffer/security/DDoS.x: ramen_root/sniffer/metrics.x
-ramen_root/sniffer/top_zones/_.x: ramen_root/sniffer/metrics.x
-ramen_root/sniffer/per_zone/_.x: ramen_root/sniffer/metrics.x
-ramen_root/sniffer/per_zone/_.x: ramen_root/sniffer/metrics.x
-ramen_root/sniffer/top_servers/_.x: ramen_root/sniffer/metrics.x
-ramen_root/sniffer/per_application/_.x: ramen_root/sniffer/metrics.x
-ramen_root/sniffer/transactions/_.x: ramen_root/sniffer/metrics.x
-ramen_root/sniffer/top_errors/_.x: ramen_root/sniffer/metrics.x
-ramen_root/sniffer/per_application/autodetect.x: ramen_root/sniffer/per_application/_.x
+ramen_root/sniffer/top_zones.x: ramen_root/sniffer/metrics.x
+ramen_root/sniffer/per_zone.x: ramen_root/sniffer/metrics.x
+ramen_root/sniffer/per_zone.x: ramen_root/sniffer/metrics.x
+ramen_root/sniffer/top_servers.x: ramen_root/sniffer/metrics.x
+ramen_root/sniffer/per_application.x: ramen_root/sniffer/metrics.x
+ramen_root/sniffer/transactions.x: ramen_root/sniffer/metrics.x
+ramen_root/sniffer/top_errors.x: ramen_root/sniffer/metrics.x
+ramen_root/sniffer/autodetect.x: ramen_root/sniffer/per_application.x
 
 # That one use parents "../csv" to find out types:
 ramen_root/sniffer/metrics.x: ramen_root/sniffer/metrics.ramen ramen_root/sniffer/csv_files.x
 	@echo 'Compiling ramen program $@'
 	@ln -sf csv_files.x ramen_root/sniffer/csv.x
 	@ramen compile -L ramen_root $<
-
-# Autodetect depends on per_application/10min.x:
-ramen_root/sniffer/per_application/autodetect.x: ramen_root/sniffer/per_application/10min.x
-# Which is just a variation of per_application/_.x:
-ramen_root/sniffer/per_application/10min.x: ramen_root/sniffer/per_application/_.x
-	@ln -sf _.x $@
 
 SOURCES = $(CONFIGURATOR_SOURCES) $(FINDCSV_SOURCES)
 
