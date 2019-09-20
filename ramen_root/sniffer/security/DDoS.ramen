@@ -19,20 +19,20 @@ AS
     start > merge_greatest.start - 3min AND
     COALESCE(ip_client NOT IN whitelist, true)
   SELECT
-    truncate(start, avg_win) AS start,
+    TRUNCATE(start, avg_win) AS start,
     out.start + avg_win AS stop,
-    min start, max stop,
+    MIN start, MAX stop,
     -- Traffic (of any kind) we haven't seen in the last hour.
     -- Increase the estimate of *not* remembering since we ask for 10% of
     -- false positives.
-    sum ((1 + false_pos_rate) * float(not remember (
+    SUM ((1 + false_pos_rate) * float(NOT REMEMBER (
            false_pos_rate,
            start, 1h,
            ip_client, ip_server))) / avg_win
         AS num_new_cnxs_per_sec
         "Approximate number of newly communicating hosts (as in: hosts that were not communicating for at least one hour)",
     -- Clients we haven't seen in the last hour.
-    sum ((1 + false_pos_rate) * float(not remember (
+    SUM ((1 + false_pos_rate) * float(NOT REMEMBER (
            false_pos_rate, start, 1h, ip_client))) / avg_win
         AS num_new_clients_per_sec
         "Approximate number of new clients (as in: hosts that were not clients of anything for at least one hour)"
@@ -45,32 +45,36 @@ DEFINE LAZY 'new peers: DDoS predictions' AS
   SELECT
     start,
     num_new_cnxs_per_sec,
-    smooth globally(num_new_cnxs_per_sec) AS pred_0_num_new_cnxs_per_sec,
-    linreg globally(5, num_new_cnxs_per_sec) AS pred_1_num_new_cnxs_per_sec,
-    5-ma globally(num_new_cnxs_per_sec) AS pred_2_num_new_cnxs_per_sec,
-    lag globally(num_new_cnxs_per_sec) AS pred_3_num_new_cnxs_per_sec,
-    IF num_new_cnxs_per_sec > 1 THEN (abs(pred_3_num_new_cnxs_per_sec - num_new_cnxs_per_sec) /
-       max(abs pred_3_num_new_cnxs_per_sec, abs num_new_cnxs_per_sec) +
-     abs(pred_2_num_new_cnxs_per_sec - num_new_cnxs_per_sec) /
-       max(abs pred_2_num_new_cnxs_per_sec, abs num_new_cnxs_per_sec) +
-     abs(pred_1_num_new_cnxs_per_sec - num_new_cnxs_per_sec) /
-       max(abs pred_1_num_new_cnxs_per_sec, abs num_new_cnxs_per_sec) +
-     abs(pred_0_num_new_cnxs_per_sec - num_new_cnxs_per_sec) /
-       max(abs pred_0_num_new_cnxs_per_sec, abs num_new_cnxs_per_sec)) / 4 ELSE 0
+    SMOOTH GLOBALLY(num_new_cnxs_per_sec) AS pred_0_num_new_cnxs_per_sec,
+    FIT(LATEST 5 GLOBALLY num_new_cnxs_per_sec) AS pred_1_num_new_cnxs_per_sec,
+    5-ma GLOBALLY(num_new_cnxs_per_sec) AS pred_2_num_new_cnxs_per_sec,
+    LAG GLOBALLY(num_new_cnxs_per_sec) AS pred_3_num_new_cnxs_per_sec,
+    IF num_new_cnxs_per_sec > 1 THEN (ABS(pred_3_num_new_cnxs_per_sec - num_new_cnxs_per_sec) /
+       MAX(ABS pred_3_num_new_cnxs_per_sec, ABS num_new_cnxs_per_sec) +
+     ABS(pred_2_num_new_cnxs_per_sec - num_new_cnxs_per_sec) /
+       MAX(ABS pred_2_num_new_cnxs_per_sec, ABS num_new_cnxs_per_sec) +
+     COALESCE(
+       ABS(pred_1_num_new_cnxs_per_sec - num_new_cnxs_per_sec) /
+         MAX(ABS pred_1_num_new_cnxs_per_sec, ABS num_new_cnxs_per_sec),
+       0) +
+     ABS(pred_0_num_new_cnxs_per_sec - num_new_cnxs_per_sec) /
+       MAX(ABS pred_0_num_new_cnxs_per_sec, ABS num_new_cnxs_per_sec)) / 4 ELSE 0
         AS abnormality_num_new_cnxs_per_sec,
     num_new_clients_per_sec,
-    smooth globally(num_new_clients_per_sec) AS pred_0_num_new_clients_per_sec,
-    linreg globally(5, num_new_clients_per_sec) AS pred_1_num_new_clients_per_sec,
-    5-ma globally(num_new_clients_per_sec) AS pred_2_num_new_clients_per_sec,
-    lag globally(num_new_clients_per_sec) AS pred_3_num_new_clients_per_sec,
-    IF num_new_clients_per_sec > 1 THEN (abs(pred_3_num_new_clients_per_sec - num_new_clients_per_sec) /
-       max(abs pred_3_num_new_clients_per_sec, abs num_new_clients_per_sec) +
-     abs(pred_2_num_new_clients_per_sec - num_new_clients_per_sec) /
-       max(abs pred_2_num_new_clients_per_sec, abs num_new_clients_per_sec) +
-     abs(pred_1_num_new_clients_per_sec - num_new_clients_per_sec) /
-       max(abs pred_1_num_new_clients_per_sec, abs num_new_clients_per_sec) +
-     abs(pred_0_num_new_clients_per_sec - num_new_clients_per_sec) /
-       max(abs pred_0_num_new_clients_per_sec, abs num_new_clients_per_sec)) / 4 ELSE 0
+    SMOOTH GLOBALLY(num_new_clients_per_sec) AS pred_0_num_new_clients_per_sec,
+    FIT(LATEST 5 GLOBALLY num_new_clients_per_sec) AS pred_1_num_new_clients_per_sec,
+    5-ma GLOBALLY(num_new_clients_per_sec) AS pred_2_num_new_clients_per_sec,
+    LAG GLOBALLY(num_new_clients_per_sec) AS pred_3_num_new_clients_per_sec,
+    IF num_new_clients_per_sec > 1 THEN (ABS(pred_3_num_new_clients_per_sec - num_new_clients_per_sec) /
+       MAX(ABS pred_3_num_new_clients_per_sec, ABS num_new_clients_per_sec) +
+     ABS(pred_2_num_new_clients_per_sec - num_new_clients_per_sec) /
+       MAX(ABS pred_2_num_new_clients_per_sec, ABS num_new_clients_per_sec) +
+     COALESCE(
+       ABS(pred_1_num_new_clients_per_sec - num_new_clients_per_sec) /
+         MAX(ABS pred_1_num_new_clients_per_sec, ABS num_new_clients_per_sec),
+       0) +
+     ABS(pred_0_num_new_clients_per_sec - num_new_clients_per_sec) /
+       MAX(ABS pred_0_num_new_clients_per_sec, ABS num_new_clients_per_sec)) / 4 ELSE 0
         AS abnormality_num_new_clients_per_sec;
 
 DEFINE 'new peers: DDoS anomalies' AS
@@ -81,7 +85,7 @@ DEFINE 'new peers: DDoS anomalies' AS
      abnormality_num_new_cnxs_per_sec > 0.75) AS abnormality,
     5-ma float(abnormality) AS _recent_abnormality,
     NOT (HYSTERESIS (_recent_abnormality, 3/5, 4/5)) AS firing,
-    0.1 * abs(_recent_abnormality - 3/5) AS certainty,
+    0.1 * ABS(_recent_abnormality - 3/5) AS certainty,
     "possible DDoS" AS desc
   NOTIFY "Security - Possible DDoS detected"
   AND KEEP ALL
