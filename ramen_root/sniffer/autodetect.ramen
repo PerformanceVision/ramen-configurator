@@ -3,7 +3,7 @@
 PARAMETERS
   fitting_points DEFAULTS TO 144; -- 24h of 10min slices
 
-RUN IF COALESCE(variant("run_per_app_aad") != "off", false);
+RUN IF COALESCE(variant("run_per_app_aad") = "on", false);
 
 -- Automatic Anomaly Detection per Application
 
@@ -65,4 +65,5 @@ AS
     ) AS predicted_round_trip_time
 
   -- Will output a value for every input in absence of an explicit COMMIT clause:
-  GROUP BY application;
+  GROUP BY application
+  KEEP ALL;
