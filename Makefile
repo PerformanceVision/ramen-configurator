@@ -1,6 +1,6 @@
 # Configuration
 
-VERSION = 3.0.5
+VERSION = 3.0.6
 RAMEN_VERSION = 4.0.6
 
 DUPS_IN = $(shell ocamlfind ocamlc -where)/compiler-libs
