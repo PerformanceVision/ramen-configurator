@@ -20,7 +20,7 @@ let () =
   let files = Sys.files_of !dir in
   let num_files = ref 0 ;
   and num_csv = ref 0 in
-  let fre = Str.regexp {|^\([a-z_]+\)_v29\.\([0-9]+\)\.csv\.lz4$|} in
+  let fre = Str.regexp {|^\([a-z_]+\)_v30\.\([0-9]+\)\.csv\.lz4$|} in
   let sets = Hashtbl.create 9999 in
   Enum.iter (fun f ->
     incr num_files ;
@@ -71,7 +71,7 @@ let () =
     if n >= max_count then lst else (
       let lst =
         Set.String.fold (fun metric lst ->
-          (metric ^"_v29."^ string_of_int ts ^".csv.lz4") :: lst
+          (metric ^"_v30."^ string_of_int ts ^".csv.lz4") :: lst
         ) metrics lst in
       files lst (n + 1) (ts + 60)
     ) in

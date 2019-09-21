@@ -727,7 +727,7 @@ $voip = "AS CSV
      sign_count_server u32 {},
      sign_payload_client u32 {bytes},   -- 50
      sign_payload_server u32 {bytes},
-     -- v29 specs say these are client/server but junkie seems to do the right
+     -- v30 specs say these are client/server but junkie seems to do the right
      -- thing here, that is: callee/caller:
      rtp_rtcp_bytes_caller u32 {bytes},
      rtp_rtcp_bytes_callee u32 {bytes},
