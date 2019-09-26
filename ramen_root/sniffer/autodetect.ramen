@@ -8,7 +8,7 @@ RUN IF COALESCE(variant("run_per_app_aad") = "on", false);
 -- Automatic Anomaly Detection per Application
 
 DEFINE tcp_predictors
-  "Predictors on main metrics based on the shape of the traffic."
+  -- "Predictors on main metrics based on the shape of the traffic."
 AS
   FROM '../per_application#10min/tcp'
   SELECT
