@@ -7,10 +7,10 @@ $citrix = "AS CSV
     (poller string,                     -- 1
      capture_begin u64,
      capture_end u64,
-     pkt_source_kind_client u8?,
-     pkt_source_name_client string?,
-     pkt_source_kind_server u8?,
-     pkt_source_name_server string?,
+     datasource_kind_client u8?,
+     datasource_name_client string?,
+     datasource_kind_server u8?,
+     datasource_name_server string?,
      vlan_client u32?,
      vlan_server u32?,
      mac_client u64?,                   -- 10
@@ -57,10 +57,10 @@ $citrix_chanless = "AS CSV
     (poller string,                     -- 1
      capture_begin u64,
      capture_end u64,
-     pkt_source_kind_client u8?,
-     pkt_source_name_client string?,
-     pkt_source_kind_server u8?,
-     pkt_source_name_server string?,
+     datasource_kind_client u8?,
+     datasource_name_client string?,
+     datasource_kind_server u8?,
+     datasource_name_server string?,
      vlan_client u32?,
      vlan_server u32?,
      mac_client u64?,                   -- 10
@@ -117,10 +117,10 @@ $dns = "AS CSV
     (poller string,                     -- 1
      capture_begin u64,
      capture_end u64,
-     pkt_source_kind_client u8?,
-     pkt_source_name_client string?,
-     pkt_source_kind_server u8?,
-     pkt_source_name_server string?,
+     datasource_kind_client u8?,
+     datasource_name_client string?,
+     datasource_kind_server u8?,
+     datasource_name_server string?,
      vlan_client u32?,
      vlan_server u32?,
      mac_client u64?,                   -- 10
@@ -161,10 +161,10 @@ $http = "AS CSV
     (poller string,                     -- 1
      capture_begin u64,
      capture_end u64,
-     pkt_source_kind_client u8?,
-     pkt_source_name_client string?,
-     pkt_source_kind_server u8?,
-     pkt_source_name_server string?,
+     datasource_kind_client u8?,
+     datasource_name_client string?,
+     datasource_kind_server u8?,
+     datasource_name_server string?,
      vlan_client u32?,
      vlan_server u32?,
      mac_client u64?,                   -- 10
@@ -243,10 +243,10 @@ $icmp = "AS CSV
     (poller string,                     -- 1
      capture_begin u64,
      capture_end u64,
-     pkt_source_kind_client u8?,
-     pkt_source_name_client string?,
-     pkt_source_kind_server u8?,
-     pkt_source_name_server string?,
+     datasource_kind_client u8?,
+     datasource_name_client string?,
+     datasource_kind_server u8?,
+     datasource_name_server string?,
      vlan_client u32?,
      vlan_server u32?,
      mac_client u64?,                   -- 10
@@ -291,10 +291,10 @@ $nonip = "AS CSV
     (poller string,                     -- 1
      capture_begin u64,
      capture_end u64,
-     pkt_source_kind_client u8?,
-     pkt_source_name_client string?,
-     pkt_source_kind_server u8?,
-     pkt_source_name_server string?,
+     datasource_kind_client u8?,
+     datasource_name_client string?,
+     datasource_kind_server u8?,
+     datasource_name_server string?,
      vlan_client u32?,
      vlan_server u32?,
      mac_client u64?,                   -- 10
@@ -321,10 +321,10 @@ $otherip = "AS CSV
     (poller string,                     -- 1
      capture_begin u64,
      capture_end u64,
-     pkt_source_kind_client u8?,
-     pkt_source_name_client string?,
-     pkt_source_kind_server u8?,
-     pkt_source_name_server string?,
+     datasource_kind_client u8?,
+     datasource_name_client string?,
+     datasource_kind_server u8?,
+     datasource_name_server string?,
      vlan_client u32?,
      vlan_server u32?,
      mac_client u64?,                   -- 10
@@ -357,10 +357,10 @@ $smb = "AS CSV
     (poller string,                     -- 1
      capture_begin u64,
      capture_end u64,
-     pkt_source_kind_client u8?,
-     pkt_source_name_client string?,
-     pkt_source_kind_server u8?,
-     pkt_source_name_server string?,
+     datasource_kind_client u8?,
+     datasource_name_client string?,
+     datasource_kind_server u8?,
+     datasource_name_server string?,
      vlan_client u32?,
      vlan_server u32?,
      mac_client u64?,                   -- 10
@@ -423,10 +423,10 @@ $sql = "AS CSV
     (poller string,                     -- 1
      capture_begin u64,
      capture_end u64,
-     pkt_source_kind_client u8?,
-     pkt_source_name_client string?,
-     pkt_source_kind_server u8?,
-     pkt_source_name_server string?,
+     datasource_kind_client u8?,
+     datasource_name_client string?,
+     datasource_kind_server u8?,
+     datasource_name_server string?,
      vlan_client u32?,
      vlan_server u32?,
      mac_client u64?,                   -- 10
@@ -480,10 +480,10 @@ $tcp = "AS CSV
     (poller string,                     -- 1
      capture_begin u64,
      capture_end u64,
-     pkt_source_kind_client u8?,
-     pkt_source_name_client string?,
-     pkt_source_kind_server u8?,
-     pkt_source_name_server string?,
+     datasource_kind_client u8?,
+     datasource_name_client string?,
+     datasource_kind_server u8?,
+     datasource_name_server string?,
      vlan_client u32?,
      vlan_server u32?,
      mac_client u64?,                   -- 10
@@ -568,10 +568,10 @@ $tls = "AS CSV
     (poller string,                     -- 1
      capture_begin u64,
      capture_end u64,
-     pkt_source_kind_client u8?,
-     pkt_source_name_client string?,
-     pkt_source_kind_server u8?,
-     pkt_source_name_server string?,
+     datasource_kind_client u8?,
+     datasource_name_client string?,
+     datasource_kind_server u8?,
+     datasource_name_server string?,
      vlan_client u32?,
      vlan_server u32?,
      mac_client u64?,                   -- 10
@@ -637,10 +637,10 @@ $udp = "AS CSV
     (poller string,                     -- 1
      capture_begin u64,
      capture_end u64,
-     pkt_source_kind_client u8?,
-     pkt_source_name_client string?,
-     pkt_source_kind_server u8?,
-     pkt_source_name_server string?,
+     datasource_kind_client u8?,
+     datasource_name_client string?,
+     datasource_kind_server u8?,
+     datasource_name_server string?,
      vlan_client u32?,
      vlan_server u32?,
      mac_client u64?,                   -- 10
@@ -679,10 +679,10 @@ $voip = "AS CSV
     (poller string,                     -- 1
      capture_begin u64,
      capture_end u64,
-     pkt_source_kind_client u8?,
-     pkt_source_name_client string?,
-     pkt_source_kind_server u8?,
-     pkt_source_name_server string?,
+     datasource_kind_client u8?,
+     datasource_name_client string?,
+     datasource_kind_server u8?,
+     datasource_name_server string?,
      vlan_client u32?,
      vlan_server u32?,
      mac_client u64?,                   -- 10
