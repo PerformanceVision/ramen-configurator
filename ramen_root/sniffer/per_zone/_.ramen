@@ -62,7 +62,7 @@ DEFINE c2s_tcp AS
 
 DEFINE s2c_tcp AS
   FROM ../../csv/tcp
-  WHERE zone_client <> zone_client
+  WHERE zone_client <> zone_server
   SELECT
     start, stop,
     zone_client AS zone,
@@ -144,7 +144,7 @@ DEFINE c2s_udp AS
 
 DEFINE s2c_udp AS
   FROM ../../csv/udp
-  WHERE zone_client <> zone_client
+  WHERE zone_client <> zone_server
   SELECT
     start, stop,
     zone_client AS zone,
@@ -211,7 +211,7 @@ DEFINE c2s_icmp AS
 
 DEFINE s2c_icmp AS
   FROM ../../csv/icmp
-  WHERE zone_client <> zone_client
+  WHERE zone_client <> zone_server
   SELECT
     start, stop,
     zone_client AS zone,
@@ -278,7 +278,7 @@ DEFINE c2s_other_ip AS
 
 DEFINE s2c_other_ip AS
   FROM '../../csv/other-ip'
-  WHERE zone_client <> zone_client
+  WHERE zone_client <> zone_server
   SELECT
     start, stop,
     zone_client AS zone,
@@ -345,7 +345,7 @@ DEFINE c2s_non_ip AS
 
 DEFINE s2c_non_ip AS
   FROM '../../csv/non-ip'
-  WHERE zone_client <> zone_client
+  WHERE zone_client <> zone_server
   SELECT
     start, stop,
     zone_client AS zone,
