@@ -58,7 +58,7 @@ DEFINE LAZY c2s_tcp AS
     syn_count_client AS syn_count_in,
     0u32 AS syn_count_out,
     -- Those are significant for both directions regardless of where is the client:
-    timeout_count, close_count, ct_count, ct_sum, ct_square_sum;
+    close_count, ct_count, ct_sum, ct_square_sum;
 
 DEFINE LAZY s2c_tcp AS
   FROM ../metrics/tcp
@@ -106,7 +106,7 @@ DEFINE LAZY s2c_tcp AS
     dtt_square_sum_client AS dtt_square_sum_out,
     0u32 AS syn_count_in,
     syn_count_client AS syn_count_out,
-    timeout_count, close_count, ct_count, ct_sum, ct_square_sum;
+    close_count, ct_count, ct_sum, ct_square_sum;
 
 -- UDP
 

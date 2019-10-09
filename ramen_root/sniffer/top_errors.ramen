@@ -63,7 +63,7 @@ DEFINE LAZY tcp_degraded AS
       TOP top_size GLOBALLY BY (retrans_traffic_bytes_client + retrans_traffic_bytes_server)
         AT TIME start FOR THE LAST top_duration) OR
     (IS ip_server IN
-      TOP top_size GLOBALLY BY (rst_count_server + timeout_count)
+      TOP top_size GLOBALLY BY rst_count_server
         AT TIME start FOR THE LAST top_duration)
       AS _important,
     -- The data
@@ -76,7 +76,7 @@ DEFINE LAZY tcp_degraded AS
     ct_count,
     syn_count_client, fin_count_client,
     fin_count_server, rst_count_client,
-    rst_count_server, timeout_count, close_count,
+    rst_count_server, close_count,
     dupack_count_client, dupack_count_server,
     zero_window_count_client, zero_window_count_server,
     -- Degraded non important ip_server:
@@ -119,8 +119,6 @@ AS
       "RST flags per second from clients.",
     sum rst_count_server / time_step AS server_rst_per_sec
       "RST flags per second from this server.",
-    sum timeout_count / time_step AS timeouts_per_sec
-      "Timeout rate.",
     sum ct_count AS _sum_ct_count,
     _sum_ct_count / time_step AS ct_per_secs
       "connection establishments per second.",

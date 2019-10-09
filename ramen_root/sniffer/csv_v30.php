@@ -525,9 +525,8 @@ $tcp = "AS CSV
      fin_count_server u32? {},
      rst_count_client u32? {},
      rst_count_server u32? {},
-     timeout_count u32 {},
-     close_count u32? {},               -- 50
-     dupack_count_client u32? {},
+     close_count u32? {},
+     dupack_count_client u32? {},       -- 50
      dupack_count_server u32? {},
      zero_window_count_client u32? {},
      zero_window_count_server u32? {},
@@ -537,8 +536,8 @@ $tcp = "AS CSV
      ct_square_sum u128 {microseconds^2},
      rt_count_server u32? {},
      rt_sum_server u64 {microseconds},
-     rt_square_sum_server u128 {microseconds^2}, -- 60
-     rtt_count_client u32? {},
+     rt_square_sum_server u128 {microseconds^2},
+     rtt_count_client u32? {},          -- 60
      rtt_sum_client u64 {microseconds},
      rtt_square_sum_client u128 {microseconds^2},
      rtt_count_server u32? {},
@@ -547,8 +546,8 @@ $tcp = "AS CSV
      rd_count_client u32? {},
      rd_sum_client u64 {microseconds},
      rd_square_sum_client u128 {microseconds^2},
-     rd_count_server u32? {},           -- 70
-     rd_sum_server u64 {microseconds},
+     rd_count_server u32? {},
+     rd_sum_server u64 {microseconds},  -- 70
      rd_square_sum_server u128 {microseconds^2},
      dtt_count_client u32? {},
      dtt_sum_client u64 {microseconds},
@@ -705,8 +704,7 @@ $voip = "AS CSV
      last_call_state u8,
      is_starting bool,
      is_finished bool,
-     _hardcoded_0 bool,                 -- 30
-     last_error u32,
+     last_error u32,                    -- 30
      call_id string,
      rtp_duration u64?,
      id_caller string,
@@ -715,8 +713,8 @@ $voip = "AS CSV
      ip6_caller string?,
      zone_caller u32,
      caller_codec string?,
-     id_callee string,                  -- 40
-     callee_mac u64,
+     id_callee string,
+     callee_mac u64,                    -- 40
      ip4_callee u32?,
      ip6_callee string?,
      zone_callee u32,
@@ -725,8 +723,8 @@ $voip = "AS CSV
      sign_bytes_server u32 {bytes},
      sign_count_client u32 {},
      sign_count_server u32 {},
-     sign_payload_client u32 {bytes},   -- 50
-     sign_payload_server u32 {bytes},
+     sign_payload_client u32 {bytes},
+     sign_payload_server u32 {bytes},   -- 50
      -- v30 specs say these are client/server but junkie seems to do the right
      -- thing here, that is: callee/caller:
      rtp_rtcp_bytes_caller u32 {bytes},
@@ -737,8 +735,8 @@ $voip = "AS CSV
      rtp_rtcp_payload_callee u32 {bytes},
      rt_count_server u32 {},
      rt_sum_server u64 {microseconds},
-     rt_square_sum_server u128 {microseconds^2}, -- 60
-     jitter_count_caller u32 {},
+     rt_square_sum_server u128 {microseconds^2},
+     jitter_count_caller u32 {},        -- 60
      jitter_sum_caller u64 {microseconds},
      jitter_square_sum_caller u128 {microseconds^2},
      jitter_count_callee u32 {},
@@ -747,8 +745,8 @@ $voip = "AS CSV
      rtt_count_caller u32 {},
      rtt_sum_caller u64 {microseconds},
      rtt_square_sum_caller u128 {microseconds^2},
-     rtt_count_callee u32 {},           -- 70
-     rtt_sum_callee u64 {microseconds},
+     rtt_count_callee u32 {},
+     rtt_sum_callee u64 {microseconds}, -- 70
      rtt_square_sum_callee u128 {microseconds^2},
      loss_callee2caller_alt_count u32 {},
      loss_caller2callee_alt_count u32 {},
@@ -757,8 +755,8 @@ $voip = "AS CSV
      sign_rtt_square_sum_client u128 {microseconds^2},
      sign_rtt_count_server u32 {},
      sign_rtt_sum_server u64 {microseconds},
-     sign_rtt_square_sum_server u128 {microseconds^2}, -- 80
-     sign_rd_count_client u32 {},
+     sign_rtt_square_sum_server u128 {microseconds^2},
+     sign_rd_count_client u32 {},       -- 80
      sign_rd_sum_client u64 {microseconds},
      sign_rd_square_sum_client u128 {microseconds^2},
      sign_rd_count_server u32 {},
