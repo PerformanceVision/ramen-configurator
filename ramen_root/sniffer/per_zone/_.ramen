@@ -58,7 +58,11 @@ DEFINE c2s_tcp AS
     syn_count_client AS syn_count_in,
     0u32 AS syn_count_out,
     -- Those are significant for both directions regardless of where is the client:
-    timeout_count, close_count, ct_count, ct_sum, ct_square_sum;
+    timeout_count, close_count, ct_count, ct_sum, ct_square_sum,
+    -- Those are carried along to compute an EURT eventually:
+    rtt_count_client, rtt_sum_client, rtt_count_server, rtt_sum_server,
+    rt_count_server, rt_sum_server, dtt_count_client, dtt_sum_client,
+    dtt_count_server, dtt_sum_server;
 
 DEFINE s2c_tcp AS
   FROM ../../csv/tcp
@@ -106,7 +110,11 @@ DEFINE s2c_tcp AS
     dtt_square_sum_client AS dtt_square_sum_out,
     0u32 AS syn_count_in,
     syn_count_client AS syn_count_out,
-    timeout_count, close_count, ct_count, ct_sum, ct_square_sum;
+    timeout_count, close_count, ct_count, ct_sum, ct_square_sum,
+    -- Those are carried along to compute an EURT eventually:
+    rtt_count_client, rtt_sum_client, rtt_count_server, rtt_sum_server,
+    rt_count_server, rt_sum_server, dtt_count_client, dtt_sum_client,
+    dtt_count_server, dtt_sum_server;
 
 -- UDP
 
@@ -140,7 +148,13 @@ DEFINE c2s_udp AS
     0. AS dtt_square_sum_in, 0. AS dtt_square_sum_out,
     0u32 AS syn_count_in, 0u32 AS syn_count_out,
     0u32 AS timeout_count, 0u32 AS close_count,
-    0u32 AS ct_count, 0. AS ct_sum, 0. AS ct_square_sum;
+    0u32 AS ct_count, 0. AS ct_sum, 0. AS ct_square_sum,
+    -- Those are carried along to compute an EURT eventually:
+    0u32 AS rtt_count_client, 0. AS rtt_sum_client,
+    0u32 AS rtt_count_server, 0. AS rtt_sum_server,
+    0u32 AS rt_count_server, 0. AS rt_sum_server,
+    0u32 AS dtt_count_client, 0. AS dtt_sum_client,
+    0u32 AS dtt_count_server, 0. AS dtt_sum_server;
 
 DEFINE s2c_udp AS
   FROM ../../csv/udp
@@ -173,7 +187,13 @@ DEFINE s2c_udp AS
     0. AS dtt_square_sum_in, 0. AS dtt_square_sum_out,
     0u32 AS syn_count_in, 0u32 AS syn_count_out,
     0u32 AS timeout_count, 0u32 AS close_count,
-    0u32 AS ct_count, 0. AS ct_sum, 0. AS ct_square_sum;
+    0u32 AS ct_count, 0. AS ct_sum, 0. AS ct_square_sum,
+    -- Those are carried along to compute an EURT eventually:
+    0u32 AS rtt_count_client, 0. AS rtt_sum_client,
+    0u32 AS rtt_count_server, 0. AS rtt_sum_server,
+    0u32 AS rt_count_server, 0. AS rt_sum_server,
+    0u32 AS dtt_count_client, 0. AS dtt_sum_client,
+    0u32 AS dtt_count_server, 0. AS dtt_sum_server;
 
 -- ICMP
 
@@ -207,7 +227,14 @@ DEFINE c2s_icmp AS
     0. AS dtt_square_sum_in, 0. AS dtt_square_sum_out,
     0u32 AS syn_count_in, 0u32 AS syn_count_out,
     0u32 AS timeout_count, 0u32 AS close_count,
-    0u32 AS ct_count, 0. AS ct_sum, 0. AS ct_square_sum;
+    0u32 AS ct_count, 0. AS ct_sum, 0. AS ct_square_sum,
+    -- Those are carried along to compute an EURT eventually:
+    0u32 AS rtt_count_client, 0. AS rtt_sum_client,
+    0u32 AS rtt_count_server, 0. AS rtt_sum_server,
+    0u32 AS rt_count_server, 0. AS rt_sum_server,
+    0u32 AS dtt_count_client, 0. AS dtt_sum_client,
+    0u32 AS dtt_count_server, 0. AS dtt_sum_server;
+
 
 DEFINE s2c_icmp AS
   FROM ../../csv/icmp
@@ -240,7 +267,13 @@ DEFINE s2c_icmp AS
     0. AS dtt_square_sum_in, 0. AS dtt_square_sum_out,
     0u32 AS syn_count_in, 0u32 AS syn_count_out,
     0u32 AS timeout_count, 0u32 AS close_count,
-    0u32 AS ct_count, 0. AS ct_sum, 0. AS ct_square_sum;
+    0u32 AS ct_count, 0. AS ct_sum, 0. AS ct_square_sum,
+    -- Those are carried along to compute an EURT eventually:
+    0u32 AS rtt_count_client, 0. AS rtt_sum_client,
+    0u32 AS rtt_count_server, 0. AS rtt_sum_server,
+    0u32 AS rt_count_server, 0. AS rt_sum_server,
+    0u32 AS dtt_count_client, 0. AS dtt_sum_client,
+    0u32 AS dtt_count_server, 0. AS dtt_sum_server;
 
 -- OtherIP
 
@@ -274,7 +307,13 @@ DEFINE c2s_other_ip AS
     0. AS dtt_square_sum_in, 0. AS dtt_square_sum_out,
     0u32 AS syn_count_in, 0u32 AS syn_count_out,
     0u32 AS timeout_count, 0u32 AS close_count,
-    0u32 AS ct_count, 0. AS ct_sum, 0. AS ct_square_sum;
+    0u32 AS ct_count, 0. AS ct_sum, 0. AS ct_square_sum,
+    -- Those are carried along to compute an EURT eventually:
+    0u32 AS rtt_count_client, 0. AS rtt_sum_client,
+    0u32 AS rtt_count_server, 0. AS rtt_sum_server,
+    0u32 AS rt_count_server, 0. AS rt_sum_server,
+    0u32 AS dtt_count_client, 0. AS dtt_sum_client,
+    0u32 AS dtt_count_server, 0. AS dtt_sum_server;
 
 DEFINE s2c_other_ip AS
   FROM '../../csv/other-ip'
@@ -307,7 +346,13 @@ DEFINE s2c_other_ip AS
     0. AS dtt_square_sum_in, 0. AS dtt_square_sum_out,
     0u32 AS syn_count_in, 0u32 AS syn_count_out,
     0u32 AS timeout_count, 0u32 AS close_count,
-    0u32 AS ct_count, 0. AS ct_sum, 0. AS ct_square_sum;
+    0u32 AS ct_count, 0. AS ct_sum, 0. AS ct_square_sum,
+    -- Those are carried along to compute an EURT eventually:
+    0u32 AS rtt_count_client, 0. AS rtt_sum_client,
+    0u32 AS rtt_count_server, 0. AS rtt_sum_server,
+    0u32 AS rt_count_server, 0. AS rt_sum_server,
+    0u32 AS dtt_count_client, 0. AS dtt_sum_client,
+    0u32 AS dtt_count_server, 0. AS dtt_sum_server;
 
 -- NonIP
 
@@ -341,7 +386,13 @@ DEFINE c2s_non_ip AS
     0. AS dtt_square_sum_in, 0. AS dtt_square_sum_out,
     0u32 AS syn_count_in, 0u32 AS syn_count_out,
     0u32 AS timeout_count, 0u32 AS close_count,
-    0u32 AS ct_count, 0. AS ct_sum, 0. AS ct_square_sum;
+    0u32 AS ct_count, 0. AS ct_sum, 0. AS ct_square_sum,
+    -- Those are carried along to compute an EURT eventually:
+    0u32 AS rtt_count_client, 0. AS rtt_sum_client,
+    0u32 AS rtt_count_server, 0. AS rtt_sum_server,
+    0u32 AS rt_count_server, 0. AS rt_sum_server,
+    0u32 AS dtt_count_client, 0. AS dtt_sum_client,
+    0u32 AS dtt_count_server, 0. AS dtt_sum_server;
 
 DEFINE s2c_non_ip AS
   FROM '../../csv/non-ip'
@@ -374,7 +425,13 @@ DEFINE s2c_non_ip AS
     0. AS dtt_square_sum_in, 0. AS dtt_square_sum_out,
     0u32 AS syn_count_in, 0u32 AS syn_count_out,
     0u32 AS timeout_count, 0u32 AS close_count,
-    0u32 AS ct_count, 0. AS ct_sum, 0. AS ct_square_sum;
+    0u32 AS ct_count, 0. AS ct_sum, 0. AS ct_square_sum,
+    -- Those are carried along to compute an EURT eventually:
+    0u32 AS rtt_count_client, 0. AS rtt_sum_client,
+    0u32 AS rtt_count_server, 0. AS rtt_sum_server,
+    0u32 AS rt_count_server, 0. AS rt_sum_server,
+    0u32 AS dtt_count_client, 0. AS dtt_sum_client,
+    0u32 AS dtt_count_server, 0. AS dtt_sum_server;
 
 -- Finally:
 
@@ -458,7 +515,7 @@ AS
       "Measured out then in round trip times per second.",
     IF _sum_rtt_count_in > 0 THEN
       _sum_rtt_sum_in / _sum_rtt_count_in AS 'in.rtt.avg'
-      "Average out then in round trip time."
+      "Average out then in round trip time.",
     --IF _sum_rtt_count_in > 0 THEN
     --  sqrt (sum rtt_square_sum_in / _sum_rtt_count_in -
     --        (_sum_rtt_sum_in / _sum_rtt_count_in)^2) AS _rtt_stddev_in
@@ -467,6 +524,39 @@ AS
     --  "Average out then in round trip time plus its standard deviation.",
     --max(0, 'in.rtt.avg' - _rtt_stddev_in) AS 'in.rtt.avg - σ'
     --  "Average out then in round trip time minus its standard deviation."
+    --
+    -- User experience, recomputed from client/server stats although we
+    -- do not know on what end of the link were each server:
+    --
+    sum rtt_count_client AS _sum_rtt_count_client,
+    sum rtt_sum_client AS _sum_rtt_sum_client,
+    IF _sum_rtt_count_client > 0 THEN
+      _sum_rtt_sum_client / _sum_rtt_count_client AS 'server.rtt.avg'
+      "Average server→client→server round trip time (regardless of direction).",
+    sum rtt_count_server AS _sum_rtt_count_server,
+    sum rtt_sum_server AS _sum_rtt_sum_server,
+    IF _sum_rtt_count_server > 0 THEN
+      _sum_rtt_sum_server / _sum_rtt_count_server AS 'client.rtt.avg'
+      "Average client→server→client round trip time.",
+    sum rt_count_server AS _sum_rt_count_server,
+    sum rt_sum_server AS _sum_rt_sum_server,
+    IF _sum_rt_count_server > 0 THEN
+      _sum_rt_sum_server / _sum_rt_count_server AS 'server.rt.avg'
+      "Average response time.",
+    sum dtt_count_client AS _sum_dtt_count_client,
+    sum dtt_sum_client AS _sum_dtt_sum_client,
+    IF _sum_dtt_count_client > 0 THEN
+      _sum_dtt_sum_client / _sum_dtt_count_client AS 'client.dtt.avg'
+      "Average clients to servers data transfer time.",
+    -- Average Data Transfer Time S2C
+    sum dtt_count_server AS _sum_dtt_count_server,
+    sum dtt_sum_server AS _sum_dtt_sum_server,
+    IF _sum_dtt_count_server > 0 THEN
+      _sum_dtt_sum_server / _sum_dtt_count_server AS 'server.dtt.avg'
+      "Average servers to clients data transfer time.",
+    'server.rtt.avg' + 'client.rtt.avg' + 'server.rt.avg' +
+    COALESCE('client.dtt.avg', 0) + 'server.dtt.avg' AS 'user.experience'
+      "Average End User Response Time."
   GROUP BY start // time_step, zone
   COMMIT AFTER
     in.start > out.start + 2 * time_step
