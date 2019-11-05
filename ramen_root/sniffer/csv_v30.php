@@ -1,5 +1,5 @@
 <?
-$citrix = "AS CSV
+$citrix_channels = "AS CSV
       SEPARATOR \"\\t\"
       NULL \"\\\\N\"
       NO QUOTES
@@ -7,14 +7,14 @@ $citrix = "AS CSV
     (poller string,                     -- 1
      capture_begin u64,
      capture_end u64,
-     datasource_kind_client u8?,
-     datasource_name_client string?,
-     datasource_kind_server u8?,
-     datasource_name_server string?,
+     datasource_kind_client u8,
+     datasource_name_client string,
+     datasource_kind_server u8,
+     datasource_name_server string,
      vlan_client u32?,
      vlan_server u32?,
-     mac_client u64?,                   -- 10
-     mac_server u64?,
+     mac_client u64,                    -- 10
+     mac_server u64,
      zone_client u32,
      zone_server u32,
      ip4_client u32?,
@@ -24,7 +24,7 @@ $citrix = "AS CSV
      port_client u16,
      port_server u16,
      application u32,                   -- 20
-     protostack string?,
+     protostack string,
      connection_uuid string?,
      channel_id u8?,
      channel u8?,
@@ -49,7 +49,7 @@ $citrix = "AS CSV
   EVENT STARTING AT capture_begin * 1e-6
     AND STOPPING AT capture_end * 1e-6";
 
-$citrix_chanless = "AS CSV
+$citrix = "AS CSV
       SEPARATOR \"\\t\"
       NULL \"\\\\N\"
       NO QUOTES
@@ -57,14 +57,14 @@ $citrix_chanless = "AS CSV
     (poller string,                     -- 1
      capture_begin u64,
      capture_end u64,
-     datasource_kind_client u8?,
-     datasource_name_client string?,
-     datasource_kind_server u8?,
-     datasource_name_server string?,
+     datasource_kind_client u8,
+     datasource_name_client string,
+     datasource_kind_server u8,
+     datasource_name_server string,
      vlan_client u32?,
      vlan_server u32?,
-     mac_client u64?,                   -- 10
-     mac_server u64?,
+     mac_client u64,                   -- 10
+     mac_server u64,
      zone_client u32,
      zone_server u32,
      ip4_client u32?,
@@ -74,7 +74,7 @@ $citrix_chanless = "AS CSV
      port_client u16,
      port_server u16,
      application u32,                   -- 20
-     protostack string?,
+     protostack string,
      connection_uuid string?,
      module_name string?,
      encrypt_type u8,
@@ -117,14 +117,14 @@ $dns = "AS CSV
     (poller string,                     -- 1
      capture_begin u64,
      capture_end u64,
-     datasource_kind_client u8?,
-     datasource_name_client string?,
-     datasource_kind_server u8?,
-     datasource_name_server string?,
+     datasource_kind_client u8,
+     datasource_name_client string,
+     datasource_kind_server u8,
+     datasource_name_server string,
      vlan_client u32?,
      vlan_server u32?,
-     mac_client u64?,                   -- 10
-     mac_server u64?,
+     mac_client u64,                    -- 10
+     mac_server u64,
      zone_client u32,
      zone_server u32,
      ip4_client u32?,
@@ -132,7 +132,7 @@ $dns = "AS CSV
      ip4_server u32?,
      ip6_server string?,
      application u32,
-     protostack string?,
+     protostack string,
      _hardcoded_one_facepalm u8,        -- 20
      query_name string,
      query_type u16,
@@ -161,14 +161,14 @@ $http = "AS CSV
     (poller string,                     -- 1
      capture_begin u64,
      capture_end u64,
-     datasource_kind_client u8?,
-     datasource_name_client string?,
-     datasource_kind_server u8?,
-     datasource_name_server string?,
+     datasource_kind_client u8,
+     datasource_name_client string,
+     datasource_kind_server u8,
+     datasource_name_server string,
      vlan_client u32?,
      vlan_server u32?,
-     mac_client u64?,                   -- 10
-     mac_server u64?,
+     mac_client u64,                    -- 10
+     mac_server u64,
      zone_client u32,
      zone_server u32,
      ip4_client u32?,
@@ -186,7 +186,7 @@ $http = "AS CSV
      timeouted bool,
      host string?,
      user_agent string?,
-     url string,
+     url string?,
      server string?,                    -- 30
      compressed bool,
      chunked_encoding bool,
@@ -243,10 +243,10 @@ $icmp = "AS CSV
     (poller string,                     -- 1
      capture_begin u64,
      capture_end u64,
-     datasource_kind_client u8?,
-     datasource_name_client string?,
-     datasource_kind_server u8?,
-     datasource_name_server string?,
+     datasource_kind_client u8,
+     datasource_name_client string,
+     datasource_kind_server u8,
+     datasource_name_server string,
      vlan_client u32?,
      vlan_server u32?,
      mac_client u64?,                   -- 10
@@ -259,12 +259,12 @@ $icmp = "AS CSV
      ip6_server string?,
      ip4_external u32?,
      ip6_external string?,
-     diffserv_client u8,                -- 20
-     diffserv_server u8,
+     diffserv_client u16,                -- 20
+     diffserv_server u16,
      mtu_client u32? {bytes},
      mtu_server u32? {bytes},
      application u32,
-     protostack string?,
+     protostack string,
      traffic_bytes_client u64 {bytes},
      traffic_bytes_server u64 {bytes},
      traffic_packets_client u32,
@@ -291,21 +291,21 @@ $nonip = "AS CSV
     (poller string,                     -- 1
      capture_begin u64,
      capture_end u64,
-     datasource_kind_client u8?,
-     datasource_name_client string?,
-     datasource_kind_server u8?,
-     datasource_name_server string?,
+     datasource_kind_client u8,
+     datasource_name_client string,
+     datasource_kind_server u8,
+     datasource_name_server string,
      vlan_client u32?,
      vlan_server u32?,
-     mac_client u64?,                   -- 10
-     mac_server u64?,
+     mac_client u64,                    -- 10
+     mac_server u64,
      zone_client u32,
      zone_server u32,
      mtu_client u32? {bytes},
      mtu_server u32? {bytes},
      eth_type u16,
      application u32,
-     protostack string?,
+     protostack string,
      traffic_bytes_client u64 {bytes},
      traffic_bytes_server u64 {bytes},  -- 20
      traffic_packets_client u32,
@@ -321,27 +321,27 @@ $otherip = "AS CSV
     (poller string,                     -- 1
      capture_begin u64,
      capture_end u64,
-     datasource_kind_client u8?,
-     datasource_name_client string?,
-     datasource_kind_server u8?,
-     datasource_name_server string?,
+     datasource_kind_client u8,
+     datasource_name_client string,
+     datasource_kind_server u8,
+     datasource_name_server string,
      vlan_client u32?,
      vlan_server u32?,
-     mac_client u64?,                   -- 10
-     mac_server u64?,
+     mac_client u64,                    -- 10
+     mac_server u64,
      zone_client u32,
      zone_server u32,
      ip4_client u32?,
      ip6_client string?,
      ip4_server u32?,
      ip6_server string?,
-     diffserv_client u8,
-     diffserv_server u8,
+     diffserv_client u16,
+     diffserv_server u16,
      mtu_client u32? {bytes},           -- 20
      mtu_server u32? {bytes},
      ip_protocol u8,
      application u32,
-     protostack string?,
+     protostack string,
      traffic_bytes_client u64 {bytes},
      traffic_bytes_server u64 {bytes},
      traffic_packets_client u32,
@@ -357,14 +357,14 @@ $smb = "AS CSV
     (poller string,                     -- 1
      capture_begin u64,
      capture_end u64,
-     datasource_kind_client u8?,
-     datasource_name_client string?,
-     datasource_kind_server u8?,
-     datasource_name_server string?,
+     datasource_kind_client u8,
+     datasource_name_client string,
+     datasource_kind_server u8,
+     datasource_name_server string,
      vlan_client u32?,
      vlan_server u32?,
-     mac_client u64?,                   -- 10
-     mac_server u64?,
+     mac_client u64,                    -- 10
+     mac_server u64,
      zone_client u32,
      zone_server u32,
      ip4_client u32?,
@@ -374,7 +374,7 @@ $smb = "AS CSV
      port_client u16,
      port_server u16,
      version u32,                       -- 20
-     protostack string?,
+     protostack string,
      user string?,
      domain string?,
      file_id u128?,
@@ -389,8 +389,8 @@ $smb = "AS CSV
      warnings u32,
      queries u32,
      connection_uuid string?,
-     query_begin u64,
-     query_end u64,
+     query_begin u64?,
+     query_end u64?,
      query_payload u32 {bytes},
      query_pkts u32,
      resp_begin u64?,                   -- 40
@@ -423,14 +423,14 @@ $sql = "AS CSV
     (poller string,                     -- 1
      capture_begin u64,
      capture_end u64,
-     datasource_kind_client u8?,
-     datasource_name_client string?,
-     datasource_kind_server u8?,
-     datasource_name_server string?,
+     datasource_kind_client u8,
+     datasource_name_client string,
+     datasource_kind_server u8,
+     datasource_name_server string,
      vlan_client u32?,
      vlan_server u32?,
-     mac_client u64?,                   -- 10
-     mac_server u64?,
+     mac_client u64,                    -- 10
+     mac_server u64,
      zone_client u32,
      zone_server u32,
      ip4_client u32?,
@@ -441,7 +441,7 @@ $sql = "AS CSV
      port_server u16,
      query string,                      -- 20
      timeouted bool,
-     protostack string?,
+     protostack string,
      user string?,
      dbname string?,
      error_sql_status string?,
@@ -480,10 +480,10 @@ $tcp = "AS CSV
     (poller string,                     -- 1
      capture_begin u64,
      capture_end u64,
-     datasource_kind_client u8?,
-     datasource_name_client string?,
-     datasource_kind_server u8?,
-     datasource_name_server string?,
+     datasource_kind_client u8,
+     datasource_name_client string,
+     datasource_kind_server u8,
+     datasource_name_server string,
      vlan_client u32?,
      vlan_server u32?,
      mac_client u64?,                   -- 10
@@ -498,15 +498,15 @@ $tcp = "AS CSV
      ip6_external string?,
      port_client u16,                   -- 20
      port_server u16,
-     diffserv_client u8,
-     diffserv_server u8,
+     diffserv_client u16,
+     diffserv_server u16,
      os_client u8?,
      os_server u8?,
      mtu_client u32? {bytes},
      mtu_server u32? {bytes},
      captured_pcap string?,
      application u32,
-     protostack string?,                -- 30
+     protostack string,                -- 30
      uuid string?,
      traffic_bytes_client u64 {bytes},
      traffic_bytes_server u64 {bytes},
@@ -516,43 +516,43 @@ $tcp = "AS CSV
      payload_bytes_server u64 {bytes},
      payload_packets_client u32,
      payload_packets_server u32,
-     retrans_traffic_bytes_client u64? {bytes}, -- 40
-     retrans_traffic_bytes_server u64? {bytes},
-     retrans_payload_bytes_client u64? {bytes},
-     retrans_payload_bytes_server u64? {bytes},
-     syn_count_client u32? {},
-     fin_count_client u32? {},
-     fin_count_server u32? {},
-     rst_count_client u32? {},
-     rst_count_server u32? {},
-     close_count u32? {},
-     dupack_count_client u32? {},       -- 50
-     dupack_count_server u32? {},
-     zero_window_count_client u32? {},
-     zero_window_count_server u32? {},
+     retrans_traffic_bytes_client u64 {bytes}, -- 40
+     retrans_traffic_bytes_server u64 {bytes},
+     retrans_payload_bytes_client u64 {bytes},
+     retrans_payload_bytes_server u64 {bytes},
+     syn_count_client u32 {},
+     fin_count_client u32 {},
+     fin_count_server u32 {},
+     rst_count_client u32 {},
+     rst_count_server u32 {},
+     close_count u32 {},
+     dupack_count_client u32 {},       -- 50
+     dupack_count_server u32 {},
+     zero_window_count_client u32 {},
+     zero_window_count_server u32 {},
      -- Some counts can be null although the sums cannot ...
-     ct_count u32? {},
+     ct_count u32 {},
      ct_sum u64 {microseconds},
      ct_square_sum u128 {microseconds^2},
-     rt_count_server u32? {},
+     rt_count_server u32 {},
      rt_sum_server u64 {microseconds},
      rt_square_sum_server u128 {microseconds^2},
-     rtt_count_client u32? {},          -- 60
+     rtt_count_client u32 {},          -- 60
      rtt_sum_client u64 {microseconds},
      rtt_square_sum_client u128 {microseconds^2},
-     rtt_count_server u32? {},
+     rtt_count_server u32 {},
      rtt_sum_server u64 {microseconds},
      rtt_square_sum_server u128 {microseconds^2},
-     rd_count_client u32? {},
+     rd_count_client u32 {},
      rd_sum_client u64 {microseconds},
      rd_square_sum_client u128 {microseconds^2},
-     rd_count_server u32? {},
+     rd_count_server u32 {},
      rd_sum_server u64 {microseconds},  -- 70
      rd_square_sum_server u128 {microseconds^2},
-     dtt_count_client u32? {},
+     dtt_count_client u32 {},
      dtt_sum_client u64 {microseconds},
      dtt_square_sum_client u128 {microseconds^2},
-     dtt_count_server u32? {},
+     dtt_count_server u32 {},
      dtt_sum_server u64 {microseconds},
      dtt_square_sum_server u128 {microseconds^2},
      dcerpc_uuid string?)
@@ -567,14 +567,14 @@ $tls = "AS CSV
     (poller string,                     -- 1
      capture_begin u64,
      capture_end u64,
-     datasource_kind_client u8?,
-     datasource_name_client string?,
-     datasource_kind_server u8?,
-     datasource_name_server string?,
+     datasource_kind_client u8,
+     datasource_name_client string,
+     datasource_kind_server u8,
+     datasource_name_server string,
      vlan_client u32?,
      vlan_server u32?,
-     mac_client u64?,                   -- 10
-     mac_server u64?,
+     mac_client u64,                    -- 10
+     mac_server u64,
      zone_client u32,
      zone_server u32,
      ip4_client u32?,
@@ -584,7 +584,7 @@ $tls = "AS CSV
      port_client u16,
      port_server u16,
      application u32,                   -- 20
-     protostack string?,
+     protostack string,
      connection_uuid string?,
      cipher_suite u32?,
      client_common_name string?,
@@ -592,15 +592,15 @@ $tls = "AS CSV
      server_name string?,
      client_not_after u64? {seconds(rel)},
      server_not_after u64? {seconds(rel)},
-     resumed u32, -- actually a bool
-     decrypted u32, -- actually a bool  -- 30
-     version u32,
+     resumed u8, -- actually a bool
+     decrypted u8, -- actually a bool  -- 30
+     version u8,
      client_signature string?,
      server_signature string?,
      client_serial_number string?,
      server_serial_number string?,
-     client_type u32?,
-     server_type u32?,
+     client_type u8?,
+     server_type u8?,
      client_bits u32?,
      server_bits u32?,
      meta_client u32 {pdus},            -- 40
@@ -622,7 +622,7 @@ $tls = "AS CSV
      rt_count_server u32 {},
      rt_sum_server u64 {microseconds},
      rt_square_sum_server u128 {microseconds^2},
-     ct_count u32? {},
+     ct_count u32 {},
      ct_sum u64 {microseconds},         -- 60
      ct_square_sum u128 {microseconds^2})
   EVENT STARTING AT capture_begin * 1e-6
@@ -636,10 +636,10 @@ $udp = "AS CSV
     (poller string,                     -- 1
      capture_begin u64,
      capture_end u64,
-     datasource_kind_client u8?,
-     datasource_name_client string?,
-     datasource_kind_server u8?,
-     datasource_name_server string?,
+     datasource_kind_client u8,
+     datasource_name_client string,
+     datasource_kind_server u8,
+     datasource_name_server string,
      vlan_client u32?,
      vlan_server u32?,
      mac_client u64?,                   -- 10
@@ -654,12 +654,12 @@ $udp = "AS CSV
      ip6_external string?,
      port_client u16,                   -- 20
      port_server u16,
-     diffserv_client u8,
-     diffserv_server u8,
+     diffserv_client u16,
+     diffserv_server u16,
      mtu_client u32? {bytes},
      mtu_server u32? {bytes},
      application u32,
-     protostack string?,
+     protostack string,
      traffic_bytes_client u64 {bytes},
      traffic_bytes_server u64 {bytes},
      traffic_packets_client u32,        -- 30
@@ -678,14 +678,14 @@ $voip = "AS CSV
     (poller string,                     -- 1
      capture_begin u64,
      capture_end u64,
-     datasource_kind_client u8?,
-     datasource_name_client string?,
-     datasource_kind_server u8?,
-     datasource_name_server string?,
+     datasource_kind_client u8,
+     datasource_name_client string,
+     datasource_kind_server u8,
+     datasource_name_server string,
      vlan_client u32?,
      vlan_server u32?,
-     mac_client u64?,                   -- 10
-     mac_server u64?,
+     mac_client u64,                    -- 10
+     mac_server u64,
      zone_client u32,
      zone_server u32,
      ip4_client u32?,
@@ -696,7 +696,7 @@ $voip = "AS CSV
      port_server u16,
      capture_file string?,              -- 20
      application u32,
-     protostack string?,
+     protostack string,
      connection_uuid string?,
      ip_protocol u8,
      had_voice bool,
@@ -719,20 +719,20 @@ $voip = "AS CSV
      ip6_callee string?,
      zone_callee u32,
      callee_codec string?,
-     sign_bytes_client u32 {bytes},
-     sign_bytes_server u32 {bytes},
+     sign_bytes_client u64 {bytes},
+     sign_bytes_server u64 {bytes},
      sign_count_client u32 {},
      sign_count_server u32 {},
-     sign_payload_client u32 {bytes},
-     sign_payload_server u32 {bytes},   -- 50
+     sign_payload_client u64 {bytes},
+     sign_payload_server u64 {bytes},   -- 50
      -- v30 specs say these are client/server but junkie seems to do the right
      -- thing here, that is: callee/caller:
-     rtp_rtcp_bytes_caller u32 {bytes},
-     rtp_rtcp_bytes_callee u32 {bytes},
+     rtp_rtcp_bytes_caller u64 {bytes},
+     rtp_rtcp_bytes_callee u64 {bytes},
      rtp_rtcp_count_caller u32 {},
      rtp_rtcp_count_callee u32 {},
-     rtp_rtcp_payload_caller u32 {bytes},
-     rtp_rtcp_payload_callee u32 {bytes},
+     rtp_rtcp_payload_caller u64 {bytes},
+     rtp_rtcp_payload_callee u64 {bytes},
      rt_count_server u32 {},
      rt_sum_server u64 {microseconds},
      rt_square_sum_server u128 {microseconds^2},

@@ -1,7 +1,7 @@
 # Configuration
 
 VERSION = 3.0.8
-RAMEN_VERSION = 4.0.9
+RAMEN_VERSION = 4.1.1
 
 DUPS_IN = $(shell ocamlfind ocamlc -where)/compiler-libs
 OCAMLOPT   = OCAMLPATH=$(OCAMLPATH) OCAMLRUNPARAM= OCAMLFIND_IGNORE_DUPS_IN="$(DUPS_IN)" ocamlfind ocamlopt
@@ -18,6 +18,8 @@ RAMEN_SOURCES = \
 	ramen_root/internal/monitoring/meta.ramen \
 	ramen_root/sniffer/csv_files.ramen \
 	ramen_root/sniffer/csv_kafka.ramen \
+	ramen_root/sniffer/chb_files.ramen \
+	ramen_root/sniffer/chb_kafka.ramen \
 	ramen_root/sniffer/metrics.ramen \
 	ramen_root/sniffer/security/scans.ramen \
 	ramen_root/sniffer/security/DDoS.ramen \
@@ -59,12 +61,19 @@ all: $(INSTALLED) $(CHECK_COMPILATION) src/findcsv
 
 # Source files templating
 
-%.ramen: %.php ramen_root/sniffer/csv_v30.php
+%.ramen: %.php
 	@echo 'Expanding $@'
 	@php -n $< > $@ || true
 	@if grep -e Warning -e 'Parse error:' $@ ; then \
 	  rm $@ ;\
 	fi
+
+ramen_root/sniffer/chb_files.php: ramen_root/sniffer/chb_v30.php
+ramen_root/sniffer/chb_files.php: ramen_root/sniffer/adapt_chb_types.ramen
+ramen_root/sniffer/csv_files.php: ramen_root/sniffer/csv_v30.php
+ramen_root/sniffer/chb_kafka.php: ramen_root/sniffer/chb_v30.php
+ramen_root/sniffer/chb_kafka.php: ramen_root/sniffer/adapt_chb_types.ramen
+ramen_root/sniffer/csv_kafka.php: ramen_root/sniffer/csv_v30.php
 
 # Dependencies
 
@@ -76,7 +85,7 @@ CONFIGURATOR_SOURCES = \
 FINDCSV_SOURCES = \
 	src/RamenLog.ml src/RamenHelpers.ml src/findcsv.ml
 
-ramen_root/snigger/metrics.x: ramen_root/sniffer/csv.x
+ramen_root/snigger/metrics.x: ramen_root/sniffer/csv.x ramen_root/sniffer/chb.x
 ramen_root/sniffer/security/scans.x: ramen_root/sniffer/metrics.x
 ramen_root/sniffer/security/DDoS.x: ramen_root/sniffer/metrics.x
 ramen_root/sniffer/top_zones.x: ramen_root/sniffer/metrics.x
@@ -88,10 +97,16 @@ ramen_root/sniffer/transactions.x: ramen_root/sniffer/metrics.x
 ramen_root/sniffer/top_errors.x: ramen_root/sniffer/metrics.x
 ramen_root/sniffer/autodetect.x: ramen_root/sniffer/per_application.x
 
+FILES_OR_KAFKA ?= files
+
 # That one use parents "../csv" to find out types:
-ramen_root/sniffer/metrics.x: ramen_root/sniffer/metrics.ramen ramen_root/sniffer/csv_files.x
+ramen_root/sniffer/metrics.x: \
+		ramen_root/sniffer/metrics.ramen \
+		ramen_root/sniffer/csv_$(FILES_OR_KAFKA).x \
+		ramen_root/sniffer/chb_$(FILES_OR_KAFKA).x
 	@echo 'Compiling ramen program $@'
-	@ln -sf csv_files.x ramen_root/sniffer/csv.x
+	@ln -sf csv_$(FILES_OR_KAFKA).x ramen_root/sniffer/csv.x
+	@ln -sf chb_$(FILES_OR_KAFKA).x ramen_root/sniffer/chb.x
 	@ramen compile -L ramen_root $<
 
 SOURCES = $(CONFIGURATOR_SOURCES) $(FINDCSV_SOURCES)
@@ -219,3 +234,5 @@ clean: clean-comp
 	@$(RM) ramen_configurator.*.deb ramen_configurator.*.tgz
 	@$(RM) ramen_root/sniffer/csv_files.ramen
 	@$(RM) ramen_root/sniffer/csv_kafka.ramen
+	@$(RM) ramen_root/sniffer/chb_files.ramen
+	@$(RM) ramen_root/sniffer/chb_kafka.ramen

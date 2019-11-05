@@ -5,7 +5,7 @@ open RamenHelpers
 let () =
   let dir = ref "." in
   let metrics = ref "tcp,udp,icmp,other_ip,non_ip,dns,http,citrix,\
-                     citrix_chanless,smb,sql,voip" in
+                     citrix_channels,smb,database,voip" in
   Arg.parse [
     "-dir", Set_string dir, "directory where the files are" ;
     "-metrics", Set_string metrics, "list (coma separated) of metrics to \

@@ -22,7 +22,7 @@ DEFINE LAZY icmp_degraded AS
     IS icmp_type, icmp_code, error_ip_server, error_port_server IN
       TOP top_size GLOBALLY
       AT TIME start FOR THE LAST top_duration AS _important,
-    -- degrade the key of not important:
+    -- degrade the key if not important:
     icmp_type, icmp_code,
     IF _important THEN error_ip_server AS error_ip_server,
     IF _important THEN error_port_server AS error_port_server;

@@ -1,5 +1,5 @@
 -- vim: ft=sql expandtab
-<? include "csv_v30.php" ?>
+<? include 'csv_v30.php' ?>
 
 PARAMETERS
   csv_prefix DEFAULTS TO "/srv/nova/ramen/*.*.",
@@ -55,19 +55,19 @@ DEFINE LAZY http AS
       THEN DELETE IF csv_delete
     <?=$http?>;
 
+DEFINE LAZY citrix_channels AS
+  READ FROM
+    FILES csv_prefix || "citrix_channels_v30.*csv" || (IF csv_compressed THEN ".lz4" ELSE "")
+      PREPROCESSED WITH (IF csv_compressed THEN "lz4 -d -c" ELSE "")
+      THEN DELETE IF csv_delete
+    <?=$citrix_channels?>;
+
 DEFINE LAZY citrix AS
   READ FROM
     FILES csv_prefix || "citrix_v30.*csv" || (IF csv_compressed THEN ".lz4" ELSE "")
       PREPROCESSED WITH (IF csv_compressed THEN "lz4 -d -c" ELSE "")
       THEN DELETE IF csv_delete
     <?=$citrix?>;
-
-DEFINE LAZY citrix_chanless AS
-  READ FROM
-    FILES csv_prefix || "citrix_chanless_v30.*csv" || (IF csv_compressed THEN ".lz4" ELSE "")
-      PREPROCESSED WITH (IF csv_compressed THEN "lz4 -d -c" ELSE "")
-      THEN DELETE IF csv_delete
-    <?=$citrix_chanless?>;
 
 DEFINE LAZY smb AS
   READ FROM

@@ -9,7 +9,7 @@
 -- quality of service. We blanks these metrics for other sources below:
 
 DEFINE PERSIST FOR 15min tcp AS
-  FROM ../csv/tcp
+  FROM ../csv/tcp, ../chb/tcp
   SELECT
     "tcp" AS metric,
     (capture_begin / 1e6) {seconds(rel)} AS start,
@@ -35,33 +35,10 @@ DEFINE PERSIST FOR 15min tcp AS
     (dtt_square_sum_client / 1e12) {seconds^2} AS dtt_square_sum_client,
     (dtt_sum_server / 1e6) {seconds} AS dtt_sum_server,
     (dtt_square_sum_server / 1e12) {seconds^2} AS dtt_square_sum_server,
-    -- Also fix NULL counters:
-    COALESCE(ct_count, 0) AS ct_count,
-    COALESCE(close_count, 0) AS close_count,
-    COALESCE(rt_count_server, 0) AS rt_count_server,
-    COALESCE(rtt_count_client, 0) AS rtt_count_client,
-    COALESCE(rtt_count_server, 0) AS rtt_count_server,
-    COALESCE(rd_count_client, 0) AS rd_count_client,
-    COALESCE(rd_count_server, 0) AS rd_count_server,
-    COALESCE(dtt_count_client, 0) AS dtt_count_client,
-    COALESCE(dtt_count_server, 0) AS dtt_count_server,
-    COALESCE(dupack_count_client, 0) AS dupack_count_client,
-    COALESCE(dupack_count_server, 0) AS dupack_count_server,
-    COALESCE(zero_window_count_client, 0) AS zero_window_count_client,
-    COALESCE(zero_window_count_server, 0) AS zero_window_count_server,
-    COALESCE(syn_count_client, 0) AS syn_count_client,
-    COALESCE(rst_count_client, 0) AS rst_count_client,
-    COALESCE(rst_count_server, 0) AS rst_count_server,
-    COALESCE(fin_count_client, 0) AS fin_count_client,
-    COALESCE(fin_count_server, 0) AS fin_count_server,
-    COALESCE(retrans_traffic_bytes_client, 0) AS retrans_traffic_bytes_client,
-    COALESCE(retrans_traffic_bytes_server, 0) AS retrans_traffic_bytes_server,
-    COALESCE(retrans_payload_bytes_client, 0) AS retrans_payload_bytes_client,
-    COALESCE(retrans_payload_bytes_server, 0) AS retrans_payload_bytes_server,
     *; -- -ip4_client -ip6_client etc
 
 DEFINE PERSIST FOR 15min udp AS
-  FROM ../csv/udp
+  FROM ../csv/udp, ../chb/udp
   SELECT
     "udp" AS metric,
     (capture_begin / 1e6) {seconds(rel)} AS start,
@@ -85,7 +62,7 @@ DEFINE PERSIST FOR 15min udp AS
     *;
 
 DEFINE PERSIST FOR 15min icmp AS
-  FROM ../csv/icmp
+  FROM ../csv/icmp, ../chb/icmp
   SELECT
     "icmp" AS metric,
     (capture_begin / 1e6) {seconds(rel)} AS start,
@@ -147,7 +124,7 @@ DEFINE PERSIST FOR 15min 'non-ip' AS
     *;
 
 DEFINE PERSIST FOR 15min dns AS
-  FROM ../csv/dns
+  FROM ../csv/dns, ../chb/dns
   SELECT
     "dns" AS metric,
     (capture_begin / 1e6) {seconds(rel)} AS start,
@@ -161,7 +138,7 @@ DEFINE PERSIST FOR 15min dns AS
     *;
 
 DEFINE PERSIST FOR 15min http AS
-  FROM ../csv/http
+  FROM ../csv/http, ../chb/http
   SELECT
     "http" AS metric,
     (capture_begin / 1e6) {seconds(rel)} AS start,
@@ -188,7 +165,7 @@ DEFINE PERSIST FOR 15min http AS
     *;
 
 DEFINE PERSIST FOR 15min citrix_channels AS
-  FROM ../csv/citrix
+  FROM ../csv/citrix_channels, ../chb/citrix_channels
   SELECT
     "citrix-channels" AS metric,
     (capture_begin / 1e6) {seconds(rel)} AS start,
@@ -206,7 +183,7 @@ DEFINE PERSIST FOR 15min citrix_channels AS
     *;
 
 DEFINE PERSIST FOR 15min citrix AS
-  FROM ../csv/citrix_chanless
+  FROM ../csv/citrix, ../chb/citrix
   SELECT
     "citrix" AS metric,
     (capture_begin / 1e6) {seconds(rel)} AS start,
@@ -228,7 +205,7 @@ DEFINE PERSIST FOR 15min citrix AS
     *;
 
 DEFINE PERSIST FOR 15min smb AS
-  FROM ../csv/smb
+  FROM ../csv/smb, ../chb/smb
   SELECT
     "smb" AS metric,
     (capture_begin / 1e6) {seconds(rel)} AS start,
@@ -250,7 +227,7 @@ DEFINE PERSIST FOR 15min smb AS
     *;
 
 DEFINE PERSIST FOR 15min sql AS
-  FROM ../csv/sql
+  FROM ../csv/sql, ../chb/sql
   SELECT
     "sql" AS metric,
     (capture_begin / 1e6) {seconds(rel)} AS start,
@@ -272,7 +249,7 @@ DEFINE PERSIST FOR 15min sql AS
     *;
 
 DEFINE PERSIST FOR 15min voip AS
-  FROM ../csv/voip
+  FROM ../csv/voip, ../chb/voip
   SELECT
     "voip" AS metric,
     (capture_begin / 1e6) {seconds(rel)} AS start,
@@ -307,7 +284,7 @@ DEFINE PERSIST FOR 15min voip AS
     *;
 
 DEFINE PERSIST FOR 15min tls AS
-  FROM ../csv/tls
+  FROM ../csv/tls, ../chb/tls
   SELECT
     "tls" AS metric,
     (capture_begin / 1e6) {seconds} AS start,
@@ -326,6 +303,4 @@ DEFINE PERSIST FOR 15min tls AS
     (dtt_square_sum_client / 1e12) {seconds^2} AS dtt_square_sum_client,
     (dtt_sum_server / 1e6) {seconds} AS dtt_sum_server,
     (dtt_square_sum_server / 1e12) {seconds^2} AS dtt_square_sum_server,
-    -- Also fix NULL counters:
-    COALESCE(ct_count, 0) AS ct_count,
     *;
