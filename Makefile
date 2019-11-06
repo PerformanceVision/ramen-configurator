@@ -11,6 +11,8 @@ WARNS      = -w -40+27
 override OCAMLOPTFLAGS += -I src $(WARNS) -g -annot -O2 -S
 override OCAMLFLAGS    += -I src $(WARNS) -g -annot
 
+SOLVER = /usr/bin/z3 -t:300000 -smt2 %s
+
 PACKAGES = \
 	batteries cmdliner sqlite3 unix
 
@@ -57,7 +59,7 @@ all: $(INSTALLED) $(CHECK_COMPILATION) src/findcsv
 
 %.x: %.ramen
 	@echo 'Compiling ramen program $@'
-	@ramen compile -L ramen_root $<
+	@ramen compile --solver='$(SOLVER)' -L ramen_root $<
 
 # Source files templating
 
@@ -68,12 +70,10 @@ all: $(INSTALLED) $(CHECK_COMPILATION) src/findcsv
 	  rm $@ ;\
 	fi
 
-ramen_root/sniffer/chb_files.php: ramen_root/sniffer/chb_v30.php
-ramen_root/sniffer/chb_files.php: ramen_root/sniffer/adapt_chb_types.ramen
-ramen_root/sniffer/csv_files.php: ramen_root/sniffer/csv_v30.php
-ramen_root/sniffer/chb_kafka.php: ramen_root/sniffer/chb_v30.php
-ramen_root/sniffer/chb_kafka.php: ramen_root/sniffer/adapt_chb_types.ramen
-ramen_root/sniffer/csv_kafka.php: ramen_root/sniffer/csv_v30.php
+ramen_root/sniffer/chb_files.ramen: ramen_root/sniffer/chb_v30.php ramen_root/sniffer/adapt_chb_types.ramen
+ramen_root/sniffer/csv_files.ramen: ramen_root/sniffer/csv_v30.php
+ramen_root/sniffer/chb_kafka.ramen: ramen_root/sniffer/chb_v30.php ramen_root/sniffer/adapt_chb_types.ramen
+ramen_root/sniffer/csv_kafka.ramen: ramen_root/sniffer/csv_v30.php
 
 # Dependencies
 
@@ -107,7 +107,7 @@ ramen_root/sniffer/metrics.x: \
 	@echo 'Compiling ramen program $@'
 	@ln -sf csv_$(FILES_OR_KAFKA).x ramen_root/sniffer/csv.x
 	@ln -sf chb_$(FILES_OR_KAFKA).x ramen_root/sniffer/chb.x
-	@ramen compile -L ramen_root $<
+	@ramen compile --solver='$(SOLVER)' -L ramen_root $<
 
 SOURCES = $(CONFIGURATOR_SOURCES) $(FINDCSV_SOURCES)
 
