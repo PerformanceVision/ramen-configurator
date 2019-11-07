@@ -19,11 +19,11 @@ DEFINE LAZY tcp AS
     zone_client,
     zone_server,
     ip4_client,
-    string?(NULL) AS ip6_client, -- TODO: convert from u8[16] into u128
+    string(ip6_client) AS ip6_client,
     ip4_server,
-    string?(NULL) AS ip6_server, -- TODO: convert from u8[16] into u128
+    string(ip6_server) AS ip6_server,
     ip4_external,
-    string?(NULL) AS ip6_external, -- TODO: convert from u8[16] into u128
+    string(ip6_external) AS ip6_external,
     port_client,
     port_server,
     u16(diffserv_client),
@@ -35,7 +35,7 @@ DEFINE LAZY tcp AS
     captured_pcap,
     application,
     protostack,
-    string?("") AS uuid, -- TODO: an UUID to String conversion function
+    UUID_OF_U128 uuid,
     traffic_bytes_client,
     traffic_bytes_server,
     traffic_packets_client,
@@ -82,7 +82,7 @@ DEFINE LAZY tcp AS
     dtt_count_server,
     u64(dtt_sum_server),
     u128(dtt_square_sum_server),
-    string?("") AS dcerpc_uuid -- TODO: an UUID to String conversion function
+    UUID_OF_U128 dcerpc_uuid
   EVENT STARTING AT capture_begin * 1e-6
     AND STOPPING AT capture_end * 1e-6;
 
@@ -102,11 +102,11 @@ DEFINE LAZY udp AS
     zone_client,
     zone_server,
     ip4_client,
-    string?(NULL) AS ip6_client, -- TODO: convert from u8[16] into u128
+    string(ip6_client) AS ip6_client,
     ip4_server,
-    string?(NULL) AS ip6_server, -- TODO: convert from u8[16] into u128
+    string(ip6_server) AS ip6_server,
     ip4_external,
-    string?(NULL) AS ip6_external, -- TODO: convert from u8[16] into u128
+    string(ip6_external) AS ip6_external,
     port_client,
     port_server,
     u16(diffserv_client),
@@ -121,7 +121,7 @@ DEFINE LAZY udp AS
     traffic_packets_server,
     payload_bytes_client,
     payload_bytes_server,
-    string?("") AS dcerpc_uuid -- TODO: an UUID to String conversion function
+    UUID_OF_U128 dcerpc_uuid
   EVENT STARTING AT capture_begin * 1e-6
     AND STOPPING AT capture_end * 1e-6;
 
@@ -141,11 +141,11 @@ DEFINE LAZY icmp AS
     zone_client,
     zone_server,
     ip4_client,
-    string?(NULL) AS ip6_client, -- TODO: convert from u8[16] into u128
+    string(ip6_client) AS ip6_client,
     ip4_server,
-    string?(NULL) AS ip6_server, -- TODO: convert from u8[16] into u128
+    string(ip6_server) AS ip6_server,
     ip4_external,
-    string?(NULL) AS ip6_external, -- TODO: convert from u8[16] into u128
+    string(ip6_external) AS ip6_external,
     u16(diffserv_client),
     u16(diffserv_server),
     u32(mtu_client),
@@ -159,9 +159,9 @@ DEFINE LAZY icmp AS
     icmp_type,
     icmp_code,
     error_ip4_client,
-    string?(NULL) AS error_ip6_client, -- TODO: convert from u8[16] into u128
+    string(error_ip6_client) AS error_ip6_client,
     error_ip4_server,
-    string?(NULL) AS error_ip6_server, -- TODO: convert from u8[16] into u128
+    string(error_ip6_server) AS error_ip6_server,
     error_port_client,
     error_port_server,
     error_protocol AS error_ip_proto,
@@ -186,9 +186,9 @@ DEFINE LAZY 'other-ip' AS
     zone_client,
     zone_server,
     ip4_client,
-    string?(NULL) AS ip6_client, -- TODO: convert from u8[16] into u128
+    string(ip6_client) AS ip6_client,
     ip4_server,
-    string?(NULL) AS ip6_server, -- TODO: convert from u8[16] into u128
+    string(ip6_server) AS ip6_server,
     u16(diffserv_client),
     u16(diffserv_server),
     u32(mtu_client),
@@ -246,9 +246,9 @@ DEFINE LAZY dns AS
     zone_client,
     zone_server,
     ip4_client,
-    string?(NULL) AS ip6_client, -- TODO: convert from u8[16] into u128
+    string(ip6_client) AS ip6_client,
     ip4_server,
-    string?(NULL) AS ip6_server, -- TODO: convert from u8[16] into u128
+    string(ip6_server) AS ip6_server,
     application,
     protostack,
     query_count,
@@ -287,15 +287,15 @@ DEFINE LAZY http AS
     zone_client,
     zone_server,
     ip4_client,
-    string?(NULL) AS ip6_client, -- TODO: convert from u8[16] into u128
+    string(ip6_client) AS ip6_client,
     ip4_server,
-    string?(NULL) AS ip6_server, -- TODO: convert from u8[16] into u128
+    string(ip6_server) AS ip6_server,
     port_client,
     port_server,
     string?("") AS connection_uuid,
-    "" AS id, -- TODO: an UUID to String conversion function
-    "" AS parent_id, -- TODO: an UUID to String conversion function
-    IF referrer_hit IS NULL THEN NULL ELSE "" AS referrer_id, -- TODO: an UUID to String conversion function
+    UUID_OF_U128 uuid AS id,
+    UUID_OF_U128 parent_hit AS parent_id,
+    UUID_OF_U128 referrer_hit AS referrer_id,
     is_deep_inspect > 0 AS deep_inspect,
     has_contributed > 0 AS contributed,
     has_timeouted > 0 AS timeouted,
@@ -307,7 +307,7 @@ DEFINE LAZY http AS
     chunked_encoding_count > 0 AS chunked_encoding,
     ajax_request_count > 0 AS ajax,
     ip4_origin AS ip4_orig_client,
-    string?(NULL) AS ip6_orig_client, -- TODO: convert from u8[16] into u128
+    string(ip6_origin) AS ip6_orig_client,
     u32(page_count),
     dtt_count_client,
     query_begin,
@@ -366,9 +366,9 @@ DEFINE LAZY citrix_channels AS
     zone_client,
     zone_server,
     ip4_client,
-    string?(NULL) AS ip6_client, -- TODO: convert from u8[16] into u128
+    string(ip6_client) AS ip6_client,
     ip4_server,
-    string?(NULL) AS ip6_server, -- TODO: convert from u8[16] into u128
+    string(ip6_server) AS ip6_server,
     port_client,
     port_server,
     application,
@@ -413,9 +413,9 @@ DEFINE LAZY citrix AS
     zone_client,
     zone_server,
     ip4_client,
-    string?(NULL) AS ip6_client, -- TODO: convert from u8[16] into u128
+    string(ip6_client) AS ip6_client,
     ip4_server,
-    string?(NULL) AS ip6_server, -- TODO: convert from u8[16] into u128
+    string(ip6_server) AS ip6_server,
     port_client,
     port_server,
     application,
@@ -470,9 +470,9 @@ DEFINE LAZY smb AS
     zone_client,
     zone_server,
     ip4_client,
-    string?(NULL) AS ip6_client, -- TODO: convert from u8[16] into u128
+    string(ip6_client) AS ip6_client,
     ip4_server,
-    string?(NULL) AS ip6_server, -- TODO: convert from u8[16] into u128
+    string(ip6_server) AS ip6_server,
     port_client,
     port_server,
     u32(version),
@@ -533,9 +533,9 @@ DEFINE LAZY sql AS
     zone_client,
     zone_server,
     ip4_client,
-    string?(NULL) AS ip6_client, -- TODO: convert from u8[16] into u128
+    string(ip6_client) AS ip6_client,
     ip4_server,
-    string?(NULL) AS ip6_server, -- TODO: convert from u8[16] into u128
+    string(ip6_server) AS ip6_server,
     port_client,
     port_server,
     query,
@@ -586,9 +586,9 @@ DEFINE LAZY voip AS
     zone_client,
     zone_server,
     ip4_client,
-    string?(NULL) AS ip6_client, -- TODO: convert from u8[16] into u128
+    string(ip6_client) AS ip6_client,
     ip4_server,
-    string?(NULL) AS ip6_server, -- TODO: convert from u8[16] into u128
+    string(ip6_server) AS ip6_server,
     port_client,
     port_server,
     captured_pcap AS capture_file,
@@ -607,13 +607,13 @@ DEFINE LAZY voip AS
     caller_id AS id_caller,
     mac_caller AS caller_mac,
     ip4_caller,
-    string?(NULL) AS ip6_caller, -- TODO: convert from u8[16] into u128
+    string(ip6_caller) AS ip6_caller,
     zone_caller,
     codec_caller AS caller_codec,
     callee_id AS id_callee,
     mac_callee AS callee_mac,
     ip4_callee,
-    string?(NULL) AS ip6_callee, -- TODO: convert from u8[16] into u128
+    string(ip6_callee) AS ip6_callee,
     zone_callee,
     codec_callee AS callee_codec,
     sign_traffic_bytes_client AS sign_bytes_client,
@@ -676,9 +676,9 @@ DEFINE LAZY tls AS
     zone_client,
     zone_server,
     ip4_client,
-    string?(NULL) AS ip6_client, -- TODO: convert from u8[16] into u128
+    string(ip6_client) AS ip6_client,
     ip4_server,
-    string?(NULL) AS ip6_server, -- TODO: convert from u8[16] into u128
+    string(ip6_server) AS ip6_server,
     port_client,
     port_server,
     application,
