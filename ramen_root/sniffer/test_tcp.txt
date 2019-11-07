@@ -1,1 +1,14 @@
-/home/rixed/src/sact/pv-back/pv_back/pv_storage/model/inputs/test_tcp.txt
+columns format version: 1
+12 columns:
+`capture_begin` UInt64
+`capture_end` UInt64
+`traffic_bytes_client` UInt64
+`traffic_bytes_server` UInt64
+`ip4_client` Nullable(UInt32)
+`ip6_client` Nullable(FixedString(16))
+`ip4_server` Nullable(UInt32)
+`ip6_server` Nullable(FixedString(16))
+`dtt_count_client` UInt32
+`dtt_sum_client` UInt32
+`dtt_count_server` UInt32
+`dtt_sum_server` UInt32

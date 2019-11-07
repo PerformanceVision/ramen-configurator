@@ -1,1 +1,9 @@
-/home/rixed/src/sact/pv-back/pv_back/pv_storage/model/inputs/flows.txt
+columns format version: 1
+7 columns:
+`capture_begin` UInt64
+`poller` String
+`layer` String
+`timestamp` UInt32
+`file_count` UInt16
+`rows_integrated` UInt32
+`rows_truncated` UInt32

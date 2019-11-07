@@ -1,1 +1,36 @@
-/home/rixed/src/sact/pv-back/pv_back/pv_storage/model/inputs/udp.txt
+columns format version: 1
+34 columns:
+`poller` String
+`capture_begin` UInt64
+`capture_end` UInt64
+`datasource_kind_client` UInt8
+`datasource_name_client` String
+`datasource_kind_server` UInt8
+`datasource_name_server` String
+`vlan_client` Nullable(UInt32)
+`vlan_server` Nullable(UInt32)
+`mac_client` Nullable(UInt64)
+`mac_server` Nullable(UInt64)
+`zone_client` UInt32
+`zone_server` UInt32
+`ip4_client` Nullable(UInt32)
+`ip6_client` Nullable(FixedString(16))
+`ip4_server` Nullable(UInt32)
+`ip6_server` Nullable(FixedString(16))
+`ip4_external` Nullable(UInt32)
+`ip6_external` Nullable(FixedString(16))
+`port_client` UInt16
+`port_server` UInt16
+`diffserv_client` UInt16
+`diffserv_server` UInt16
+`mtu_client` Nullable(UInt16)
+`mtu_server` Nullable(UInt16)
+`application` UInt32
+`protostack` String
+`traffic_bytes_client` UInt64
+`traffic_bytes_server` UInt64
+`traffic_packets_client` UInt32
+`traffic_packets_server` UInt32
+`payload_bytes_client` UInt64
+`payload_bytes_server` UInt64
+`dcerpc_uuid` Nullable(UUID)

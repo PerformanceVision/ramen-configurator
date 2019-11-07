@@ -1,1 +1,11 @@
-/home/rixed/src/sact/pv-back/pv_back/pv_storage/model/inputs/test_l7.txt
+columns format version: 1
+9 columns:
+`capture_begin` UInt64
+`capture_end` UInt64
+`traffic_bytes_client` UInt64
+`traffic_bytes_server` UInt64
+`version` UInt8
+`icmp_type` UInt16
+`icmp_code` UInt16
+`url` String
+`alert_types` UInt32
