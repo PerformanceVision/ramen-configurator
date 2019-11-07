@@ -59,7 +59,7 @@ all: $(INSTALLED) $(CHECK_COMPILATION) src/findcsv
 
 %.x: %.ramen
 	@echo 'Compiling ramen program $@'
-	@ramen compile --solver='$(SOLVER)' -L ramen_root $<
+	@RAMEN_CONFSERVER= ramen compile --solver='$(SOLVER)' -L ramen_root $<
 
 # Source files templating
 
@@ -107,7 +107,7 @@ ramen_root/sniffer/metrics.x: \
 	@echo 'Compiling ramen program $@'
 	@ln -sf csv_$(FILES_OR_KAFKA).x ramen_root/sniffer/csv.x
 	@ln -sf chb_$(FILES_OR_KAFKA).x ramen_root/sniffer/chb.x
-	@ramen compile --solver='$(SOLVER)' -L ramen_root $<
+	@RAMEN_CONFSERVER= ramen compile --solver='$(SOLVER)' -L ramen_root $<
 
 SOURCES = $(CONFIGURATOR_SOURCES) $(FINDCSV_SOURCES)
 
