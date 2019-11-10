@@ -124,11 +124,15 @@ let sync_programs debug ramen_cmd root_dir confserver_url uncompress
             [ "csv_prefix", dquote csv_prefix ;
               "csv_delete", string_of_bool csv_delete ;
               "csv_compressed", string_of_bool uncompress ] ] in
-  let fname = "sniffer/"
-              ^ (if kafka_brokers <> "" then "csv_kafka" else "csv_files")
-              ^ ".ramen" in
-  let no_ext = "sniffer/csv" in
-  comp no_ext ~fname ~src_path:no_ext params ;
+  let run_source format =
+    let no_ext = "sniffer/" ^ format in
+    let fname =
+      no_ext ^ "_" ^
+      (if kafka_brokers <> "" then "kafka" else "files") ^
+      ".ramen" in
+    comp no_ext ~fname ~src_path:no_ext params in
+  run_source "csv" ;
+  run_source "chb" ;
   comp "sniffer/metrics" no_params ;
   let aggr_times =
     Hashtbl.of_list [ "1min",  [ "time_step", "60" ] ;
