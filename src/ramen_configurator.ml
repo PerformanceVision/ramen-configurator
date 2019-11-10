@@ -111,9 +111,14 @@ let sync_programs debug ramen_cmd root_dir confserver_url uncompress
   let old_running = get_running ramen_cmd confserver_url "sniffer/*" in
   let new_running = ref Set.String.empty in
   let comp no_ext ?fname ?src_path p =
-    let rs = run_file debug ramen_cmd root_dir confserver_url no_ext
-                      ?fname ?src_path p in
-    new_running := Set.String.union rs !new_running in
+    match run_file debug ramen_cmd root_dir confserver_url no_ext
+                   ?fname ?src_path p with
+    | exception e ->
+        let what = "running program "^ no_ext in
+        print_exception ~what e
+    | rs ->
+        new_running := Set.String.union rs !new_running
+  in
   comp "internal/monitoring/meta" no_params ;
   let params =
     Hashtbl.of_list
