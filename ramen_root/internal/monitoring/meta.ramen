@@ -114,7 +114,7 @@ DEFINE alert_output AS
 
     diff_out_per_sec + diff_running + diff_active AS tot_diff;
 
-DEFINE alert_output_do_notif AS
+DEFINE alert_output_to_notif AS
   FROM alert_output
   SELECT
     tot_diff > 0.8 AS firing,
