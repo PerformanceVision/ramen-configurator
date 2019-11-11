@@ -21,12 +21,12 @@ columns format version: 1
 `protostack` String
 `query_count` UInt32
 `query_name` String
-`query_type` UInt32
-`query_class` UInt32
+`query_type` UInt16
+`query_class` UInt16
 `rcode` Int32
 `error_count` UInt32
-`response_type` UInt32
-`response_class` UInt32
+`response_type` UInt16
+`response_class` UInt16
 `captured_pcap` Nullable(String)
 `uuid` Nullable(UUID)
 `traffic_bytes_client` UInt64

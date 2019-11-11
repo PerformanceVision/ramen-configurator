@@ -21,8 +21,8 @@ columns format version: 1
 `ip6_external` Nullable(FixedString(16))
 `port_client` UInt16
 `port_server` UInt16
-`diffserv_client` UInt16
-`diffserv_server` UInt16
+`diffserv_client` UInt8
+`diffserv_server` UInt8
 `mtu_client` Nullable(UInt16)
 `mtu_server` Nullable(UInt16)
 `application` UInt32
