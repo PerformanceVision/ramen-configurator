@@ -332,23 +332,23 @@ let confserver_url =
   Arg.(value (opt ~vopt:"localhost" string "" i))
 
 let uncompress_opt =
-  let i = Arg.info ~doc:"CSV are compressed with lz4"
+  let i = Arg.info ~doc:"CSV/CHB are compressed with lz4"
                    [ "uncompress" ; "uncompress-csv" ] in
   Arg.(value (flag i))
 
 let kafka_brokers =
-  let i = Arg.info ~doc:"Read CSV data from Kafka instead of files."
-            [ "kafka-broers" ] in
+  let i = Arg.info ~doc:"Read CSV/CHB data from Kafka instead of files."
+            [ "kafka-brokers" ] in
   Arg.(value (opt string "" i))
 
 let csv_prefix =
-  let i = Arg.info ~doc:"File glob for the CSV files that comes right \
+  let i = Arg.info ~doc:"File glob for the CSV/CHB files that comes right \
                          before the metric name"
                    [ "csv" ] in
   Arg.(value (opt string "" i))
 
 let csv_delete =
-  let i = Arg.info ~doc:"Delete CSV files once injected"
+  let i = Arg.info ~doc:"Delete CSV/CHB files once injected"
                    [ "delete" ] in
   Arg.(value (flag i))
 
