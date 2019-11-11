@@ -106,7 +106,7 @@ let kill ramen_cmd confserver_url prog =
     run_cmd |> ignore
 
 let sync_programs debug ramen_cmd root_dir confserver_url uncompress
-                  kafka_brokers csv_prefix csv_delete security_whitelist =
+                  kafka_brokers files_prefix files_delete security_whitelist =
   let no_params = Hashtbl.create 0 in
   let old_running = get_running ramen_cmd confserver_url "sniffer/*" in
   let new_running = ref Set.String.empty in
@@ -126,9 +126,9 @@ let sync_programs debug ramen_cmd root_dir confserver_url uncompress
           if kafka_brokers <> "" then
             [ "kafka_broker_list", dquote kafka_brokers ]
           else
-            [ "csv_prefix", dquote csv_prefix ;
-              "csv_delete", string_of_bool csv_delete ;
-              "csv_compressed", string_of_bool uncompress ] ] in
+            [ "files_prefix", dquote files_prefix ;
+              "files_delete", string_of_bool files_delete ;
+              "files_compressed", string_of_bool uncompress ] ] in
   let run_source format =
     let no_ext = "sniffer/" ^ format in
     let fname =
@@ -272,20 +272,20 @@ let sync_notif_conf =
       prev_cmds := Some cmds)
 
 let start debug monitor ramen_cmd root_dir confserver_url db_name
-          uncompress kafka_brokers csv_prefix csv_delete alert_internal
+          uncompress kafka_brokers files_prefix files_delete alert_internal
           notif_conf_file identity_file_ dry_run_ =
   logger := make_logger debug ;
   identity_file := identity_file_ ;
   dry_run := dry_run_ ;
   if kafka_brokers <> "" &&
-     (csv_prefix <> "" || csv_delete || uncompress)
+     (files_prefix <> "" || files_delete || uncompress)
   then
     failwith "CSV options are not compatible with Kafka" ;
   let db = Conf_of_sqlite.get_db db_name in
   let update_programs () =
     let security_whitelist = Conf_of_sqlite.get_source_params db in
     sync_programs debug ramen_cmd root_dir confserver_url uncompress
-                  kafka_brokers csv_prefix csv_delete security_whitelist
+                  kafka_brokers files_prefix files_delete security_whitelist
   and update_notif_conf () =
     if notif_conf_file <> "" then
       sync_notif_conf db notif_conf_file alert_internal
@@ -341,13 +341,13 @@ let kafka_brokers =
             [ "kafka-brokers" ] in
   Arg.(value (opt string "" i))
 
-let csv_prefix =
+let files_prefix =
   let i = Arg.info ~doc:"File glob for the CSV/CHB files that comes right \
                          before the metric name"
-                   [ "csv" ] in
+                   [ "files" ; "csv" (* backward compatible *) ] in
   Arg.(value (opt string "" i))
 
-let csv_delete =
+let files_delete =
   let i = Arg.info ~doc:"Delete CSV/CHB files once injected"
                    [ "delete" ] in
   Arg.(value (flag i))
@@ -387,8 +387,8 @@ let start_cmd =
       $ db_name
       $ uncompress_opt
       $ kafka_brokers
-      $ csv_prefix
-      $ csv_delete
+      $ files_prefix
+      $ files_delete
       $ alert_internal
       $ notif_conf_file
       $ identity_file
