@@ -179,12 +179,11 @@ tarball: ramen_configurator.$(VERSION).tgz
 
 ramen_configurator.$(VERSION).deb: debian.control
 	@echo 'Building debian package $@'
-	@sudo $(RM) -r debtmp
+	@$(RM) -r debtmp
 	@$(MAKE) prefix=debtmp/ install
 	@mkdir -p debtmp/DEBIAN
 	@cp debian.control debtmp/DEBIAN/control
-	@sudo chown root: -R debtmp/usr
-	@dpkg --build debtmp
+	@fakeroot dpkg --build debtmp
 	@mv debtmp.deb $@
 
 ramen_configurator.$(VERSION).tgz:
@@ -228,7 +227,7 @@ clean: clean-comp
 	@$(RM) oUnit-anon.cache qtest.targets.log
 	@$(RM) .depend src/*.opt src/*.byte src/*.top
 	@$(RM) src/ramen_configurator
-	@sudo rm -rf debtmp
+	@rm -rf debtmp
 	@$(RM) -r tmp
 	@$(RM) ramen_configurator.*.deb ramen_configurator.*.tgz
 	@$(RM) ramen_root/sniffer/csv_files.ramen
