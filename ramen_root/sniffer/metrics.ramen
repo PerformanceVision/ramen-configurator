@@ -88,7 +88,7 @@ DEFINE PERSIST FOR 15min icmp AS
     *;
 
 DEFINE PERSIST FOR 15min 'other-ip' AS
-  FROM '../csv/other-ip'
+  FROM '../csv/other-ip', '../chb/other-ip'
   SELECT
     "other-ip" AS metric,
     (capture_begin / 1e6) {seconds(rel)} AS start,
@@ -110,7 +110,7 @@ DEFINE PERSIST FOR 15min 'other-ip' AS
     *;
 
 DEFINE PERSIST FOR 15min 'non-ip' AS
-  FROM '../csv/non-ip'
+  FROM '../csv/non-ip', '../chb/non-ip'
   SELECT
     "non-ip" AS metric,
     (capture_begin / 1e6) {seconds(rel)} AS start,
