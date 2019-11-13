@@ -67,7 +67,7 @@ DEFINE LAZY smb_ext AS
 
 DEFINE LAZY sql_ext AS
   READ FROM
-    KAFKA TOPIC "pvx.sql"
+    KAFKA TOPIC "pvx.databases"
     WITH OPTIONS "metadata.broker.list" = kafka_broker_list
     <?=$sql?>;
 
