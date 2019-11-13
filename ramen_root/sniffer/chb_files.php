@@ -64,7 +64,7 @@ DEFINE LAZY citrix_channels_ext AS
 
 DEFINE LAZY citrix_ext AS
   READ FROM
-    FILES files_prefix || "citrix_chanless_v30.*chb" || (IF files_compressed THEN ".lz4" ELSE "")
+    FILES files_prefix || "citrix_v30.*chb" || (IF files_compressed THEN ".lz4" ELSE "")
       PREPROCESSED WITH (IF files_compressed THEN "lz4 -d -c" ELSE "")
       THEN DELETE IF files_delete
     <?=$citrix?>;
