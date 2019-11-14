@@ -65,6 +65,13 @@ let shell_quote s =
 let sql_quote s =
   "'"^ String.nreplace s "'" "''" ^"'"
 
+let json_quote s =
+  let rep f t s = String.nreplace s f t in
+  let quote f s = rep f ("\\" ^ f) s in
+  "\""^ (s |> quote "\\" |> quote "\"" |> quote "/" |> quote "\b" |>
+              quote "\n" |> quote "\r" |> quote "\t" |>
+              rep "\x0c" "\\f") ^"\""
+
 let getenv ?def n =
   try Sys.getenv n
   with Not_found ->

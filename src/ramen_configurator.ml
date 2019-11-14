@@ -106,7 +106,7 @@ let kill ramen_cmd confserver_url prog =
     run_cmd |> ignore
 
 let sync_programs debug ramen_cmd root_dir confserver_url uncompress
-                  kafka_brokers files_prefix files_delete security_whitelist =
+                  kafka_brokers_in files_prefix files_delete security_whitelist =
   let no_params = Hashtbl.create 0 in
   let old_running = get_running ramen_cmd confserver_url "sniffer/*" in
   let new_running = ref Set.String.empty in
@@ -123,8 +123,8 @@ let sync_programs debug ramen_cmd root_dir confserver_url uncompress
   let params =
     Hashtbl.of_list
       [ "",
-          if kafka_brokers <> "" then
-            [ "kafka_broker_list", dquote kafka_brokers ]
+          if kafka_brokers_in <> "" then
+            [ "kafka_broker_list", dquote kafka_brokers_in ]
           else
             [ "files_prefix", dquote files_prefix ;
               "files_delete", string_of_bool files_delete ;
@@ -133,7 +133,7 @@ let sync_programs debug ramen_cmd root_dir confserver_url uncompress
     let no_ext = "sniffer/" ^ format in
     let fname =
       no_ext ^ "_" ^
-      (if kafka_brokers <> "" then "kafka" else "files") ^
+      (if kafka_brokers_in <> "" then "kafka" else "files") ^
       ".ramen" in
     comp no_ext ~fname ~src_path:no_ext params in
   run_source "csv" ;
@@ -201,64 +201,109 @@ let send_trap sink =
        extParameters.0 s ${desc}"
     (shell_quote sink)
 
-let write_notif_conf fname alert_internal cmds =
+(* Write the alerter configuration file.
+ * [alert_internal] is a boolean controlling whether meta-monitoring
+ * alerts should be sent or ignored.
+ * Then, all alerts are send to several destination channels:
+ * - an sqlite file, if [to_sqlite] is set;
+ * - any external commands listed in [ext_cmds];
+ * - a kafka topic, if [kafka_topic] and [kafka_partition] are
+ *   set. *)
+let write_notif_conf fname alert_internal to_sqlite ext_cmds
+                     kafka_options kafka_topic kafka_partition
+                     tenant_id tenant_name =
   !logger.info "Writing notifier configuration in %S" fname ;
   (* We could share the same type for the conf, and then serialize it,
    * but that would force us to package a library from ramen, for the only
    * benefit of this program. Rather, we'd like PPP to offer _modification_
    * of a blob from the command line. Meanwhile, we merely templatize
    * this string: *)
+  let contacts = [] in
+  let contacts =
+    if to_sqlite <> "" then
+      Printf.sprintf {|
+        ViaSqlite {
+          file = %S ;
+          create = "create table \"alerts\" (
+              \"id\" integer primary key autoincrement,
+              \"start\" integer not null,
+              \"stop\" integer null,
+              \"name\" text not null,
+              \"firing\" integer null,
+              \"desc\" text null,
+              \"bcn\" integer null,
+              \"bca\" integer null,
+              \"service_id\" integer null,
+              \"ips\" text null,
+              \"thresholds\" text null,
+              \"values\" text null
+            );" ;
+          insert = "insert into \"alerts\" (
+              \"name\", \"desc\", \"firing\",
+              \"start\", \"stop\",
+              \"bcn\", \"bca\", \"service_id\",
+              \"ips\", \"thresholds\", \"values\"
+            ) values (
+              ${name}, ${desc}, ${firing},
+              ${start}, ${stop},
+              ${bcn}, ${bca}, ${service_id},
+              ${ips}, ${thresholds}, ${values}
+            );"
+        }
+      |} to_sqlite :: contacts else contacts in
+  let contacts =
+    IO.to_string
+      (List.print ~first:"" ~sep:" ;\n" ~last:"\n" (fun oc cmd ->
+        Printf.fprintf oc "ViaExec %S" cmd)
+      ) ext_cmds :: contacts in
+  let contacts =
+    if kafka_topic <> "" && kafka_options <> [] then
+      Printf.sprintf2 {|
+        ViaKafka {
+          options = %a;
+          topic = %S;
+          partition = %d;
+          text = "{\"tenantName\":%s,\
+                   \"tenantId\":%s,\
+                   \"processedTimestamp\":${last_sent},\
+                   \"timestamp\":${start},\
+                   \"startTimestamp\":${first_sent},\
+                   \"policyId\":${id},\
+                   \"source\":\"ramen\",\
+                   \"type\":${firing}}";
+        }
+      |}
+        (List.print (Tuple2.print String.print_quoted String.print_quoted))
+          kafka_options
+        kafka_topic kafka_partition
+        (json_quote tenant_id) (json_quote tenant_name) :: contacts
+    else (
+      if kafka_topic <> "" || kafka_options <> [] then
+        failwith "Both parameters kafka-topic and kafka-options need to be \
+                  set for enabling Kafka output" ;
+      contacts
+    ) in
   File.with_file_out ~mode:[`create;`text;`trunc] fname (fun oc ->
     Printf.fprintf oc {|
-{
-  teams = [
-    %s{
-      name = "" ;
-      contacts =
-        [
-          ViaSqlite {
-            file = "/srv/ramen/alerts.db" ;
-            create = "create table \"alerts\" (
-                \"id\" integer primary key autoincrement,
-                \"start\" integer not null,
-                \"stop\" integer null,
-                \"name\" text not null,
-                \"firing\" integer null,
-                \"desc\" text null,
-                \"bcn\" integer null,
-                \"bca\" integer null,
-                \"service_id\" integer null,
-                \"ips\" text null,
-                \"thresholds\" text null,
-                \"values\" text null
-              );" ;
-            insert = "insert into \"alerts\" (
-                \"name\", \"desc\", \"firing\",
-                \"start\", \"stop\",
-                \"bcn\", \"bca\", \"service_id\",
-                \"ips\", \"thresholds\", \"values\"
-              ) values (
-                ${name}, ${desc}, ${firing},
-                ${start}, ${stop},
-                ${bcn}, ${bca}, ${service_id},
-                ${ips}, ${thresholds}, ${values}
-              );"
-          }%s
-          %a
-        ]
-    }
-  ];
-  default_init_schedule_delay = 30;
-}
-|}
-    (if alert_internal then "" else "{ name = \"Internal\" ; contacts = [] }; ")
-    (if cmds <> [] then " ;" else "")
-    (List.print ~first:"" ~sep:" ;\n" ~last:"\n" (fun oc cmd ->
-      Printf.fprintf oc "ViaExec %S" cmd)) cmds)
+        {
+          teams = [
+            %s{
+              name = "";
+              contacts = [ %a ]
+            }
+          ];
+          default_init_schedule_delay = 30;
+        }
+      |}
+    (if alert_internal then ""
+     else "{ name = \"Internal\" ; contacts = [] };\n")
+    (List.print String.print) contacts)
 
 let sync_notif_conf =
   let prev_cmds = ref None in
-  fun db notif_conf_file alert_internal ->
+  fun db notif_conf_file alert_internal to_sqlite
+      kafka_options kafka_topic kafka_partition
+      tenant_id tenant_name ->
     let from, rcpts, snmpsink = Conf_of_sqlite.get_alerts_sink db in
     let cmds = [] in
     let cmds =
@@ -268,16 +313,21 @@ let sync_notif_conf =
       if snmpsink = "" then cmds
       else send_trap snmpsink :: cmds in
     if !prev_cmds <> Some cmds then (
-      write_notif_conf notif_conf_file alert_internal cmds ;
+      write_notif_conf notif_conf_file alert_internal to_sqlite cmds
+                       kafka_options kafka_topic kafka_partition
+                       tenant_id tenant_name ;
       prev_cmds := Some cmds)
 
 let start debug monitor ramen_cmd root_dir confserver_url db_name
-          uncompress kafka_brokers files_prefix files_delete alert_internal
-          notif_conf_file identity_file_ dry_run_ =
+          uncompress kafka_brokers_in files_prefix files_delete alert_internal
+          notif_conf_file identity_file_ to_sqlite
+          kafka_options kafka_topic kafka_partition
+          tenant_id tenant_name
+          dry_run_ =
   logger := make_logger debug ;
   identity_file := identity_file_ ;
   dry_run := dry_run_ ;
-  if kafka_brokers <> "" &&
+  if kafka_brokers_in <> "" &&
      (files_prefix <> "" || files_delete || uncompress)
   then
     failwith "CSV options are not compatible with Kafka" ;
@@ -285,10 +335,12 @@ let start debug monitor ramen_cmd root_dir confserver_url db_name
   let update_programs () =
     let security_whitelist = Conf_of_sqlite.get_source_params db in
     sync_programs debug ramen_cmd root_dir confserver_url uncompress
-                  kafka_brokers files_prefix files_delete security_whitelist
+                  kafka_brokers_in files_prefix files_delete security_whitelist
   and update_notif_conf () =
     if notif_conf_file <> "" then
-      sync_notif_conf db notif_conf_file alert_internal
+      sync_notif_conf db notif_conf_file alert_internal to_sqlite
+                      kafka_options kafka_topic kafka_partition
+                      tenant_id tenant_name
   in
   update_notif_conf () ;
   update_programs () ;
@@ -303,25 +355,25 @@ let start debug monitor ramen_cmd root_dir confserver_url db_name
 open Cmdliner
 
 let debug =
-  Arg.(value (flag (info ~doc:"increase verbosity" ["d"; "debug"])))
+  Arg.(value (flag (info ~doc:"increase verbosity." ["d"; "debug"])))
 
 let monitor =
-  Arg.(value (flag (info ~doc:"keep running and update conf when DB changes"
+  Arg.(value (flag (info ~doc:"keep running and update conf when DB changes."
                            ["m"; "monitor"])))
 
 let ramen_cmd =
-  let i = Arg.info ~doc:"Command line to run ramen"
+  let i = Arg.info ~doc:"Command line to run ramen."
                    [ "ramen" ] in
   Arg.(value (opt string "ramen" i))
 
 let db_name =
-  let i = Arg.info ~doc:"Path of the SQLite file"
+  let i = Arg.info ~doc:"Path of the SQLite file."
                    [ "db" ] in
   Arg.(required (opt (some string) None i))
 
 let root_dir =
   let env = Term.env_info "RAMEN_ROOT" in
-  let i = Arg.info ~doc:"Path of root of ramen configuration tree"
+  let i = Arg.info ~doc:"Path of root of ramen configuration tree."
                    ~env [ "root" ] in
   Arg.(value (opt string "." i))
 
@@ -332,29 +384,29 @@ let confserver_url =
   Arg.(value (opt ~vopt:"localhost" string "" i))
 
 let uncompress_opt =
-  let i = Arg.info ~doc:"CSV/CHB are compressed with lz4"
+  let i = Arg.info ~doc:"CSV/CHB are compressed with lz4."
                    [ "uncompress" ; "uncompress-csv" ] in
   Arg.(value (flag i))
 
-let kafka_brokers =
+let kafka_brokers_in =
   let i = Arg.info ~doc:"Read CSV/CHB data from Kafka instead of files."
             [ "kafka-brokers" ] in
   Arg.(value (opt string "" i))
 
 let files_prefix =
   let i = Arg.info ~doc:"File glob for the CSV/CHB files that comes right \
-                         before the metric name"
+                         before the metric name."
                    [ "files" ; "csv" (* backward compatible *) ] in
   Arg.(value (opt string "" i))
 
 let files_delete =
-  let i = Arg.info ~doc:"Delete CSV/CHB files once injected"
+  let i = Arg.info ~doc:"Delete CSV/CHB files once injected."
                    [ "delete" ] in
   Arg.(value (flag i))
 
 let notif_conf_file =
   let env = Term.env_info "NOTIFIER_CONFIG" in
-  let i = Arg.info ~doc:"Notifier configuration file to write"
+  let i = Arg.info ~doc:"Notifier configuration file to write."
                    ~env ["notifier-config"; "notif-config"] in
   Arg.(value (opt string "" i))
 
@@ -369,8 +421,51 @@ let identity_file =
                    ~docv:"FILE" ~env [ "i" ; "identity" ] in
   Arg.(value (opt string "" i))
 
+let to_sqlite =
+  let i = Arg.info ~doc:"Also output all alerts into this sqlite file."
+                   ~docv:"FILE" [ "to-sqlite" ] in
+  Arg.(value (opt string "/srv/ramen/alerts.db" i))
+
+let kafka_option =
+  let parse s =
+    try Pervasives.Ok (String.split s ~by:"=")
+    with Not_found ->
+      Pervasives.Error (
+        `Msg "You must specify the option name, followed by an equal \
+              sign (=), followed by the option value.")
+  and print fmt (pname, pval) =
+    Format.fprintf fmt "%s=%s" pname pval
+  in
+  Arg.conv ~docv:"OPTION=VALUE" (parse, print)
+
+let kafka_options =
+  let i = Arg.info ~doc:"Kafka options to send alerts via Kafka."
+                   ~docv:"OPTION=VALUE" [ "kafka-option" ] in
+  Arg.(value (opt_all kafka_option [] i))
+
+let kafka_topic =
+  let i = Arg.info ~doc:"Also send alerts to this Kafka topic. See \
+                         kafka-option to set brokers etc."
+                   ~docv:"TOPIC" [ "kafka-topic" ] in
+  Arg.(value (opt string "" i))
+
+let kafka_partition =
+  let i = Arg.info ~doc:"Kafka partition where to send alerts to."
+                   ~docv:"INTEGER" [ "kafka-partition" ] in
+  Arg.(value (opt int 0 i))
+
+let tenant_id =
+  let i = Arg.info ~doc:"Tenant identifier for that configured Ramen instance."
+                   ~docv:"ID" [ "tenant-id" ] in
+  Arg.(value (opt string "" i))
+
+let tenant_name =
+  let i = Arg.info ~doc:"Tenant name for that configured Ramen instance."
+                   ~docv:"NAME" [ "tenant-name" ] in
+  Arg.(value (opt string "" i))
+
 let dry_run =
-  let i = Arg.info ~doc:"Just display what would be killed/run"
+  let i = Arg.info ~doc:"Just display what would be killed/run."
                    [ "dry-run" ] in
   Arg.(value (flag i))
 
@@ -386,12 +481,18 @@ let start_cmd =
       $ confserver_url
       $ db_name
       $ uncompress_opt
-      $ kafka_brokers
+      $ kafka_brokers_in
       $ files_prefix
       $ files_delete
       $ alert_internal
       $ notif_conf_file
       $ identity_file
+      $ to_sqlite
+      $ kafka_options
+      $ kafka_topic
+      $ kafka_partition
+      $ tenant_id
+      $ tenant_name
       $ dry_run),
     info "ramen_configurator" ~version ~doc)
 
