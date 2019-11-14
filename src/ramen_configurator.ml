@@ -304,7 +304,8 @@ let sync_notif_conf =
   fun db notif_conf_file alert_internal to_sqlite
       kafka_options kafka_topic kafka_partition
       tenant_id tenant_name ->
-    let from, rcpts, snmpsink = Conf_of_sqlite.get_alerts_sink db in
+    let from, rcpts, snmpsink =
+      Option.map_default Conf_of_sqlite.get_alerts_sink ("", "", "") db in
     let cmds = [] in
     let cmds =
       if rcpts = "" || from = "" then cmds
@@ -331,9 +332,10 @@ let start debug monitor ramen_cmd root_dir confserver_url db_name
      (files_prefix <> "" || files_delete || uncompress)
   then
     failwith "CSV options are not compatible with Kafka" ;
-  let db = Conf_of_sqlite.get_db db_name in
+  let db = Option.map Conf_of_sqlite.get_db db_name in
   let update_programs () =
-    let security_whitelist = Conf_of_sqlite.get_source_params db in
+    let security_whitelist =
+      Option.map_default Conf_of_sqlite.get_source_params "" db in
     sync_programs debug ramen_cmd root_dir confserver_url uncompress
                   kafka_brokers_in files_prefix files_delete security_whitelist
   and update_notif_conf () =
@@ -369,7 +371,7 @@ let ramen_cmd =
 let db_name =
   let i = Arg.info ~doc:"Path of the SQLite file."
                    [ "db" ] in
-  Arg.(required (opt (some string) None i))
+  Arg.(value (opt (some string) None i))
 
 let root_dir =
   let env = Term.env_info "RAMEN_ROOT" in
