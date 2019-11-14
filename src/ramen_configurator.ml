@@ -391,8 +391,9 @@ let uncompress_opt =
   Arg.(value (flag i))
 
 let kafka_brokers_in =
+  let env = Term.env_info "KAFKA_READ_FROM_BROKERS" in
   let i = Arg.info ~doc:"Read CSV/CHB data from Kafka instead of files."
-            [ "kafka-brokers" ] in
+                   ~env [ "read-from-kafka-brokers" ] in
   Arg.(value (opt string "" i))
 
 let files_prefix =
@@ -441,14 +442,16 @@ let kafka_option =
   Arg.conv ~docv:"OPTION=VALUE" (parse, print)
 
 let kafka_options =
+  let env = Term.env_info "KAFKA_ALERT_OPTIONS" in
   let i = Arg.info ~doc:"Kafka options to send alerts via Kafka."
-                   ~docv:"OPTION=VALUE" [ "kafka-option" ] in
+                   ~docv:"OPTION=VALUE" ~env [ "kafka-option" ] in
   Arg.(value (opt_all kafka_option [] i))
 
 let kafka_topic =
+  let env = Term.env_info "KAFKA_ALERT_TOPIC" in
   let i = Arg.info ~doc:"Also send alerts to this Kafka topic. See \
                          kafka-option to set brokers etc."
-                   ~docv:"TOPIC" [ "kafka-topic" ] in
+                   ~docv:"TOPIC" ~env [ "kafka-topic" ] in
   Arg.(value (opt string "" i))
 
 let kafka_partition =
@@ -457,13 +460,15 @@ let kafka_partition =
   Arg.(value (opt int 0 i))
 
 let tenant_id =
+  let env = Term.env_info "TENANT_ID" in
   let i = Arg.info ~doc:"Tenant identifier for that configured Ramen instance."
-                   ~docv:"ID" [ "tenant-id" ] in
+                   ~docv:"ID" ~env [ "tenant-id" ] in
   Arg.(value (opt string "" i))
 
 let tenant_name =
+  let env = Term.env_info "TENANT_NAME" in
   let i = Arg.info ~doc:"Tenant name for that configured Ramen instance."
-                   ~docv:"NAME" [ "tenant-name" ] in
+                   ~docv:"NAME" ~env [ "tenant-name" ] in
   Arg.(value (opt string "" i))
 
 let dry_run =
