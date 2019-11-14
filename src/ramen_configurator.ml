@@ -408,8 +408,8 @@ let files_delete =
 
 let notif_conf_file =
   let env = Term.env_info "NOTIFIER_CONFIG" in
-  let i = Arg.info ~doc:"Notifier configuration file to write."
-                   ~env ["notifier-config"; "notif-config"] in
+  let i = Arg.info ~doc:"Alerter configuration file to write."
+                   ~env ["alerter-config"] in
   Arg.(value (opt string "" i))
 
 let alert_internal =
