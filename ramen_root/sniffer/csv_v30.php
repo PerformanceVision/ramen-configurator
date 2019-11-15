@@ -764,4 +764,58 @@ $voip = "AS CSV
      sign_rd_square_sum_server u128 {microseconds^2})
   EVENT STARTING AT capture_begin * 1e-6
     AND STOPPING AT capture_end * 1e-6";
+
+$bootp= "AS CSV
+       SEPARATOR \"\\t\"
+       NULL \"\\\\N\"
+       NO QUOTES
+       ESCAPE WITH \"\\\\\"
+     (poller string,                    -- 01
+      capture_begin u64,
+      capture_end u64,
+      datasource_kind_client u8,
+      datasource_name_client string,
+      datasource_kind_server u8,
+      datasource_name_server string,
+      vlan_client u32?,
+      vlan_server u32?,
+      mac_client u64,                   -- 10
+      mac_server u64,
+      zone_client u32,
+      zone_server u32,
+      ip4_client u32?,
+      ip4_server u32?,
+      application u32,
+      protostack string,
+      ip4_ignored_server u32?,
+      mac_ignored_server u64,
+      hops u8,                          -- 20
+      ip4_next_server u32?,
+      ip4_gateway u32?,
+      mac_bootp_client u64,
+      file string?,
+      ip4_subnet u32?,
+      ip4_router u32?,
+      ip4_nameserver1 u32?,
+      ip4_nameserver2 u32?,
+      hostname string?,
+      domain_name string?,              -- 30
+      ip4_ntp u32?,
+      ip4_requested_ip u32?,
+      lease_time u32?,
+      dhcp_types u32?,
+      message string?,
+      vendor_class string?,
+      pxelinux_config string?,
+      traffic_bytes_client u64,
+      traffic_bytes_server u64,
+      traffic_packets_client u32,       -- 40
+      traffic_packets_server u32,
+      payload_bytes_client u64,
+      payload_bytes_server u64,
+      rt_count_server u32,
+      rt_sum_server u32,
+      rt_square_sum_server u64)
+  EVENT STARTING AT capture_begin * 1e-6
+    AND STOPPING AT capture_end * 1e-6";
 ?>

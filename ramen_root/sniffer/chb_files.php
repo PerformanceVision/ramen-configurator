@@ -97,4 +97,10 @@ DEFINE LAZY tls_ext AS
       THEN DELETE IF files_delete
     <?=$tls?>;
 
+DEFINE LAZY bootp_ext AS
+  READ FROM
+    FILES files_prefix || "bootp_v30.*chb" || (IF files_compressed THEN ".lz4" ELSE "")
+      PREPROCESSED WITH (IF files_compressed THEN "lz4 -d -c" ELSE "")
+      THEN DELETE IF files_delete
+    <?=$bootp?>;
 <? include 'adapt_chb_types.ramen' ?>
