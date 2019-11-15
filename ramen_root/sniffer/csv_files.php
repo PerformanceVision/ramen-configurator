@@ -78,7 +78,7 @@ DEFINE LAZY smb AS
 
 DEFINE LAZY sql AS
   READ FROM
-    FILES files_prefix || "sql_v30.*csv" || (IF files_compressed THEN ".lz4" ELSE "")
+    FILES files_prefix || "databases_v30.*csv" || (IF files_compressed THEN ".lz4" ELSE "")
       PREPROCESSED WITH (IF files_compressed THEN "lz4 -d -c" ELSE "")
       THEN DELETE IF files_delete
     <?=$sql?>;
