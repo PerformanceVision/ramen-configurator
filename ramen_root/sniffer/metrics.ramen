@@ -304,3 +304,20 @@ DEFINE PERSIST FOR 15min tls AS
     (dtt_sum_server / 1e6) {seconds} AS dtt_sum_server,
     (dtt_square_sum_server / 1e12) {seconds^2} AS dtt_square_sum_server,
     *;
+
+DEFINE PERSIST FOR 15min bootp AS
+  FROM ../csv/bootp, ../chb/bootp
+  SELECT
+    "bootp" as metric,
+    (capture_begin / 1e6) {seconds} as start,
+    (capture_end / 1e6) {seconds} as stop,
+    COALESCE(ip(ip4_client), 0.0.0.0) AS ip_client,
+    COALESCE(ip(ip4_server), 0.0.0.0) AS ip_server,
+    eth(mac_client) AS mac_client,
+    eth(mac_server) AS mac_server,
+    (rt_sum_server / 1e6) {seconds} AS rt_sum_server,
+    (rt_count_server / 1e6) {seconds} AS rt_count_server,
+    (rt_square_sum_server / 1e6) {seconds} AS rt_square_sum_server,
+    traffic_packets_client AS payload_packets_client,
+    traffic_packets_server AS payload_packets_server,
+    *;

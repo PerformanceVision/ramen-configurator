@@ -96,3 +96,10 @@ DEFINE LAZY tls AS
       PREPROCESSED WITH (IF files_compressed THEN "lz4 -d -c" ELSE "")
       THEN DELETE IF files_delete
     <?=$tls?>;
+
+DEFINE LAZY bootp AS
+  READ FROM
+    FILES files_prefix || "bootp_v30.*csv" || (IF files_compressed THEN ".lz4" ELSE "")
+      PREPROCESSED WITH (IF files_compressed THEN "lz4 -d -c" ELSE "")
+      THEN DELETE IF files_delete
+    <?=$bootp?>;

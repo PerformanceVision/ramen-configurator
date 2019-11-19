@@ -821,3 +821,34 @@ AS
   COMMIT AFTER
     in.start > out.start + 2 * time_step
   FACTOR application;
+
+DEFINE LAZY bootp
+  "Bootp metrics per application and time step."
+AS
+  FROM ../metrics/bootp
+  SELECT
+    -- Time
+    truncate(start, time_step) AS start,
+    out.start + time_step AS stop,
+    application DOC "Application",
+    -- Average Server Response Time
+    sum rt_count_server AS _sum_rt_count_server,
+    sum rt_sum_server AS _sum_rt_sum_server,
+    IF _sum_rt_count_server > 0 THEN
+      _sum_rt_sum_server / _sum_rt_count_server AS 'server.rt.avg'
+      "Average response time.",
+    _sum_rt_count_server / time_step AS 'server.rt.count.per_sec'
+      "Number of query/response pairs per second.",
+    -- Volumes
+    sum traffic_bytes_client / time_step AS 'client.traffic.per_sec'
+      "Bytes per second from client.",
+    sum traffic_bytes_server / time_step AS 'server.traffic.per_sec'
+      "Bytes per second from server.",
+    sum traffic_packets_client / time_step AS 'client.pdus.per_sec'
+      "Packets per second from client.",
+    sum traffic_packets_server / time_step AS 'server.pdus.per_sec'
+      "Packets per second from server."
+  GROUP BY start // time_step, application
+  COMMIT AFTER
+    in.start > out.start + 2 * time_step
+  FACTOR application;

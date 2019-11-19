@@ -82,3 +82,9 @@ DEFINE LAZY tls AS
     KAFKA TOPIC "pvx.tls"
     WITH OPTIONS "metadata.broker.list" = kafka_broker_list
     <?=$tls?>;
+
+DEFINE LAZY bootp AS
+  READ FROM
+    KAFKA TOPIC "pvx.bootp"
+    WITH OPTIONS "metadata.broker.list" = kafka_broker_list
+    <?=$bootp?>;

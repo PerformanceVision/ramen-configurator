@@ -83,4 +83,10 @@ DEFINE LAZY tls_ext AS
     WITH OPTIONS "metadata.broker.list" = kafka_broker_list
     <?=$tls?>;
 
+DEFINE LAZY bootp_ext AS
+  READ FROM
+    KAFKA TOPIC "pvx.bootp"
+    WITH OPTIONS "metadata.broker.list" = kafka_broker_list
+    <?=$bootp?>;
+
 <? include 'adapt_chb_types.ramen' ?>

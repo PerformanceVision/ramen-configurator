@@ -76,4 +76,10 @@ $voip = "AS ROWBINARY (
   )
   EVENT STARTING AT capture_begin * 1e-6
     AND STOPPING AT capture_end * 1e-6";
+
+$bootp = "AS ROWBINARY (
+    ".file_get_contents('ramen_root/sniffer/bootp.txt')."
+  )
+  EVENT STARTING AT capture_begin * 1e-6
+    AND STOPPING AT capture_end * 1e-6";
 ?>
