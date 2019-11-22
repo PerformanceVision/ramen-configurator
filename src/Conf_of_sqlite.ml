@@ -49,7 +49,7 @@ let get_db filename =
     exit 1
   )
 
-let get_str_value what stmt def =
+let get_str_value what db stmt def =
   let open Sqlite3 in
   match step stmt with
   | Rc.ROW ->
@@ -62,18 +62,18 @@ let get_str_value what stmt def =
     def
   | _ ->
     reset stmt |> ignore ;
-    Printf.sprintf "No idea what to do from this %s result" what |>
-    failwith
+    !logger.error "Error while reading config.db: %S. Fallback to default %S for %S" (errmsg db) def what ;
+    def
 
 let get_alerts_sink db =
   !logger.debug "Getting alerts sink from DB..." ;
-  get_str_value "get_email_from" db.get_email_from "no-reply@accedian.com",
-  get_str_value "get_email_rcpts" db.get_email_rcpts "",
-  get_str_value "get_snmp_sink" db.get_snmp_sink ""
+  get_str_value "get_email_from" db.db db.get_email_from "no-reply@accedian.com",
+  get_str_value "get_email_rcpts" db.db db.get_email_rcpts "",
+  get_str_value "get_snmp_sink" db.db db.get_snmp_sink ""
 
 (* For now the only parameter we have is the whitelist for the scan detector: *)
 let get_source_params db =
-  get_str_value "get_security_whitelist" db.get_security_whitelist ""
+  get_str_value "get_security_whitelist" db.db db.get_security_whitelist ""
 
 let make filename =
   let db = get_db filename in
