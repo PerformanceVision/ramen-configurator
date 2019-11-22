@@ -323,8 +323,9 @@ let start debug monitor ramen_cmd root_dir confserver_url db_name
           notif_conf_file identity_file_ to_sqlite
           kafka_options kafka_topic kafka_partition
           tenant_id tenant_name
-          dry_run_ =
+          dry_run_ version =
   logger := make_logger debug ;
+  !logger.info "Run ramen-configurator version %s" version ;
   identity_file := identity_file_ ;
   dry_run := dry_run_ ;
   if kafka_brokers_in <> "" &&
@@ -493,7 +494,8 @@ let start_cmd =
       $ kafka_partition
       $ tenant_id
       $ tenant_name
-      $ dry_run),
+      $ dry_run
+      $ const version),
     info "ramen_configurator" ~version ~doc)
 
 let () =
