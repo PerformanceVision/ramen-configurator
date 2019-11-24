@@ -2,6 +2,7 @@ open Batteries
 open RamenLog
 open RamenHelpers
 
+let version = "3.3.0"
 let dry_run = ref false
 let identity_file = ref ""
 
@@ -325,7 +326,7 @@ let start debug monitor ramen_cmd root_dir confserver_url db_name
           notif_conf_file identity_file_ to_sqlite
           kafka_options kafka_topic kafka_partition
           tenant_id tenant_name
-          dry_run_ version =
+          dry_run_ =
   logger := make_logger debug ;
   !logger.info "Run ramen-configurator version %s" version ;
   identity_file := identity_file_ ;
@@ -479,8 +480,7 @@ let dry_run =
   Arg.(value (flag i))
 
 let start_cmd =
-  let doc = "Configurator for Ramen in PV"
-  and version = "3.2.0" in
+  let doc = "Configurator for Ramen in PV" in
   Term.(
     (const start
       $ debug
@@ -502,8 +502,7 @@ let start_cmd =
       $ kafka_partition
       $ tenant_id
       $ tenant_name
-      $ dry_run
-      $ const version),
+      $ dry_run),
     info "ramen_configurator" ~version ~doc)
 
 let () =
