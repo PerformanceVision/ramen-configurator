@@ -1,0 +1,15 @@
+#!/bin/bash
+
+set -e
+
+USER=configurator \
+  /usr/bin/ramen_configurator \
+    --monitor \
+    --root /var/lib/ramen_root \
+    --confserver localhost:29340 \
+    --alerter-config /ramen/alerter.conf \
+    --to-sqlite "" &
+
+export RAMEN_REPORT_PERIOD=10
+
+exec /start "$@"

@@ -263,20 +263,21 @@ let write_notif_conf fname alert_internal to_sqlite ext_cmds
           options = %a;
           topic = %S;
           partition = %d;
-          text = "{\"tenantName\":%s,\
-                   \"tenantId\":%s,\
-                   \"processedTimestamp\":${last_sent},\
-                   \"timestamp\":${start},\
-                   \"startTimestamp\":${first_sent},\
-                   \"policyId\":${id},\
-                   \"source\":\"ramen\",\
+          text = "{\"tenantName\":%s,
+                   \"tenantId\":%s,
+                   \"processedTimestamp\":${last_sent},
+                   \"timestamp\":${start},
+                   \"startTimestamp\":${first_sent},
+                   \"policyId\":${id},
+                   \"source\":\"ramen\",
                    \"type\":${firing}}";
         }
       |}
         (List.print (Tuple2.print String.print_quoted String.print_quoted))
           kafka_options
         kafka_topic kafka_partition
-        (json_quote tenant_id) (json_quote tenant_name) :: contacts
+        (ppp_quote (json_quote tenant_id))
+        (ppp_quote (json_quote tenant_name)) :: contacts
     else (
       if kafka_topic <> "" || kafka_options <> [] then
         failwith "Both parameters kafka-topic and kafka-options need to be \
@@ -289,7 +290,7 @@ let write_notif_conf fname alert_internal to_sqlite ext_cmds
           teams = [
             %s{
               name = "";
-              contacts = [ %a ]
+              contacts = %a
             }
           ];
           default_init_schedule_delay = 30;

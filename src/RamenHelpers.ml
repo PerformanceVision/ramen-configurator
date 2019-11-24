@@ -72,6 +72,12 @@ let json_quote s =
               quote "\n" |> quote "\r" |> quote "\t" |>
               rep "\x0c" "\\f") ^"\""
 
+(* For strings embedded in a string passed to PPPP.of_string: *)
+let ppp_quote s =
+  let rep f t s = String.nreplace s f t in
+  rep "\\" "\\\\" s |>
+  rep "\"" "\\\""
+
 let getenv ?def n =
   try Sys.getenv n
   with Not_found ->

@@ -177,7 +177,11 @@ deb: ramen_configurator.$(VERSION).deb
 
 tarball: ramen_configurator.$(VERSION).tgz
 
-ramen_configurator.$(VERSION).deb: debian.control
+ramen_configurator.$(VERSION).deb: \
+		debian.control \
+		$(INSTALLED_BIN) \
+		$(RAMEN_SOURCES) \
+		experiments.config
 	@echo 'Building debian package $@'
 	@$(RM) -r debtmp
 	@$(MAKE) prefix=debtmp/ install
@@ -194,20 +198,20 @@ ramen_configurator.$(VERSION).tgz:
 
 # Docker images
 
-docker/alert.conf: alert_sqlite.conf
-	@ln -f $< $@
-
 docker/ramen_configurator.$(VERSION).deb: ramen_configurator.$(VERSION).deb
 	@ln -f $< $@
 
-docker-latest: docker/Dockerfile docker/alert.conf docker/protocols docker/services docker/start \
-               docker/ramen_configurator.$(VERSION).deb docker/ramen.$(RAMEN_VERSION).deb
-	@echo 'Building docker image for nevrax v5.0.x'
-	@docker build -t rixed/ramen:pv-5.0.x --squash -f $< docker/
+docker-latest: \
+		docker/Dockerfile \
+		docker/ramen_configurator.$(VERSION).deb
+	@echo 'Building docker image for DH cloud deployment'
+	@docker build -t ramen-dh -f $< docker/
+	@docker tag ramen-dh localhost:5000/ramen-dh
+	@docker push localhost:5000/ramen-dh
 
 docker-push:
 	@echo 'Uploading docker images'
-	@docker push rixed/ramen:pv-5.0.x
+	@echo 'Better not!'
 
 
 # Cleaning
