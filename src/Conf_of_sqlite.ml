@@ -62,7 +62,9 @@ let get_str_value what db stmt def =
     def
   | _ ->
     reset stmt |> ignore ;
-    !logger.error "Error while reading config.db: %S. Fallback to default %S for %S" (errmsg db) def what ;
+    !logger.error
+      "Error while reading DB: %S. Falling back to default %S for %S"
+      (errmsg db) def what ;
     def
 
 let get_alerts_sink db =
