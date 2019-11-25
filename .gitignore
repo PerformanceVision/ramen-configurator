@@ -26,6 +26,7 @@ TODO
 *.db
 src/ramen_configurator
 src/findcsv
+src/rebinary
 *.html
 *.deb
 debtmp/
@@ -40,3 +41,7 @@ ramen_root/sniffer/csv_files.ramen
 ramen_root/sniffer/csv_kafka.ramen
 ramen_root/sniffer/chb_files.ramen
 ramen_root/sniffer/chb_kafka.ramen
+docker/rebinary
+docker/rebinary_plug.*
+docker/chbs/
+docker/schemas/

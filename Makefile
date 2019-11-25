@@ -14,7 +14,7 @@ override OCAMLFLAGS    += -I src $(WARNS) -g -annot
 SOLVER = /usr/bin/z3 -t:300000 -smt2 %s
 
 PACKAGES = \
-	batteries cmdliner sqlite3 unix
+	batteries,cmdliner,sqlite3,stdint,unix
 
 RAMEN_SOURCES = \
 	ramen_root/internal/monitoring/meta.ramen \
@@ -33,21 +33,28 @@ RAMEN_SOURCES = \
 	ramen_root/sniffer/transactions.ramen \
 	ramen_root/sniffer/top_errors.ramen
 
-INSTALLED_BIN = src/ramen_configurator
+REBINARY_SOURCES = \
+	src/rebinary_plug.ml \
+	src/rebinary.ml
+
+INSTALLED_BIN = src/ramen_configurator src/rebinary
+INSTALLED_LIB = src/rebinary_plug.cmxa
+INSTALLED = $(INSTALLED_BIN) $(INSTALLED_LIB) $(RAMEN_SOURCES)
 CHECK_COMPILATION = $(RAMEN_SOURCES:.ramen=.x)
-INSTALLED = $(INSTALLED_BIN) $(RAMEN_SOURCES)
 
 bin_dir ?= /usr/bin/
 lib_dir ?= /var/lib/
 conf_dir ?= /etc/ramen/
 
-all: $(INSTALLED) $(CHECK_COMPILATION) src/findcsv
+all: $(INSTALLED) src/findcsv
+
+check: $(CHECK_COMPILATION)
 
 # Generic rules
 
 .SUFFIXES: .ml .mli .cmi .cmx .cmxs .annot .html .adoc .ramen .x .php
 .PHONY: clean all dep install uninstall reinstall doc deb tarball \
-        docker-latest docker-push
+        docker-ramen-dh docker-rebinary docker-push
 
 %.cmx %.annot: %.ml
 	@echo 'Compiling $@ (native code)'
@@ -108,7 +115,12 @@ ramen_root/sniffer/metrics.x: \
 	@ln -sf chb_$(FILES_OR_KAFKA).x ramen_root/sniffer/chb.x
 	@RAMEN_CONFSERVER= ramen compile --solver='$(SOLVER)' -L ramen_root $<
 
-SOURCES = $(CONFIGURATOR_SOURCES) $(FINDCSV_SOURCES)
+SOURCES = \
+	$(CONFIGURATOR_SOURCES) \
+	$(REBINARY_SOURCES) \
+	$(FINDCSV_SOURCES)
+
+# Dependencies
 
 dep:
 	@$(RM) .depend
@@ -138,6 +150,19 @@ src/findcsv: $(FINDCSV_SOURCES:.ml=.cmx)
 	@echo 'Linking $@'
 	@$(OCAMLOPT) $(OCAMLOPTFLAGS) -linkpkg -package batteries $(filter %.cmx, $^) -o $@
 
+# Replay tool (rebinary)
+
+src/rebinary_plug.cmxa: src/rebinary_plug.cmx
+	@echo 'Linking library for rebinary plugins $@ (native)'
+	$(OCAMLOPT) $(OCAMLOPTFLAGS) -I src -a $(filter %.cmx, $^) -o $@
+
+src/rebinary: \
+		src/rebinary_plug.cmxa \
+		src/rebinary.ml
+	@echo 'Compiling replay tool $@ (native)'
+	$(OCAMLOPT) $(OCAMLOPTFLAGS) -I src -linkpkg -package 'batteries,cmdliner,dessser,dynlink,kafka,parsercombinator,stdint' $^ -o $@
+
+
 # Installation
 
 install-bin: $(INSTALLED_BIN)
@@ -145,10 +170,18 @@ install-bin: $(INSTALLED_BIN)
 	@install -d '$(prefix)$(bin_dir)'
 	@install $(INSTALLED_BIN) '$(prefix)$(bin_dir)'/
 
+install-lib: $(INSTALLED_LIB)
+	@echo 'Installing libraries into $(prefix)$(lib_dir)'
+	@install -d '$(prefix)$(lib_dir)'
+	@for f in $^ ; do \
+	  install -d "$(prefix)$(lib_dir)/$$(dirname $$f)" ; \
+	  install "$$f" "$(prefix)$(lib_dir)/$$f" ; \
+	done
+
 install-sources: $(RAMEN_SOURCES)
 	@echo 'Installing Ramen sources into $(prefix)$(lib_dir)'
 	@install -d '$(prefix)$(lib_dir)'
-	@for f in $(RAMEN_SOURCES) ; do \
+	@for f in $^ ; do \
 	  install -d "$(prefix)$(lib_dir)/$$(dirname $$f)" ; \
 	  install "$$f" "$(prefix)$(lib_dir)/$$f" ; \
 	done
@@ -160,7 +193,7 @@ install-conf: experiments.config
 	  install "$$f" "$(prefix)$(lib_dir)/$$f" ; \
 	done
 
-install: install-bin install-sources install-conf
+install: install-bin install-lib install-sources install-conf
 
 uninstall:
 	@echo Uninstalling
@@ -196,18 +229,46 @@ ramen_configurator.$(VERSION).tgz:
 	@$(MAKE) prefix=tmp/ bin_dir=ramen lib_dir=ramen conf_dir=ramen install
 	@tar c -C tmp ramen | gzip > $@
 
+
 # Docker images
 
 docker/ramen_configurator.$(VERSION).deb: ramen_configurator.$(VERSION).deb
 	@ln -f $< $@
 
-docker-latest: \
+docker/rebinary: src/rebinary
+	@ln -f $< $@
+
+docker/rebinary_plug.a: src/rebinary_plug.a
+	@ln -f $< $@
+
+docker/rebinary_plug.cmi: src/rebinary_plug.cmi
+	@ln -f $< $@
+
+docker/rebinary_plug.cmx: src/rebinary_plug.cmx
+	@ln -f $< $@
+
+docker/rebinary_plug.cmxa: src/rebinary_plug.cmxa
+	@ln -f $< $@
+
+docker-ramen-dh: \
 		docker/Dockerfile \
 		docker/ramen_configurator.$(VERSION).deb
 	@echo 'Building docker image for DH cloud deployment'
-	@docker build -t ramen-dh -f $< docker/
+	@docker build -t ramen-dh --squash -f $< docker/
 	@docker tag ramen-dh localhost:5000/ramen-dh
 	@docker push localhost:5000/ramen-dh
+
+docker-rebinary: \
+		docker/Dockerfile-rebinary \
+		docker/rebinary \
+		docker/rebinary_plug.cmxa \
+		docker/rebinary_plug.a \
+		docker/rebinary_plug.cmx \
+		docker/rebinary_plug.cmi
+	@echo 'Building docker image for rebinary'
+	@docker build -t rebinary --squash -f $< docker/
+	@docker tag rebinary localhost:5000/rebinary
+	@docker push localhost:5000/rebinary
 
 docker-push:
 	@echo 'Uploading docker images'

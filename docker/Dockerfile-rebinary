@@ -1,0 +1,77 @@
+# vim: ft=dockerfile
+FROM debian:buster-slim
+
+# Do not install recommends:
+RUN echo 'APT::Install-Recommends "0";' > \
+      /etc/apt/apt.conf.d/no_recommends
+
+# Install a few things
+RUN apt-get --yes update && \
+    DEBIAN_FRONTEND=noninteractive \
+      apt-get --yes upgrade && \
+    DEBIAN_FRONTEND=noninteractive \
+      apt-get --yes install \
+      binutils \
+      bzip2 \
+      ca-certificates \
+      curl \
+      git \
+      iputils-ping \
+      librdkafka-dev \
+      m4 \
+      make \
+      patch \
+      ocaml-nox \
+      unzip
+
+COPY install-opam.sh /tmp
+RUN echo | /tmp/install-opam.sh
+
+RUN /usr/local/bin/opam init --no-setup --disable-sandboxing
+RUN /usr/local/bin/opam update --yes
+# Let's use the same version as locally:
+RUN opam switch install --yes rebinary 4.07.1+BER
+
+# Environment
+ENV OPAM_SWITCH_PREFIX=/root/.opam/rebinary
+ENV CAML_LD_LIBRARY_PATH=/root/.opam/rebinary/lib/stublibs:/root/.opam/rebinary/lib/ocaml/stublibs:/root/.opam/rebinary/lib/ocaml
+ENV OCAML_TOPLEVEL_PATH=/root/.opam/rebinary/lib/toplevel
+ENV MANPATH=:/root/.opam/rebinary/man
+ENV PATH=/root/.opam/rebinary/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+RUN opam update
+#RUN opam install --yes depext
+#RUN opam depext --noninteractive conf-pkg-config
+RUN opam repo add --set-default ocalme \
+      git://github.com/rixed/ocalme-opam-repository.git
+RUN opam repo priority ocalme 1
+
+# One need master to compile with BER (fixed in next major release)
+RUN opam pin add batteries --dev-repo --no-action
+
+# All this to install some runtime deps:
+RUN opam install --yes batteries dessser stdint.0.5.0fix1
+
+# Install the binary
+COPY rebinary /rebinary/bin/
+COPY rebinary_plug.cmxa rebinary_plug.a rebinary_plug.cmi rebinary_plug.cmx /rebinary/lib/
+
+# Install the rebinary tool and default schema and chb files
+COPY schemas /schemas
+COPY chbs /chbs
+
+ENV LIB_DIR=/rebinary/lib/
+ENV SCHEMAS_DIR=/schemas
+ENV CHBS_DIR=/chbs
+ENV KAFKA_BROKERS=localhost:9092
+ENV KAFKA_TIMEOUT=10
+ENV KAFKA_PARTITION=0
+ENV KAFKA_MAX_MSG_SIZE=400000
+ENV KAFKA_MAX_TUPLES_PER_MSG=100
+
+# Command to run:
+WORKDIR /rebinary
+ENTRYPOINT ["/rebinary/bin/rebinary"]
+CMD ["/chbs"]
+
+LABEL maintainer="ccellier@accedian.com"
