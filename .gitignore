@@ -45,3 +45,6 @@ docker/rebinary
 docker/rebinary_plug.*
 docker/chbs/
 docker/schemas/
+volumes/grafana/
+volumes/prometheus/data/
+volumes/ramen-dh-tenant-id-12341234/

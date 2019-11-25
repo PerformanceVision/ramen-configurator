@@ -1,0 +1,109 @@
+version: "3.3"
+services:
+
+  zookeeper:
+    image: wurstmeister/zookeeper:3.4.6
+    expose:
+      - "2181"
+
+  kafka:
+    image: wurstmeister/kafka:2.12-2.3.0
+    depends_on:
+      - zookeeper
+    ports:
+      - "9094:9094"
+    expose:
+      - "9092"
+    environment:
+      HOSTNAME_COMMAND: "docker info | grep ^Name: | cut -d' ' -f 2"
+      KAFKA_ADVERTISED_LISTENERS: INSIDE://:9092,OUTSIDE://_{HOSTNAME_COMMAND}:9094
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INSIDE:PLAINTEXT,OUTSIDE:PLAINTEXT
+      KAFKA_LISTENERS: INSIDE://0.0.0.0:9092,OUTSIDE://0.0.0.0:9094
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_INTER_BROKER_LISTENER_NAME: INSIDE
+      KAFKA_OPTS: "-javaagent:/etc/kafka/jmx_prometheus_javaagent.jar=7071:/etc/kafka/kafka-jmx.yml"
+      KAFKA_JMX_OPTS: "-Dcom.sun.management.jmxremote -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.ssl=false -Djava.rmi.server.hostname=127.0.0.1 -Dcom.sun.management.jmxremote.rmi.port=9999"
+      JMX_PORT: 9999
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./volumes/kafka-broker:/etc/kafka
+
+  kafkaHQ:
+    image: tchiotludo/kafkahq
+    depends_on:
+      - kafka
+    ports:
+      - "8080:8080"
+    environment:
+      KAFKAHQ_CONFIGURATION: |
+        kafkahq:
+          connections:
+            my-only-beloved-kafka:
+              properties:
+                bootstrap.servers: "kafka:9092"
+
+  kafka-exporter:
+    image: danielqsj/kafka-exporter:latest
+    depends_on:
+      - kafka
+    ports:
+      - "9308:9308"
+    command: --kafka.server=kafka:9094 --kafka.version=2.3.0 --no-sasl.handshake --log.enable-sarama --log.level=info
+    restart: unless-stopped
+
+  prometheus:
+    image: prom/prometheus
+    ports:
+      - 9090:9090
+    volumes:
+      - ./volumes/prometheus/conf:/etc/prometheus
+      - ./volumes/prometheus/data:/prometheus
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana
+    depends_on:
+      - prometheus
+    environment:
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+    ports:
+      - 3000:3000
+    volumes:
+      - ./volumes/grafana:/var/lib/grafana
+    restart: unless-stopped
+
+  ramen-dh:
+    image: localhost:5000/ramen-dh
+    depends_on:
+      - kafka
+    ports:
+      - "29340:29340"
+      - "29341:29341"
+      - "29380:29380"  # HTTP/API
+      - "2003:2003"  # Graphite sink
+      - "25826:25826"  # collectd network protocol
+    volumes:
+      - ./volumes/ramen-dh-tenant-id-12341234:/ramen
+    environment:
+      RAMEN_DIR: /ramen
+      RAMEN_CONFSERVER: localhost:29340
+      TENANT_ID: tenant-id-12341234
+      TENANT_NAME: test-tenant-numero-uno
+      KAFKA_READ_FROM_BROKERS: kafka:9092
+      KAFKA_ALERT_OPTIONS:
+        metadata.broker.list=kafka:9092,topic.message.timeout.ms=5000
+      KAFKA_ALERT_TOPIC: alert-events
+    restart: unless-stopped
+
+  rebinary:
+    image: localhost:5000/rebinary
+    depends_on:
+      - kafka
+    environment:
+      KAFKA_BROKERS: kafka:9092
+      KAFKA_TIMEOUT: 10
+      KAFKA_PARTITION: 0
+      KAFKA_MAX_MSG_SIZE: 400000
+      KAFKA_MAX_TUPLES_PER_MSG: 100
+      LOOP: true
+    restart: unless-stopped

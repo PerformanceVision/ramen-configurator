@@ -272,7 +272,10 @@ docker-rebinary: \
 
 docker-push:
 	@echo 'Uploading docker images'
-	@echo 'Better not!'
+	@docker tag ramen-dh gcr.io/npav-172917/ramen-dh
+	@docker push gcr.io/npav-172917/ramen-dh
+	@docker tag rebinary gcr.io/npav-172917/rebinary
+	@docker push gcr.io/npav-172917/rebinary
 
 
 # Cleaning
