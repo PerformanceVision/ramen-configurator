@@ -212,11 +212,14 @@ let namesAndTypes schema_file =
   let str = read_whole_file schema_file in
   let print = T.print in
   let t = Parser.(string_parser ~what:"NamesAndTypes" ~print p) str in
-  Printf.printf "Will generate rowbinary for type: %a\n%!"
-    T.print t ;
+  if !debug then
+    Printf.printf "Will generate rowbinary for type: %a\n%!"
+      T.print t ;
   t
 
 let run_cmd cmd =
+  if !debug then
+    Printf.eprintf "Running command: %s\n%!" cmd ;
   match Unix.system cmd with
   | Unix.WEXITED 0 -> ()
   | Unix.WEXITED code ->
@@ -330,9 +333,50 @@ let parse_chb_fname name =
 
 let producers = Hashtbl.create 10
 
+let kafka_err_string =
+	let open Kafka in
+	function
+  | BAD_MSG -> "BAD_MSG"
+  | BAD_COMPRESSION -> "BAD_COMPRESSION"
+  | DESTROY -> "DESTROY"
+  | FAIL -> "FAIL"
+  | TRANSPORT -> "TRANSPORT"
+  | CRIT_SYS_RESOURCE -> "CRIT_SYS_RESOURCE"
+  | RESOLVE -> "RESOLVE"
+  | MSG_TIMED_OUT -> "MSG_TIMED_OUT"
+  | UNKNOWN_PARTITION -> "UNKNOWN_PARTITION"
+  | FS -> "FS"
+  | UNKNOWN_TOPIC -> "UNKNOWN_TOPIC"
+  | ALL_BROKERS_DOWN -> "ALL_BROKERS_DOWN"
+  | INVALID_ARG -> "INVALID_ARG"
+  | TIMED_OUT -> "TIMED_OUT"
+  | QUEUE_FULL -> "QUEUE_FULL"
+  | ISR_INSUFF -> "ISR_INSUFF"
+  | UNKNOWN -> "UNKNOWN"
+  | OFFSET_OUT_OF_RANGE -> "OFFSET_OUT_OF_RANGE"
+  | INVALID_MSG -> "INVALID_MSG"
+  | UNKNOWN_TOPIC_OR_PART -> "UNKNOWN_TOPIC_OR_PART"
+  | INVALID_MSG_SIZE -> "INVALID_MSG_SIZE"
+  | LEADER_NOT_AVAILABLE -> "LEADER_NOT_AVAILABLE"
+  | NOT_LEADER_FOR_PARTITION -> "NOT_LEADER_FOR_PARTITION"
+  | REQUEST_TIMED_OUT -> "REQUEST_TIMED_OUT"
+  | BROKER_NOT_AVAILABLE -> "BROKER_NOT_AVAILABLE"
+  | REPLICA_NOT_AVAILABLE -> "REPLICA_NOT_AVAILABLE"
+  | MSG_SIZE_TOO_LARGE -> "MSG_SIZE_TOO_LARGE"
+  | STALE_CTRL_EPOCH -> "STALE_CTRL_EPOCH"
+  | OFFSET_METADATA_TOO_LARGE -> "OFFSET_METADATA_TOO_LARGE"
+  | CONF_UNKNOWN -> "CONF_UNKNOWN"
+  | CONF_INVALID -> "CONF_INVALID"
+
 let delivery_callback msg_id err =
-  Printf.eprintf "delivery_callback: msg_id=%d, err=%s\n%!"
-    msg_id (if err = None then "None" else "Some")
+  match err with
+  | None ->
+      if !debug then
+        Printf.eprintf "delivery_callback: msg_id=%d, Success\n%!"
+          msg_id
+  | Some err_code ->
+      Printf.eprintf "delivery_callback: msg_id=%d, Error: %s\n%!"
+        msg_id (kafka_err_string err_code)
 
 let producer_of_topic kafka_handler timeout topic =
   try Hashtbl.find producers topic
@@ -357,8 +401,9 @@ let send_to_topic kafka_handler timeout partition topic bytes len tups =
     assert (tups > 0) ;
     let open Kafka in
     let prod_topic = producer_of_topic kafka_handler timeout topic in
-    Printf.eprintf "Sending %d tuples in %d bytes to topic %S\n%!"
-      tups len topic ;
+    if !debug then
+      Printf.eprintf "Sending %d tuples in %d bytes to topic %S\n%!"
+        tups len topic ;
     let str = Bytes.sub_string bytes 0 len in
     Kafka.produce prod_topic ~msg_id:!msg_id partition str ;
     incr msg_id ;
@@ -415,7 +460,8 @@ let replay schemas_dir lib_dir max_msg_size max_tuples_per_msg brokers
   let gen_funcs =
     Array.fold_left (fun gens file ->
       if not (Map.String.mem file.metric gens) then (
-        Printf.printf "Creating plugin for metric %S...\n%!" file.metric ;
+        if !debug then
+          Printf.printf "Creating plugin for metric %S...\n%!" file.metric ;
         let copy_record =
           create_plugin_for_metric schemas_dir output file.metric in
         Map.String.add file.metric copy_record gens
@@ -451,7 +497,8 @@ let replay schemas_dir lib_dir max_msg_size max_tuples_per_msg brokers
       "message.max.bytes", string_of_int max_msg_size ] in
   let kafka_buffer = Bytes.create max_msg_size in
   let replay_file file =
-    Printf.printf "Replaying file %S...\n%!" file.name ;
+    if !debug then
+      Printf.printf "Replaying file %S...\n%!" file.name ;
     let topic = "pvx.chb."^ file.metric in
     let copy_function = Hashtbl.find Rebinary_plug.copy_functions file.metric in
     let kafka_buffer_bytes = ref 0 in
@@ -499,9 +546,9 @@ let replay schemas_dir lib_dir max_msg_size max_tuples_per_msg brokers
         if i < num_files - 1 then
           let next_time = all_files.(i + 1).time +. time_to_now in
           let wait_time = next_time -. Unix.time () in
-          Printf.eprintf "wait_time = %f\n%!" wait_time ;
           if wait_time > 0. && not full_speed then (
-            Printf.eprintf "Sleeping for %fs\n%!" wait_time ;
+            if !debug then
+              Printf.eprintf "Sleeping for %fs\n%!" wait_time ;
             Unix.sleepf wait_time) ;
           loop_files (i + 1)
       ) in
@@ -529,6 +576,7 @@ let init debug_arg schemas_dir lib_dir full_speed brokers timeout
 let main =
   let open Cmdliner in
   let start_cmd =
+    Printf.printf "Rebinary v%s\n%!" version ;
     let doc = "RowBinary files replayer via Kafka" in
     Term.(
       (const init
