@@ -507,11 +507,11 @@ let replay schemas_dir lib_dir max_msg_size max_tuples_per_msg brokers
       if !kafka_buffer_bytes + tup_len > max_msg_size ||
          !kafka_buffer_tups >= max_tuples_per_msg then (
         send_to_topic kafka_handler timeout partition topic kafka_buffer !kafka_buffer_bytes !kafka_buffer_tups ;
-        Bytes.blit kafka_buffer 0 tup 0 tup_len ;
+        Bytes.blit tup 0 kafka_buffer 0 tup_len ;
         kafka_buffer_bytes := tup_len ;
         kafka_buffer_tups := 1
       ) else (
-        Bytes.blit kafka_buffer !kafka_buffer_bytes tup 0 tup_len ;
+        Bytes.blit tup 0 kafka_buffer !kafka_buffer_bytes tup_len ;
         kafka_buffer_bytes := !kafka_buffer_bytes + tup_len ;
         incr kafka_buffer_tups
       ) ;
