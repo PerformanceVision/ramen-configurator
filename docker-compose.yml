@@ -105,5 +105,5 @@ services:
       KAFKA_PARTITION: 0
       KAFKA_MAX_MSG_SIZE: 400000
       KAFKA_MAX_TUPLES_PER_MSG: 100
-      LOOP: true
+      LOOP: "true"
     restart: unless-stopped
